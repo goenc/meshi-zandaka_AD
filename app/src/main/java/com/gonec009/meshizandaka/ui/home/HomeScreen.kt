@@ -394,16 +394,27 @@ private fun DayStackBar(
 }
 
 private fun DrawScope.drawBarBackground() {
+    val chartLeft = size.width * 0.15f
+    val chartWidth = size.width * 0.7f
     drawRoundRect(
         color = Color(0x14000000),
-        topLeft = Offset(x = size.width * 0.15f, y = 0f),
-        size = Size(width = size.width * 0.7f, height = size.height),
+        topLeft = Offset(x = chartLeft, y = 0f),
+        size = Size(width = chartWidth, height = size.height),
         cornerRadius = CornerRadius(x = 18f, y = 18f),
     )
+    repeat(4) { index ->
+        val y = size.height - (size.height * ((index + 1) / 4f))
+        drawLine(
+            color = Color(0x2A000000),
+            start = Offset(x = chartLeft, y = y),
+            end = Offset(x = chartLeft + chartWidth, y = y),
+            strokeWidth = 1.5f,
+        )
+    }
     drawRoundRect(
         color = Color(0x22000000),
-        topLeft = Offset(x = size.width * 0.15f, y = 0f),
-        size = Size(width = size.width * 0.7f, height = size.height),
+        topLeft = Offset(x = chartLeft, y = 0f),
+        size = Size(width = chartWidth, height = size.height),
         cornerRadius = CornerRadius(x = 18f, y = 18f),
         style = Stroke(width = 2f),
     )
