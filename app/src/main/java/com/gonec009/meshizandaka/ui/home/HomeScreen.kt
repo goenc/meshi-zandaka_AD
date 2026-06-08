@@ -108,14 +108,16 @@ private fun HomeScreen(
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onBreakfastClick, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.breakfast_set))
-                }
-                Button(onClick = onLunchClick, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.lunch_set))
-                }
-                Button(onClick = onDinnerClick, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.dinner_set))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onBreakfastClick, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.breakfast_set))
+                    }
+                    Button(onClick = onLunchClick, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.lunch_set))
+                    }
+                    Button(onClick = onDinnerClick, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.dinner_set))
+                    }
                 }
                 Button(onClick = onQuickRecordClick, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.go_to_record))
