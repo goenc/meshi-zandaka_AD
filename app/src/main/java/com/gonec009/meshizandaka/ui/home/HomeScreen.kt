@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -53,6 +54,11 @@ import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
+
+private data class SummaryItem(
+    val title: String,
+    val value: String,
+)
 
 @Composable
 fun HomeRoute(
@@ -93,6 +99,33 @@ private fun HomeScreen(
     onToggleRecentRecords: () -> Unit,
     onRecordClick: (Long) -> Unit,
 ) {
+    val summaryItems = listOf(
+        SummaryItem(
+            title = stringResource(R.string.today_consumed),
+            value = stringResource(R.string.kcal_format, state.summary.todayConsumedCalories),
+        ),
+        SummaryItem(
+            title = stringResource(R.string.today_balance),
+            value = stringResource(R.string.kcal_format_signed, state.summary.todayBalanceCalories),
+        ),
+        SummaryItem(
+            title = stringResource(R.string.week_balance),
+            value = stringResource(R.string.kcal_format_signed, state.summary.weekBalanceCalories),
+        ),
+        SummaryItem(
+            title = stringResource(R.string.month_balance),
+            value = stringResource(R.string.kcal_format_signed, state.summary.monthBalanceCalories),
+        ),
+        SummaryItem(
+            title = stringResource(R.string.month_special_count),
+            value = stringResource(R.string.count_format, state.summary.monthSpecialCount),
+        ),
+        SummaryItem(
+            title = stringResource(R.string.month_special_delta),
+            value = stringResource(R.string.kcal_format_signed, state.summary.monthSpecialDeltaCalories),
+        ),
+    )
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -126,40 +159,23 @@ private fun HomeScreen(
             )
         }
         item {
-            SummaryCard(
-                title = stringResource(R.string.today_consumed),
-                value = stringResource(R.string.kcal_format, state.summary.todayConsumedCalories),
-            )
-        }
-        item {
-            SummaryCard(
-                title = stringResource(R.string.today_balance),
-                value = stringResource(R.string.kcal_format_signed, state.summary.todayBalanceCalories),
-            )
-        }
-        item {
-            SummaryCard(
-                title = stringResource(R.string.week_balance),
-                value = stringResource(R.string.kcal_format_signed, state.summary.weekBalanceCalories),
-            )
-        }
-        item {
-            SummaryCard(
-                title = stringResource(R.string.month_balance),
-                value = stringResource(R.string.kcal_format_signed, state.summary.monthBalanceCalories),
-            )
-        }
-        item {
-            SummaryCard(
-                title = stringResource(R.string.month_special_count),
-                value = stringResource(R.string.count_format, state.summary.monthSpecialCount),
-            )
-        }
-        item {
-            SummaryCard(
-                title = stringResource(R.string.month_special_delta),
-                value = stringResource(R.string.kcal_format_signed, state.summary.monthSpecialDeltaCalories),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                summaryItems.chunked(2).forEach { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        rowItems.forEach { item ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                SummaryCard(title = item.title, value = item.value)
+                            }
+                        }
+                        if (rowItems.size == 1) {
+                            Box(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
         }
         item {
             RecentRecordsSection(
@@ -372,7 +388,7 @@ private fun SummaryCard(title: String, value: String) {
     Card {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = title, style = MaterialTheme.typography.labelLarge)
-            Text(text = value, style = MaterialTheme.typography.headlineSmall)
+            Text(text = value, style = MaterialTheme.typography.titleMedium)
         }
     }
 }
