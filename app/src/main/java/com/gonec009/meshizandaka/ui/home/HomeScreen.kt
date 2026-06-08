@@ -75,12 +75,19 @@ private data class SummaryItem(
 )
 
 private fun formatChartCalories(calories: Int): String {
-    if (calories < 1000) return "${calories}k"
-    val compactValue = calories / 1000f
-    return if (compactValue >= 10f || calories % 1000 == 0) {
-        "${compactValue.toInt()}k"
-    } else {
-        String.format(Locale.US, "%.1fk", compactValue)
+    return "${calories}K"
+}
+
+private fun formatChartDateLabel(
+    index: Int,
+    date: LocalDate,
+    previousDate: LocalDate?,
+): String {
+    return when {
+        index == 0 -> "${date.monthValue}/${date.dayOfMonth}"
+        previousDate == null -> date.dayOfMonth.toString()
+        previousDate.month != date.month -> String.format(Locale.JAPAN, "%02d/%02d", date.monthValue, date.dayOfMonth)
+        else -> date.dayOfMonth.toString()
     }
 }
 
@@ -318,8 +325,16 @@ private fun WeeklyChartCard(
                     .testTag("weekly_chart_scroll"),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                stacks.forEach { stack ->
-                    DayStackBar(stack = stack, maxCalories = resolvedMaxCalories)
+                stacks.forEachIndexed { index, stack ->
+                    DayStackBar(
+                        stack = stack,
+                        maxCalories = resolvedMaxCalories,
+                        dateLabel = formatChartDateLabel(
+                            index = index,
+                            date = stack.date,
+                            previousDate = stacks.getOrNull(index - 1)?.date,
+                        ),
+                    )
                 }
             }
         }
@@ -359,6 +374,7 @@ private fun LegendItem(label: String, color: Color) {
 private fun DayStackBar(
     stack: DailyMealStack,
     maxCalories: Int,
+    dateLabel: String,
 ) {
     val formatter = DateTimeFormatter.ofPattern("MM/dd", Locale.JAPAN)
     Column(
@@ -394,7 +410,7 @@ private fun DayStackBar(
             )
         }
         Text(
-            text = formatter.format(stack.date),
+            text = dateLabel,
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
         )
