@@ -7,6 +7,12 @@
     <string name="settings_title">設定</string>
     <string name="record_edit_title">記録修正</string>
     <string name="go_to_record">記録する</string>
+    <string name="record_date_label">登録日</string>
+    <string name="record_date_today">今日はこの日付で登録します</string>
+    <string name="choose_any_date">タップで好きな日付へ移動</string>
+    <string name="previous_day">前日</string>
+    <string name="next_day">翌日</string>
+    <string name="confirm_date">この日付にする</string>
     <string name="breakfast_set">朝S</string>
     <string name="lunch_set">昼S</string>
     <string name="dinner_set">夕S</string>

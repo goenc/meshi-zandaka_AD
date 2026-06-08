@@ -21,17 +21,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +61,9 @@ import com.gonec009.meshizandaka.domain.model.DailyMealStack
 import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
@@ -83,6 +93,8 @@ fun HomeRoute(
         innerPadding = innerPadding,
         state = state,
         onQuickRecordClick = onQuickRecordClick,
+        onMoveSelectedDate = viewModel::moveSelectedRecordDate,
+        onDateSelected = viewModel::updateSelectedRecordDate,
         onBreakfastClick = viewModel::recordBreakfast,
         onLunchClick = viewModel::recordLunch,
         onDinnerClick = viewModel::recordDinner,
@@ -96,12 +108,15 @@ private fun HomeScreen(
     innerPadding: PaddingValues,
     state: HomeUiState,
     onQuickRecordClick: () -> Unit,
+    onMoveSelectedDate: (Long) -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
     onBreakfastClick: () -> Unit,
     onLunchClick: () -> Unit,
     onDinnerClick: () -> Unit,
     onToggleRecentRecords: () -> Unit,
     onRecordClick: (Long) -> Unit,
 ) {
+    var isDatePickerVisible by remember { mutableStateOf(false) }
     val summaryItems = listOf(
         SummaryItem(
             title = stringResource(R.string.today_consumed),
@@ -138,6 +153,12 @@ private fun HomeScreen(
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                RecordDateSelector(
+                    selectedDate = state.selectedRecordDate,
+                    onPreviousDateClick = { onMoveSelectedDate(-1L) },
+                    onNextDateClick = { onMoveSelectedDate(1L) },
+                    onOpenDatePicker = { isDatePickerVisible = true },
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = onBreakfastClick, modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.breakfast_set))
@@ -171,6 +192,90 @@ private fun HomeScreen(
                 onToggle = onToggleRecentRecords,
                 onRecordClick = onRecordClick,
             )
+        }
+    }
+
+    if (isDatePickerVisible) {
+        val zoneId = ZoneId.systemDefault()
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = state.selectedRecordDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { isDatePickerVisible = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            onDateSelected(Instant.ofEpochMilli(millis).atZone(zoneId).toLocalDate())
+                        }
+                        isDatePickerVisible = false
+                    },
+                ) {
+                    Text(stringResource(R.string.confirm_date))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isDatePickerVisible = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+}
+
+@Composable
+private fun RecordDateSelector(
+    selectedDate: LocalDate,
+    onPreviousDateClick: () -> Unit,
+    onNextDateClick: () -> Unit,
+    onOpenDatePicker: () -> Unit,
+) {
+    val today = remember { LocalDate.now() }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("yyyy/MM/dd (E)", Locale.JAPAN) }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedButton(onClick = onPreviousDateClick) {
+                Text(stringResource(R.string.previous_day))
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.record_date_label),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(onClick = onOpenDatePicker) {
+                    Text(
+                        text = dateFormatter.format(selectedDate),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Text(
+                    text = if (selectedDate == today) stringResource(R.string.record_date_today) else stringResource(R.string.choose_any_date),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            OutlinedButton(onClick = onNextDateClick) {
+                Text(stringResource(R.string.next_day))
+            }
         }
     }
 }

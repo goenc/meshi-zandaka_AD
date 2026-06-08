@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 
 data class HomeUiState(
     val summary: DashboardSummary = DashboardSummary(),
@@ -22,6 +25,7 @@ data class HomeUiState(
     val recentRecords: List<MealRecord> = emptyList(),
     val settings: AppSettings = AppSettings(),
     val templates: List<com.gonec009.meshizandaka.domain.model.MealTemplate> = emptyList(),
+    val selectedRecordDate: LocalDate = LocalDate.now(),
     val isRecentRecordsExpanded: Boolean = false,
     val message: String? = null,
 )
@@ -71,6 +75,14 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         _uiState.update { it.copy(isRecentRecordsExpanded = !it.isRecentRecordsExpanded) }
     }
 
+    fun moveSelectedRecordDate(days: Long) {
+        _uiState.update { it.copy(selectedRecordDate = it.selectedRecordDate.plusDays(days)) }
+    }
+
+    fun updateSelectedRecordDate(date: LocalDate) {
+        _uiState.update { it.copy(selectedRecordDate = date) }
+    }
+
     private fun recordTemplate(templateId: Long?, successMessage: String) {
         if (templateId == null) {
             _uiState.update { it.copy(message = "設定でテンプレートを選んでください") }
@@ -78,7 +90,19 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         }
         viewModelScope.launch {
             try {
-                container.createQuickRecordUseCase(templateId, emptyList())
+                val zoneId = ZoneId.systemDefault()
+                val selectedDate = _uiState.value.selectedRecordDate
+                val recordMillis = selectedDate
+                    .atTime(LocalTime.now(zoneId))
+                    .atZone(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+                container.createQuickRecordUseCase(
+                    templateId = templateId,
+                    selectedOptionIds = emptyList(),
+                    nowMillis = recordMillis,
+                    zoneId = zoneId,
+                )
                 _uiState.update {
                     it.copy(message = successMessage)
                 }
