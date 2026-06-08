@@ -74,6 +74,16 @@ private data class SummaryItem(
     val value: String,
 )
 
+private fun formatChartCalories(calories: Int): String {
+    if (calories < 1000) return "${calories}k"
+    val compactValue = calories / 1000f
+    return if (compactValue >= 10f || calories % 1000 == 0) {
+        "${compactValue.toInt()}k"
+    } else {
+        String.format(Locale.US, "%.1fk", compactValue)
+    }
+}
+
 @Composable
 fun HomeRoute(
     container: AppContainer,
@@ -306,7 +316,7 @@ private fun WeeklyChartCard(
                     .fillMaxWidth()
                     .horizontalScroll(scrollState)
                     .testTag("weekly_chart_scroll"),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 stacks.forEach { stack ->
                     DayStackBar(stack = stack, maxCalories = resolvedMaxCalories)
@@ -352,18 +362,18 @@ private fun DayStackBar(
 ) {
     val formatter = DateTimeFormatter.ofPattern("MM/dd", Locale.JAPAN)
     Column(
-        modifier = Modifier.width(40.dp),
+        modifier = Modifier.width(34.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            text = stringResource(R.string.kcal_format, stack.totalCalories),
+            text = formatChartCalories(stack.totalCalories),
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
         )
         Canvas(
             modifier = Modifier
-                .width(24.dp)
+                .width(22.dp)
                 .height(184.dp)
                 .testTag("weekly_chart_bar_${formatter.format(stack.date)}"),
         ) {
