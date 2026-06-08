@@ -31,6 +31,7 @@
     <string name="add_template">テンプレートを追加する</string>
     <string name="template_editor_title">テンプレート編集</string>
     <string name="template_name">名前</string>
+    <string name="template_shortcut_role">ホーム連携先</string>
     <string name="meal_type">食事区分</string>
     <string name="meal_type_breakfast">朝食</string>
     <string name="meal_type_lunch">昼食</string>
@@ -56,5 +57,9 @@
     <string name="default_lunch_template">昼食の標準テンプレート</string>
     <string name="default_dinner_template">夕食の標準テンプレート</string>
     <string name="default_breakfast_template">朝食の標準テンプレート</string>
+    <string name="template_role_none">未設定</string>
+    <string name="template_role_breakfast">朝セット</string>
+    <string name="template_role_lunch">昼セット</string>
+    <string name="template_role_dinner">夕セット</string>
     <string name="delete">削除する</string>
 </resources>

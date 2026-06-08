@@ -4,6 +4,7 @@ data class MealTemplate(
     val id: Long = 0,
     val name: String,
     val mealType: MealType,
+    val shortcutRole: TemplateShortcutRole = TemplateShortcutRole.NONE,
     val baseCalories: Int,
     val proteinG: Int,
     val fatG: Int,

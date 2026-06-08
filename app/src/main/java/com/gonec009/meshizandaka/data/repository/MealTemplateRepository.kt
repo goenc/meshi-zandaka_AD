@@ -10,6 +10,7 @@ import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.SelectionType
 import com.gonec009.meshizandaka.domain.model.TemplateOption
 import com.gonec009.meshizandaka.domain.model.TemplateOptionGroup
+import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -24,6 +25,7 @@ class MealTemplateRepository(private val dao: MealTemplateDao) {
                     id = entity.id,
                     name = entity.name,
                     mealType = MealType.valueOf(entity.mealType),
+                    shortcutRole = TemplateShortcutRole.valueOf(entity.shortcutRole),
                     baseCalories = entity.baseCalories,
                     proteinG = entity.proteinG,
                     fatG = entity.fatG,
@@ -66,6 +68,7 @@ class MealTemplateRepository(private val dao: MealTemplateDao) {
             id = template.id,
             name = template.name,
             mealType = template.mealType.name,
+            shortcutRole = template.shortcutRole.name,
             baseCalories = template.baseCalories,
             proteinG = template.proteinG,
             fatG = template.fatG,
@@ -89,6 +92,7 @@ class MealTemplateRepository(private val dao: MealTemplateDao) {
             id = item.template.id,
             name = item.template.name,
             mealType = MealType.valueOf(item.template.mealType),
+            shortcutRole = TemplateShortcutRole.valueOf(item.template.shortcutRole),
             baseCalories = item.template.baseCalories,
             proteinG = item.template.proteinG,
             fatG = item.template.fatG,

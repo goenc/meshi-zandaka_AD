@@ -20,7 +20,7 @@ import com.gonec009.meshizandaka.data.local.entity.TemplateOptionGroupEntity
         MealRecordEntity::class,
         MealRecordOptionEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,7 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context,
                 AppDatabase::class.java,
                 "meshi_zandaka.db",
-            ).build()
+            ).fallbackToDestructiveMigration().build()
         }
     }
 }

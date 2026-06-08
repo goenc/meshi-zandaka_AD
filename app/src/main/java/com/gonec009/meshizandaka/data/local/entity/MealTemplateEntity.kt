@@ -8,6 +8,7 @@ data class MealTemplateEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val mealType: String,
+    val shortcutRole: String = "NONE",
     val baseCalories: Int,
     val proteinG: Int,
     val fatG: Int,

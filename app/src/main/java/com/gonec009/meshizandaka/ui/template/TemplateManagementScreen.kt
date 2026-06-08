@@ -36,8 +36,10 @@ import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
+import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import com.gonec009.meshizandaka.ui.mealTypeLabel
+import com.gonec009.meshizandaka.ui.templateShortcutRoleLabel
 
 @Composable
 fun TemplateManagementRoute(
@@ -88,6 +90,7 @@ private fun TemplateManagementScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = template.name, style = MaterialTheme.typography.titleMedium)
                     Text(text = stringResource(R.string.kcal_format, template.baseCalories))
+                    Text(text = templateShortcutRoleLabel(template.shortcutRole))
                     Text(text = if (template.isSpecial) stringResource(R.string.special_meal) else stringResource(R.string.standard_meal))
                 }
             }
@@ -114,6 +117,7 @@ private fun TemplateEditorDialog(
 ) {
     val editor = state.editorState
     var mealTypeExpanded by remember { mutableStateOf(false) }
+    var roleExpanded by remember { mutableStateOf(false) }
     var comparisonExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
@@ -148,6 +152,33 @@ private fun TemplateEditorDialog(
                                 onClick = {
                                     mealTypeExpanded = false
                                     onUpdateEditor { current -> current.copy(mealType = mealType) }
+                                },
+                            )
+                        }
+                    }
+                }
+                ExposedDropdownMenuBox(
+                    expanded = roleExpanded,
+                    onExpandedChange = { roleExpanded = it },
+                ) {
+                    OutlinedTextField(
+                        value = templateShortcutRoleLabel(editor.shortcutRole),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.template_shortcut_role)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleExpanded) },
+                        modifier = Modifier.menuAnchor(),
+                    )
+                    DropdownMenu(
+                        expanded = roleExpanded,
+                        onDismissRequest = { roleExpanded = false },
+                    ) {
+                        TemplateShortcutRole.entries.forEach { role ->
+                            DropdownMenuItem(
+                                text = { Text(templateShortcutRoleLabel(role)) },
+                                onClick = {
+                                    roleExpanded = false
+                                    onUpdateEditor { current -> current.copy(shortcutRole = role) }
                                 },
                             )
                         }

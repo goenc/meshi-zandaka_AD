@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
+import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +17,7 @@ data class TemplateEditorState(
     val id: Long = 0,
     val name: String = "",
     val mealType: MealType = MealType.LUNCH,
+    val shortcutRole: TemplateShortcutRole = TemplateShortcutRole.NONE,
     val baseCalories: String = "",
     val proteinG: String = "",
     val fatG: String = "",
@@ -65,6 +67,7 @@ class TemplateManagementViewModel(
                     id = template.id,
                     name = template.name,
                     mealType = template.mealType,
+                    shortcutRole = template.shortcutRole,
                     baseCalories = template.baseCalories.toString(),
                     proteinG = template.proteinG.toString(),
                     fatG = template.fatG.toString(),
@@ -95,6 +98,7 @@ class TemplateManagementViewModel(
                     id = editor.id,
                     name = editor.name.ifBlank { "新しいテンプレート" },
                     mealType = editor.mealType,
+                    shortcutRole = editor.shortcutRole,
                     baseCalories = editor.baseCalories.toIntOrNull() ?: 0,
                     proteinG = editor.proteinG.toIntOrNull() ?: 0,
                     fatG = editor.fatG.toIntOrNull() ?: 0,
