@@ -62,6 +62,7 @@ import com.gonec009.meshizandaka.domain.model.DailyMealStack
 import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import java.text.SimpleDateFormat
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -334,6 +335,7 @@ private fun WeeklyChartCard(
                             date = stack.date,
                             previousDate = stacks.getOrNull(index - 1)?.date,
                         ),
+                        isSunday = stack.date.dayOfWeek == DayOfWeek.SUNDAY,
                     )
                 }
             }
@@ -375,6 +377,7 @@ private fun DayStackBar(
     stack: DailyMealStack,
     maxCalories: Int,
     dateLabel: String,
+    isSunday: Boolean,
 ) {
     val formatter = DateTimeFormatter.ofPattern("MM/dd", Locale.JAPAN)
     Column(
@@ -414,6 +417,7 @@ private fun DayStackBar(
             text = dateLabel,
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
+            color = if (isSunday) Color(0xFFC62828) else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
