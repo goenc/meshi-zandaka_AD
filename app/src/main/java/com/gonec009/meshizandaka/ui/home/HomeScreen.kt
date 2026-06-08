@@ -48,7 +48,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -77,7 +76,6 @@ private data class SummaryItem(
 )
 
 private val ChartBarWidth = 39.dp
-private val ChartBarSpacing = 8.dp
 
 private fun formatChartCalories(calories: Int): String {
     return "${calories}K"
@@ -85,21 +83,13 @@ private fun formatChartCalories(calories: Int): String {
 
 internal fun formatChartDateLabel(
     date: LocalDate,
-    isLeftVisible: Boolean,
+    previousDate: LocalDate?,
 ): String {
-    return if (isLeftVisible) "${date.monthValue}/${date.dayOfMonth}" else date.dayOfMonth.toString()
-}
-
-internal fun calculateLeftVisibleChartIndex(
-    scrollOffsetPx: Int,
-    barWidthPx: Float,
-    barSpacingPx: Float,
-    itemCount: Int,
-): Int {
-    if (itemCount <= 0) return 0
-    val stridePx = barWidthPx + barSpacingPx
-    if (stridePx <= 0f) return 0
-    return (scrollOffsetPx / stridePx).toInt().coerceIn(0, itemCount - 1)
+    return if (date.dayOfMonth == 1 && previousDate?.month != date.month) {
+        "${date.monthValue}/${date.dayOfMonth}"
+    } else {
+        date.dayOfMonth.toString()
+    }
 }
 
 @Composable
@@ -307,16 +297,7 @@ private fun WeeklyChartCard(
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
-    val density = LocalDensity.current
     val resolvedMaxCalories = maxCalories.coerceAtLeast(1)
-    val chartBarWidthPx = with(density) { ChartBarWidth.toPx() }
-    val chartBarSpacingPx = with(density) { ChartBarSpacing.toPx() }
-    val leftVisibleIndex = calculateLeftVisibleChartIndex(
-        scrollOffsetPx = scrollState.value,
-        barWidthPx = chartBarWidthPx,
-        barSpacingPx = chartBarSpacingPx,
-        itemCount = stacks.size,
-    )
     LaunchedEffect(stacks.size) {
         scrollState.scrollTo(scrollState.maxValue)
     }
@@ -351,7 +332,7 @@ private fun WeeklyChartCard(
                         maxCalories = resolvedMaxCalories,
                         dateLabel = formatChartDateLabel(
                             date = stack.date,
-                            isLeftVisible = index == leftVisibleIndex,
+                            previousDate = stacks.getOrNull(index - 1)?.date,
                         ),
                         isSunday = stack.date.dayOfWeek == DayOfWeek.SUNDAY,
                     )
