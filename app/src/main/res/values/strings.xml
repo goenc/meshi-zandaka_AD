@@ -7,9 +7,9 @@
     <string name="settings_title">設定</string>
     <string name="record_edit_title">記録修正</string>
     <string name="go_to_record">記録する</string>
-    <string name="breakfast_set">朝セット</string>
-    <string name="lunch_set">昼セット</string>
-    <string name="dinner_set">夕セット</string>
+    <string name="breakfast_set">朝S</string>
+    <string name="lunch_set">昼S</string>
+    <string name="dinner_set">夕S</string>
     <string name="go_to_template_management">テンプレート管理</string>
     <string name="go_to_settings">設定</string>
     <string name="today_consumed">今日の摂取カロリー</string>
