@@ -56,6 +56,7 @@ fun SettingsRoute(
         onTargetChange = viewModel::updateTarget,
         onMaintenanceChange = viewModel::updateMaintenance,
         onWeekStartChange = viewModel::updateWeekStart,
+        onBreakfastTemplateChange = viewModel::updateBreakfastTemplate,
         onLunchTemplateChange = viewModel::updateLunchTemplate,
         onDinnerTemplateChange = viewModel::updateDinnerTemplate,
         onSave = viewModel::save,
@@ -70,11 +71,13 @@ private fun SettingsScreen(
     onTargetChange: (String) -> Unit,
     onMaintenanceChange: (String) -> Unit,
     onWeekStartChange: (WeekStartDay) -> Unit,
+    onBreakfastTemplateChange: (Long?) -> Unit,
     onLunchTemplateChange: (Long?) -> Unit,
     onDinnerTemplateChange: (Long?) -> Unit,
     onSave: () -> Unit,
 ) {
     var weekStartExpanded by remember { mutableStateOf(false) }
+    var breakfastExpanded by remember { mutableStateOf(false) }
     var lunchExpanded by remember { mutableStateOf(false) }
     var dinnerExpanded by remember { mutableStateOf(false) }
 
@@ -151,6 +154,35 @@ private fun SettingsScreen(
                         onClick = {
                             lunchExpanded = false
                             onLunchTemplateChange(template.id)
+                        },
+                    )
+                }
+            }
+        }
+        ExposedDropdownMenuBox(
+            expanded = breakfastExpanded,
+            onExpandedChange = { breakfastExpanded = it },
+        ) {
+            OutlinedTextField(
+                value = state.normalTemplates.firstOrNull { it.id == state.defaultBreakfastTemplateId }?.name.orEmpty(),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(stringResource(R.string.default_breakfast_template)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = breakfastExpanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth(),
+            )
+            DropdownMenu(
+                expanded = breakfastExpanded,
+                onDismissRequest = { breakfastExpanded = false },
+            ) {
+                state.normalTemplates.forEach { template ->
+                    DropdownMenuItem(
+                        text = { Text(template.name) },
+                        onClick = {
+                            breakfastExpanded = false
+                            onBreakfastTemplateChange(template.id)
                         },
                     )
                 }

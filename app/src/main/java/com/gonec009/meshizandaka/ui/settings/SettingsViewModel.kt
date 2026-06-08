@@ -17,6 +17,7 @@ data class SettingsUiState(
     val targetCaloriesPerDay: String = "",
     val maintenanceCaloriesPerDay: String = "",
     val weekStartsOn: WeekStartDay = WeekStartDay.MONDAY,
+    val defaultBreakfastTemplateId: Long? = null,
     val defaultLunchTemplateId: Long? = null,
     val defaultDinnerTemplateId: Long? = null,
     val normalTemplates: List<MealTemplate> = emptyList(),
@@ -39,6 +40,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
                             targetCaloriesPerDay = settings.targetCaloriesPerDay.toString(),
                             maintenanceCaloriesPerDay = settings.maintenanceCaloriesPerDay.toString(),
                             weekStartsOn = settings.weekStartsOn,
+                            defaultBreakfastTemplateId = settings.defaultBreakfastTemplateId,
                             defaultLunchTemplateId = settings.defaultLunchTemplateId,
                             defaultDinnerTemplateId = settings.defaultDinnerTemplateId,
                             normalTemplates = templates,
@@ -60,6 +62,10 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         _uiState.update { it.copy(weekStartsOn = day) }
     }
 
+    fun updateBreakfastTemplate(id: Long?) {
+        _uiState.update { it.copy(defaultBreakfastTemplateId = id) }
+    }
+
     fun updateLunchTemplate(id: Long?) {
         _uiState.update { it.copy(defaultLunchTemplateId = id) }
     }
@@ -75,6 +81,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
                     targetCaloriesPerDay = _uiState.value.targetCaloriesPerDay.toIntOrNull() ?: 1800,
                     maintenanceCaloriesPerDay = _uiState.value.maintenanceCaloriesPerDay.toIntOrNull() ?: 2000,
                     weekStartsOn = _uiState.value.weekStartsOn,
+                    defaultBreakfastTemplateId = _uiState.value.defaultBreakfastTemplateId,
                     defaultLunchTemplateId = _uiState.value.defaultLunchTemplateId,
                     defaultDinnerTemplateId = _uiState.value.defaultDinnerTemplateId,
                 ),

@@ -64,6 +64,7 @@ fun MeshiZandakaAppRoot(container: AppContainer) {
                 HomeRoute(
                     container = container,
                     innerPadding = innerPadding,
+                    snackbarHostState = snackbarHostState,
                     onQuickRecordClick = { navController.navigate(AppDestination.QuickRecord.route) },
                     onTemplateManagementClick = { navController.navigate(AppDestination.Templates.route) },
                     onSettingsClick = { navController.navigate(AppDestination.Settings.route) },

@@ -20,6 +20,20 @@ class EnsureSeedDataUseCase(
         val templates = listOf(
             MealTemplateEntity(
                 id = 1,
+                name = "朝セット",
+                mealType = "BREAKFAST",
+                baseCalories = 400,
+                proteinG = 20,
+                fatG = 10,
+                carbG = 45,
+                isSpecial = false,
+                comparisonTemplateId = null,
+                weeklyLimitCount = null,
+                monthlyLimitCount = null,
+                memo = "朝の固定セット",
+            ),
+            MealTemplateEntity(
+                id = 2,
                 name = "昼食セット",
                 mealType = "LUNCH",
                 baseCalories = 180,
@@ -33,7 +47,7 @@ class EnsureSeedDataUseCase(
                 memo = "昼の標準セット",
             ),
             MealTemplateEntity(
-                id = 2,
+                id = 3,
                 name = "夕食セット",
                 mealType = "DINNER",
                 baseCalories = 220,
@@ -47,7 +61,7 @@ class EnsureSeedDataUseCase(
                 memo = "夜の標準セット",
             ),
             MealTemplateEntity(
-                id = 3,
+                id = 4,
                 name = "二郎系",
                 mealType = "EATING_OUT",
                 baseCalories = 1500,
@@ -61,7 +75,7 @@ class EnsureSeedDataUseCase(
                 memo = "特別メシ",
             ),
             MealTemplateEntity(
-                id = 4,
+                id = 5,
                 name = "マック作業食",
                 mealType = "EATING_OUT",
                 baseCalories = 1100,
@@ -75,7 +89,7 @@ class EnsureSeedDataUseCase(
                 memo = "特別メシ",
             ),
             MealTemplateEntity(
-                id = 5,
+                id = 6,
                 name = "その他外食",
                 mealType = "EATING_OUT",
                 baseCalories = 950,
@@ -125,8 +139,9 @@ class EnsureSeedDataUseCase(
         val currentSettings = settingsRepository.settingsFlow.first()
         settingsRepository.updateSettings(
             currentSettings.copy(
-                defaultLunchTemplateId = insertedIds[0],
-                defaultDinnerTemplateId = insertedIds[1],
+                defaultBreakfastTemplateId = insertedIds[0],
+                defaultLunchTemplateId = insertedIds[1],
+                defaultDinnerTemplateId = insertedIds[2],
             ),
         )
     }

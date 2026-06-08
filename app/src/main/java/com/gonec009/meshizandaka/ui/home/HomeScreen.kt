@@ -14,12 +14,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material3.SnackbarHostState
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.MealRecord
@@ -32,6 +34,7 @@ import java.util.Locale
 fun HomeRoute(
     container: AppContainer,
     innerPadding: PaddingValues,
+    snackbarHostState: SnackbarHostState,
     onQuickRecordClick: () -> Unit,
     onTemplateManagementClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -39,12 +42,21 @@ fun HomeRoute(
 ) {
     val viewModel: HomeViewModel = viewModel(factory = AppViewModelFactory(container))
     val state by viewModel.uiState.collectAsState()
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.consumeMessage()
+        }
+    }
     HomeScreen(
         innerPadding = innerPadding,
         state = state,
         onQuickRecordClick = onQuickRecordClick,
         onTemplateManagementClick = onTemplateManagementClick,
         onSettingsClick = onSettingsClick,
+        onBreakfastClick = viewModel::recordBreakfast,
+        onLunchClick = viewModel::recordLunch,
+        onDinnerClick = viewModel::recordDinner,
         onRecordClick = onRecordClick,
     )
 }
@@ -56,6 +68,9 @@ private fun HomeScreen(
     onQuickRecordClick: () -> Unit,
     onTemplateManagementClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onBreakfastClick: () -> Unit,
+    onLunchClick: () -> Unit,
+    onDinnerClick: () -> Unit,
     onRecordClick: (Long) -> Unit,
 ) {
     LazyColumn(
@@ -67,6 +82,15 @@ private fun HomeScreen(
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onBreakfastClick, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.breakfast_set))
+                }
+                Button(onClick = onLunchClick, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.lunch_set))
+                }
+                Button(onClick = onDinnerClick, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.dinner_set))
+                }
                 Button(onClick = onQuickRecordClick, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.go_to_record))
                 }
