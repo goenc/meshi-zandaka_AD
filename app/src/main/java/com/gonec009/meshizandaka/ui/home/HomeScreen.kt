@@ -79,7 +79,7 @@ private fun formatChartCalories(calories: Int): String {
     return "${calories}K"
 }
 
-private fun formatChartDateLabel(
+internal fun formatChartDateLabel(
     index: Int,
     date: LocalDate,
     previousDate: LocalDate?,
@@ -87,6 +87,8 @@ private fun formatChartDateLabel(
     return when {
         index == 0 -> "${date.monthValue}/${date.dayOfMonth}"
         previousDate == null -> date.dayOfMonth.toString()
+        previousDate.dayOfMonth == 1 && previousDate.month == date.month ->
+            "${date.monthValue}/${date.dayOfMonth}"
         previousDate.month != date.month -> String.format(Locale.JAPAN, "%02d/%02d", date.monthValue, date.dayOfMonth)
         else -> date.dayOfMonth.toString()
     }
