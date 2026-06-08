@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.CircleShape
@@ -232,8 +233,7 @@ private fun RecordDateSelector(
     onNextDateClick: () -> Unit,
     onOpenDatePicker: () -> Unit,
 ) {
-    val today = remember { LocalDate.now() }
-    val dateFormatter = remember { DateTimeFormatter.ofPattern("yyyy/MM/dd (E)", Locale.JAPAN) }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("yyyy/M/d(E)", Locale.JAPAN) }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
@@ -253,25 +253,17 @@ private fun RecordDateSelector(
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.Center,
             ) {
-                Text(
-                    text = stringResource(R.string.record_date_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 TextButton(onClick = onOpenDatePicker) {
                     Text(
                         text = dateFormatter.format(selectedDate),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Text(
-                    text = if (selectedDate == today) stringResource(R.string.record_date_today) else stringResource(R.string.choose_any_date),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
             OutlinedButton(onClick = onNextDateClick) {
                 Text(stringResource(R.string.next_day))
