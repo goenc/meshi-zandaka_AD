@@ -307,7 +307,7 @@ private fun WeeklyChartCard(
         ),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             LegendRow()
@@ -378,7 +378,7 @@ private fun DayStackBar(
 ) {
     val formatter = DateTimeFormatter.ofPattern("MM/dd", Locale.JAPAN)
     Column(
-        modifier = Modifier.width(34.dp),
+        modifier = Modifier.width(39.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -386,10 +386,11 @@ private fun DayStackBar(
             text = formatChartCalories(stack.totalCalories),
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
+            maxLines = 1,
         )
         Canvas(
             modifier = Modifier
-                .width(22.dp)
+                .width(24.dp)
                 .height(184.dp)
                 .testTag("weekly_chart_bar_${formatter.format(stack.date)}"),
         ) {
