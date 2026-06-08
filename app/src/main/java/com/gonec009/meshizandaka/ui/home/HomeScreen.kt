@@ -1,32 +1,56 @@
 package com.gonec009.meshizandaka.ui.home
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.material3.SnackbarHostState
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
+import com.gonec009.meshizandaka.domain.model.DailyMealStack
 import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
@@ -57,6 +81,7 @@ fun HomeRoute(
         onBreakfastClick = viewModel::recordBreakfast,
         onLunchClick = viewModel::recordLunch,
         onDinnerClick = viewModel::recordDinner,
+        onToggleRecentRecords = viewModel::toggleRecentRecords,
         onRecordClick = onRecordClick,
     )
 }
@@ -71,6 +96,7 @@ private fun HomeScreen(
     onBreakfastClick: () -> Unit,
     onLunchClick: () -> Unit,
     onDinnerClick: () -> Unit,
+    onToggleRecentRecords: () -> Unit,
     onRecordClick: (Long) -> Unit,
 ) {
     LazyColumn(
@@ -101,6 +127,13 @@ private fun HomeScreen(
                     Text(stringResource(R.string.go_to_settings))
                 }
             }
+        }
+        item {
+            WeeklyChartCard(
+                stacks = state.weeklyChart.days,
+                maxCalories = state.weeklyChart.maxTotalCalories,
+                modifier = Modifier.testTag("weekly_chart_card"),
+            )
         }
         item {
             SummaryCard(
@@ -139,18 +172,206 @@ private fun HomeScreen(
             )
         }
         item {
+            RecentRecordsSection(
+                records = state.recentRecords,
+                expanded = state.isRecentRecordsExpanded,
+                onToggle = onToggleRecentRecords,
+                onRecordClick = onRecordClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun WeeklyChartCard(
+    stacks: List<DailyMealStack>,
+    maxCalories: Int,
+    modifier: Modifier = Modifier,
+) {
+    val scrollState = rememberScrollState()
+    val resolvedMaxCalories = maxCalories.coerceAtLeast(1)
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.recent_seven_days),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            LegendRow()
+            if (maxCalories == 0) {
+                Text(
+                    text = stringResource(R.string.weekly_chart_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState)
+                    .testTag("weekly_chart_scroll"),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                stacks.forEach { stack ->
+                    DayStackBar(stack = stack, maxCalories = resolvedMaxCalories)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegendRow() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        LegendItem(label = stringResource(R.string.chart_breakfast), color = BreakfastChartColor)
+        LegendItem(label = stringResource(R.string.chart_lunch), color = LunchChartColor)
+        LegendItem(label = stringResource(R.string.chart_dinner), color = DinnerChartColor)
+        LegendItem(label = stringResource(R.string.chart_snack), color = SnackChartColor)
+    }
+}
+
+@Composable
+private fun LegendItem(label: String, color: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(color),
+        )
+        Text(text = label, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+@Composable
+private fun DayStackBar(
+    stack: DailyMealStack,
+    maxCalories: Int,
+) {
+    val formatter = DateTimeFormatter.ofPattern("MM/dd", Locale.JAPAN)
+    Column(
+        modifier = Modifier.width(76.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.kcal_format, stack.totalCalories),
+            style = MaterialTheme.typography.labelMedium,
+            textAlign = TextAlign.Center,
+        )
+        Canvas(
+            modifier = Modifier
+                .width(52.dp)
+                .height(200.dp)
+                .testTag("weekly_chart_bar_${formatter.format(stack.date)}"),
+        ) {
+            drawBarBackground()
+            drawStackSegment(stack.breakfastCalories, maxCalories, BreakfastChartColor)
+            drawStackSegment(stack.lunchCalories, maxCalories, LunchChartColor, stack.breakfastCalories)
+            drawStackSegment(
+                stack.dinnerCalories,
+                maxCalories,
+                DinnerChartColor,
+                stack.breakfastCalories + stack.lunchCalories,
+            )
+            drawStackSegment(
+                stack.snackCalories,
+                maxCalories,
+                SnackChartColor,
+                stack.breakfastCalories + stack.lunchCalories + stack.dinnerCalories,
+            )
+        }
+        Text(
+            text = formatter.format(stack.date),
+            style = MaterialTheme.typography.labelMedium,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+private fun DrawScope.drawBarBackground() {
+    drawRoundRect(
+        color = Color(0x14000000),
+        topLeft = Offset(x = size.width * 0.15f, y = 0f),
+        size = Size(width = size.width * 0.7f, height = size.height),
+        cornerRadius = CornerRadius(x = 18f, y = 18f),
+    )
+    drawRoundRect(
+        color = Color(0x22000000),
+        topLeft = Offset(x = size.width * 0.15f, y = 0f),
+        size = Size(width = size.width * 0.7f, height = size.height),
+        cornerRadius = CornerRadius(x = 18f, y = 18f),
+        style = Stroke(width = 2f),
+    )
+}
+
+private fun DrawScope.drawStackSegment(
+    calories: Int,
+    maxCalories: Int,
+    color: Color,
+    lowerCalories: Int = 0,
+) {
+    if (calories <= 0) return
+    val chartWidth = size.width * 0.7f
+    val chartLeft = size.width * 0.15f
+    val segmentHeight = size.height * (calories.toFloat() / maxCalories.toFloat())
+    val lowerHeight = size.height * (lowerCalories.toFloat() / maxCalories.toFloat())
+    drawRoundRect(
+        color = color,
+        topLeft = Offset(x = chartLeft, y = size.height - lowerHeight - segmentHeight),
+        size = Size(width = chartWidth, height = segmentHeight),
+        cornerRadius = CornerRadius(x = 18f, y = 18f),
+    )
+}
+
+@Composable
+private fun RecentRecordsSection(
+    records: List<MealRecord>,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onRecordClick: (Long) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
                 text = stringResource(R.string.recent_records),
                 style = MaterialTheme.typography.titleMedium,
             )
-        }
-        if (state.recentRecords.isEmpty()) {
-            item {
-                Text(text = stringResource(R.string.no_records))
+            TextButton(onClick = onToggle) {
+                Text(
+                    text = stringResource(
+                        if (expanded) R.string.hide_recent_records else R.string.show_recent_records,
+                    ),
+                )
             }
-        } else {
-            items(state.recentRecords, key = MealRecord::id) { record ->
-                RecordRow(record = record, onClick = { onRecordClick(record.id) })
+        }
+        if (expanded) {
+            if (records.isEmpty()) {
+                Text(text = stringResource(R.string.no_records))
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    records.forEach { record ->
+                        RecordRow(record = record, onClick = { onRecordClick(record.id) })
+                    }
+                }
             }
         }
     }

@@ -7,6 +7,7 @@ import com.gonec009.meshizandaka.domain.model.AppSettings
 import com.gonec009.meshizandaka.domain.model.DashboardSummary
 import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
+import com.gonec009.meshizandaka.domain.model.WeeklyMealChart
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,9 +17,11 @@ import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val summary: DashboardSummary = DashboardSummary(),
+    val weeklyChart: WeeklyMealChart = WeeklyMealChart(),
     val recentRecords: List<MealRecord> = emptyList(),
     val settings: AppSettings = AppSettings(),
     val templates: List<com.gonec009.meshizandaka.domain.model.MealTemplate> = emptyList(),
+    val isRecentRecordsExpanded: Boolean = false,
     val message: String? = null,
 )
 
@@ -34,11 +37,11 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 container.observeDashboardUseCase(),
             ) { settings, templates, dashboard -> Triple(settings, templates, dashboard) }
                 .collect { (settings, templates, dashboard) ->
-                    val (summary, recentRecords) = dashboard
                     _uiState.update {
                         it.copy(
-                            summary = summary,
-                            recentRecords = recentRecords,
+                            summary = dashboard.summary,
+                            weeklyChart = dashboard.weeklyChart,
+                            recentRecords = dashboard.recentRecords,
                             settings = settings,
                             templates = templates,
                         )
@@ -61,6 +64,10 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     fun consumeMessage() {
         _uiState.update { it.copy(message = null) }
+    }
+
+    fun toggleRecentRecords() {
+        _uiState.update { it.copy(isRecentRecordsExpanded = !it.isRecentRecordsExpanded) }
     }
 
     private fun recordTemplate(templateId: Long?, successMessage: String) {

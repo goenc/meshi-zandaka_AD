@@ -65,6 +65,44 @@ class BudgetCalculatorTest {
         assertEquals(10800, summary.weekBalanceCalories)
     }
 
+    @Test
+    fun 直近7日グラフで食事区分ごとに集計できる() {
+        val records = listOf(
+            recordAt(2026, 6, 8, 7, 30, 300, mealType = MealType.BREAKFAST),
+            recordAt(2026, 6, 8, 12, 0, 650, mealType = MealType.LUNCH),
+            recordAt(2026, 6, 8, 19, 0, 700, mealType = MealType.DINNER),
+            recordAt(2026, 6, 8, 21, 0, 200, mealType = MealType.SNACK),
+            recordAt(2026, 6, 7, 20, 0, 900, mealType = MealType.EATING_OUT),
+        )
+
+        val chart = calculator.buildWeeklyChart(
+            records = records,
+            zoneId = zoneId,
+            nowMillis = nowMillis,
+        )
+
+        assertEquals(7, chart.days.size)
+        assertEquals(300, chart.days.last().breakfastCalories)
+        assertEquals(650, chart.days.last().lunchCalories)
+        assertEquals(700, chart.days.last().dinnerCalories)
+        assertEquals(200, chart.days.last().snackCalories)
+        assertEquals(1850, chart.days.last().totalCalories)
+        assertEquals(900, chart.days[5].snackCalories)
+    }
+
+    @Test
+    fun 直近7日グラフは記録がない日も0で埋める() {
+        val chart = calculator.buildWeeklyChart(
+            records = listOf(recordAt(2026, 6, 8, 12, 0, 650, mealType = MealType.LUNCH)),
+            zoneId = zoneId,
+            nowMillis = nowMillis,
+        )
+
+        assertEquals(7, chart.days.size)
+        assertEquals(0, chart.days.first().totalCalories)
+        assertEquals(650, chart.days.last().totalCalories)
+    }
+
     private fun recordAt(
         year: Int,
         month: Int,
@@ -72,15 +110,16 @@ class BudgetCalculatorTest {
         hour: Int,
         minute: Int,
         calories: Int,
-        isSpecial: Boolean,
-        specialDelta: Int,
+        isSpecial: Boolean = false,
+        specialDelta: Int = 0,
+        mealType: MealType = MealType.DINNER,
     ): MealRecord {
         return MealRecord(
             eatenAt = LocalDateTime.of(year, month, day, hour, minute)
                 .atZone(zoneId)
                 .toInstant()
                 .toEpochMilli(),
-            mealType = MealType.DINNER,
+            mealType = mealType,
             templateId = null,
             templateNameSnapshot = "テスト",
             totalCalories = calories,

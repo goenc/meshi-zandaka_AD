@@ -18,7 +18,15 @@
     <string name="month_balance">今月の残高</string>
     <string name="month_special_count">今月の特別食回数</string>
     <string name="month_special_delta">特別メシ差分合計</string>
+    <string name="recent_seven_days">直近7日</string>
+    <string name="weekly_chart_empty">まだ記録がありません。0 kcal の日も含めて直近7日を表示しています。</string>
+    <string name="chart_breakfast">朝</string>
+    <string name="chart_lunch">昼</string>
+    <string name="chart_dinner">夕</string>
+    <string name="chart_snack">間食</string>
     <string name="recent_records">直近の記録</string>
+    <string name="show_recent_records">直近記録を表示</string>
+    <string name="hide_recent_records">直近記録を隠す</string>
     <string name="no_records">記録がまだありません</string>
     <string name="kcal_format">%1$d kcal</string>
     <string name="kcal_format_signed">%1$+d kcal</string>
