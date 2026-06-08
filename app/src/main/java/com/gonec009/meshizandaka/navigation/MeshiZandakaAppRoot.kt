@@ -1,5 +1,7 @@
 package com.gonec009.meshizandaka.navigation
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -10,7 +12,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -52,6 +57,17 @@ fun MeshiZandakaAppRoot(container: AppContainer) {
                         }
                     }
                 },
+                actions = {
+                    if (currentDestination == AppDestination.Home) {
+                        IconButton(onClick = { navController.navigate(AppDestination.Settings.route) }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_settings),
+                                contentDescription = stringResource(R.string.go_to_settings),
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                    }
+                },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -66,8 +82,6 @@ fun MeshiZandakaAppRoot(container: AppContainer) {
                     innerPadding = innerPadding,
                     snackbarHostState = snackbarHostState,
                     onQuickRecordClick = { navController.navigate(AppDestination.QuickRecord.route) },
-                    onTemplateManagementClick = { navController.navigate(AppDestination.Templates.route) },
-                    onSettingsClick = { navController.navigate(AppDestination.Settings.route) },
                     onRecordClick = { navController.navigate(AppDestination.RecordEdit.route(it)) },
                 )
             }
@@ -89,6 +103,7 @@ fun MeshiZandakaAppRoot(container: AppContainer) {
                     container = container,
                     innerPadding = innerPadding,
                     snackbarHostState = snackbarHostState,
+                    onTemplateManagementClick = { navController.navigate(AppDestination.Templates.route) },
                 )
             }
             composable(

@@ -39,6 +39,7 @@ fun SettingsRoute(
     container: AppContainer,
     innerPadding: PaddingValues,
     snackbarHostState: SnackbarHostState,
+    onTemplateManagementClick: () -> Unit,
 ) {
     val viewModel: SettingsViewModel = viewModel(factory = AppViewModelFactory(container))
     val state by viewModel.uiState.collectAsState()
@@ -59,6 +60,7 @@ fun SettingsRoute(
         onBreakfastTemplateChange = viewModel::updateBreakfastTemplate,
         onLunchTemplateChange = viewModel::updateLunchTemplate,
         onDinnerTemplateChange = viewModel::updateDinnerTemplate,
+        onTemplateManagementClick = onTemplateManagementClick,
         onSave = viewModel::save,
     )
 }
@@ -74,6 +76,7 @@ private fun SettingsScreen(
     onBreakfastTemplateChange: (Long?) -> Unit,
     onLunchTemplateChange: (Long?) -> Unit,
     onDinnerTemplateChange: (Long?) -> Unit,
+    onTemplateManagementClick: () -> Unit,
     onSave: () -> Unit,
 ) {
     var weekStartExpanded by remember { mutableStateOf(false) }
@@ -101,6 +104,9 @@ private fun SettingsScreen(
             label = { Text(stringResource(R.string.maintenance_calories)) },
             modifier = Modifier.fillMaxWidth(),
         )
+        Button(onClick = onTemplateManagementClick, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.go_to_template_management))
+        }
         ExposedDropdownMenuBox(
             expanded = weekStartExpanded,
             onExpandedChange = { weekStartExpanded = it },

@@ -60,8 +60,6 @@ fun HomeRoute(
     innerPadding: PaddingValues,
     snackbarHostState: SnackbarHostState,
     onQuickRecordClick: () -> Unit,
-    onTemplateManagementClick: () -> Unit,
-    onSettingsClick: () -> Unit,
     onRecordClick: (Long) -> Unit,
 ) {
     val viewModel: HomeViewModel = viewModel(factory = AppViewModelFactory(container))
@@ -76,8 +74,6 @@ fun HomeRoute(
         innerPadding = innerPadding,
         state = state,
         onQuickRecordClick = onQuickRecordClick,
-        onTemplateManagementClick = onTemplateManagementClick,
-        onSettingsClick = onSettingsClick,
         onBreakfastClick = viewModel::recordBreakfast,
         onLunchClick = viewModel::recordLunch,
         onDinnerClick = viewModel::recordDinner,
@@ -91,8 +87,6 @@ private fun HomeScreen(
     innerPadding: PaddingValues,
     state: HomeUiState,
     onQuickRecordClick: () -> Unit,
-    onTemplateManagementClick: () -> Unit,
-    onSettingsClick: () -> Unit,
     onBreakfastClick: () -> Unit,
     onLunchClick: () -> Unit,
     onDinnerClick: () -> Unit,
@@ -121,12 +115,6 @@ private fun HomeScreen(
                 }
                 Button(onClick = onQuickRecordClick, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.go_to_record))
-                }
-                Button(onClick = onTemplateManagementClick, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.go_to_template_management))
-                }
-                Button(onClick = onSettingsClick, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.go_to_settings))
                 }
             }
         }
