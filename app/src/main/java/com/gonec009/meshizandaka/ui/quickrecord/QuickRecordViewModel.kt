@@ -6,6 +6,7 @@ import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.AppSettings
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.TemplateOption
+import com.gonec009.meshizandaka.domain.usecase.DuplicateDailyMealException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -85,12 +86,21 @@ class QuickRecordViewModel(
         val template = _uiState.value.selectedTemplate ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
-            container.createQuickRecordUseCase(template.id, _uiState.value.selectedOptionIds.values)
-            _uiState.update {
-                it.copy(
-                    isSaving = false,
-                    message = "記録しました",
-                )
+            try {
+                container.createQuickRecordUseCase(template.id, _uiState.value.selectedOptionIds.values)
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        message = "記録しました",
+                    )
+                }
+            } catch (error: DuplicateDailyMealException) {
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        message = error.message,
+                    )
+                }
             }
         }
     }

@@ -28,6 +28,13 @@ interface MealRecordDao {
     @Query("SELECT * FROM meal_records WHERE id = :recordId")
     suspend fun getRecord(recordId: Long): MealRecordEntity?
 
+    @Query("SELECT COUNT(*) > 0 FROM meal_records WHERE mealType = :mealType AND eatenAt BETWEEN :startInclusive AND :endInclusive")
+    suspend fun existsRecordForMealTypeBetween(
+        mealType: String,
+        startInclusive: Long,
+        endInclusive: Long,
+    ): Boolean
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRecord(record: MealRecordEntity): Long
 

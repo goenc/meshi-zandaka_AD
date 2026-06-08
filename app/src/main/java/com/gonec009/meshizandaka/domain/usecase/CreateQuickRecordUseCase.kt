@@ -4,7 +4,10 @@ import com.gonec009.meshizandaka.data.repository.MealRecordRepository
 import com.gonec009.meshizandaka.data.repository.MealTemplateRepository
 import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealRecordOption
+import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.SourceType
+import com.gonec009.meshizandaka.util.TimeRangeUtils
+import java.time.ZoneId
 
 class CreateQuickRecordUseCase(
     private val templateRepository: MealTemplateRepository,
@@ -14,8 +17,11 @@ class CreateQuickRecordUseCase(
         templateId: Long,
         selectedOptionIds: Collection<Long>,
         memo: String = "",
+        nowMillis: Long = System.currentTimeMillis(),
+        zoneId: ZoneId = ZoneId.systemDefault(),
     ): Long {
         val template = templateRepository.getTemplate(templateId) ?: error("Template not found: $templateId")
+        ensureDailyMealSlotAvailable(template.mealType, nowMillis, zoneId)
         val selectedOptions = template.optionGroups.flatMap { group ->
             group.options.filter { it.id in selectedOptionIds }.map { option ->
                 MealRecordOption(
@@ -45,7 +51,7 @@ class CreateQuickRecordUseCase(
 
         return recordRepository.insertRecord(
             MealRecord(
-                eatenAt = System.currentTimeMillis(),
+                eatenAt = nowMillis,
                 mealType = template.mealType,
                 templateId = template.id,
                 templateNameSnapshot = template.name,
@@ -60,5 +66,21 @@ class CreateQuickRecordUseCase(
                 selectedOptions = selectedOptions,
             ),
         )
+    }
+
+    private suspend fun ensureDailyMealSlotAvailable(
+        mealType: MealType,
+        nowMillis: Long,
+        zoneId: ZoneId,
+    ) {
+        if (!mealType.requiresSingleRecordPerDay()) return
+        val (startInclusive, endInclusive) = TimeRangeUtils.todayRange(nowMillis, zoneId)
+        if (recordRepository.existsRecordForMealTypeBetween(mealType, startInclusive, endInclusive)) {
+            throw DuplicateDailyMealException(mealType)
+        }
+    }
+
+    private fun MealType.requiresSingleRecordPerDay(): Boolean {
+        return this == MealType.BREAKFAST || this == MealType.LUNCH || this == MealType.DINNER
     }
 }

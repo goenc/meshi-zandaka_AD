@@ -8,6 +8,7 @@ import com.gonec009.meshizandaka.domain.model.DashboardSummary
 import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.domain.model.WeeklyMealChart
+import com.gonec009.meshizandaka.domain.usecase.DuplicateDailyMealException
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -76,9 +77,15 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
             return
         }
         viewModelScope.launch {
-            container.createQuickRecordUseCase(templateId, emptyList())
-            _uiState.update {
-                it.copy(message = successMessage)
+            try {
+                container.createQuickRecordUseCase(templateId, emptyList())
+                _uiState.update {
+                    it.copy(message = successMessage)
+                }
+            } catch (error: DuplicateDailyMealException) {
+                _uiState.update {
+                    it.copy(message = error.message)
+                }
             }
         }
     }

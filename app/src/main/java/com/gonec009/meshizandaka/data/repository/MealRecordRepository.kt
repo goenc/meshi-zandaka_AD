@@ -20,6 +20,12 @@ class MealRecordRepository(private val dao: MealRecordDao) {
 
     fun observeRecord(recordId: Long): Flow<MealRecord?> = dao.observeRecord(recordId).map { it?.let(::toModel) }
 
+    suspend fun existsRecordForMealTypeBetween(
+        mealType: MealType,
+        startInclusive: Long,
+        endInclusive: Long,
+    ): Boolean = dao.existsRecordForMealTypeBetween(mealType.name, startInclusive, endInclusive)
+
     suspend fun insertRecord(record: MealRecord): Long {
         val recordId = dao.insertRecord(
             MealRecordEntity(
