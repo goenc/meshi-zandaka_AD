@@ -16,7 +16,7 @@ class ObserveDashboardUseCase(
 ) {
     operator fun invoke(zoneId: ZoneId = ZoneId.systemDefault()): Flow<HomeDashboardData> {
         val now = System.currentTimeMillis()
-        val observeStart = Instant.ofEpochMilli(now).atZone(zoneId).minusDays(40).toInstant().toEpochMilli()
+        val observeStart = Instant.ofEpochMilli(now).atZone(zoneId).minusMonths(3).plusDays(1).toInstant().toEpochMilli()
         val observeEnd = Instant.ofEpochMilli(now).atZone(zoneId).plusDays(2).toInstant().toEpochMilli()
         return combine(
             settingsRepository.settingsFlow,

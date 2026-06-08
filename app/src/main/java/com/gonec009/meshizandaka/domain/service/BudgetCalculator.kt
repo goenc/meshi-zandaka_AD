@@ -46,11 +46,12 @@ class BudgetCalculator {
         nowMillis: Long = System.currentTimeMillis(),
     ): WeeklyMealChart {
         val today = Instant.ofEpochMilli(nowMillis).atZone(zoneId).toLocalDate()
-        val startDate = today.minusDays(6)
+        val startDate = today.minusMonths(3).plusDays(1)
         val recordsByDate = records.groupBy { Instant.ofEpochMilli(it.eatenAt).atZone(zoneId).toLocalDate() }
+        val totalDays = java.time.temporal.ChronoUnit.DAYS.between(startDate, today)
 
         return WeeklyMealChart(
-            days = (0L..6L).map { offset ->
+            days = (0L..totalDays).map { offset ->
                 val date = startDate.plusDays(offset)
                 buildDailyMealStack(date, recordsByDate[date].orEmpty())
             },

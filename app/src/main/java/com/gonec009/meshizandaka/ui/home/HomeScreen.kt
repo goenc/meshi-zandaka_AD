@@ -280,6 +280,9 @@ private fun WeeklyChartCard(
 ) {
     val scrollState = rememberScrollState()
     val resolvedMaxCalories = maxCalories.coerceAtLeast(1)
+    LaunchedEffect(stacks.size) {
+        scrollState.scrollTo(scrollState.maxValue)
+    }
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -290,11 +293,6 @@ private fun WeeklyChartCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = stringResource(R.string.recent_seven_days),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
             LegendRow()
             if (maxCalories == 0) {
                 Text(
@@ -354,19 +352,19 @@ private fun DayStackBar(
 ) {
     val formatter = DateTimeFormatter.ofPattern("MM/dd", Locale.JAPAN)
     Column(
-        modifier = Modifier.width(76.dp),
+        modifier = Modifier.width(40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = stringResource(R.string.kcal_format, stack.totalCalories),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
         )
         Canvas(
             modifier = Modifier
-                .width(52.dp)
-                .height(200.dp)
+                .width(24.dp)
+                .height(184.dp)
                 .testTag("weekly_chart_bar_${formatter.format(stack.date)}"),
         ) {
             drawBarBackground()
@@ -387,7 +385,7 @@ private fun DayStackBar(
         }
         Text(
             text = formatter.format(stack.date),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
         )
     }
