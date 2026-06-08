@@ -6,24 +6,34 @@ import java.time.LocalDate
 
 class HomeScreenDateLabelTest {
     @Test
-    fun 月初の翌日も月日表記にする() {
+    fun 左端に見えている棒は月日表記にする() {
         val label = formatChartDateLabel(
-            index = 2,
-            date = LocalDate.of(2026, 6, 2),
-            previousDate = LocalDate.of(2026, 6, 1),
+            date = LocalDate.of(2026, 5, 22),
+            isLeftVisible = true,
         )
 
-        assertEquals("6/2", label)
+        assertEquals("5/22", label)
     }
 
     @Test
-    fun 通常日は日だけを表示する() {
+    fun 左端以外の棒は日だけを表示する() {
         val label = formatChartDateLabel(
-            index = 3,
-            date = LocalDate.of(2026, 6, 3),
-            previousDate = LocalDate.of(2026, 6, 2),
+            date = LocalDate.of(2026, 5, 23),
+            isLeftVisible = false,
         )
 
-        assertEquals("3", label)
+        assertEquals("23", label)
+    }
+
+    @Test
+    fun スクロール位置から左端の棒インデックスを求める() {
+        val index = calculateLeftVisibleChartIndex(
+            scrollOffsetPx = 95,
+            barWidthPx = 39f,
+            barSpacingPx = 8f,
+            itemCount = 10,
+        )
+
+        assertEquals(2, index)
     }
 }

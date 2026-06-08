@@ -48,6 +48,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,23 +76,30 @@ private data class SummaryItem(
     val value: String,
 )
 
+private val ChartBarWidth = 39.dp
+private val ChartBarSpacing = 8.dp
+
 private fun formatChartCalories(calories: Int): String {
     return "${calories}K"
 }
 
 internal fun formatChartDateLabel(
-    index: Int,
     date: LocalDate,
-    previousDate: LocalDate?,
+    isLeftVisible: Boolean,
 ): String {
-    return when {
-        index == 0 -> "${date.monthValue}/${date.dayOfMonth}"
-        previousDate == null -> date.dayOfMonth.toString()
-        previousDate.dayOfMonth == 1 && previousDate.month == date.month ->
-            "${date.monthValue}/${date.dayOfMonth}"
-        previousDate.month != date.month -> String.format(Locale.JAPAN, "%02d/%02d", date.monthValue, date.dayOfMonth)
-        else -> date.dayOfMonth.toString()
-    }
+    return if (isLeftVisible) "${date.monthValue}/${date.dayOfMonth}" else date.dayOfMonth.toString()
+}
+
+internal fun calculateLeftVisibleChartIndex(
+    scrollOffsetPx: Int,
+    barWidthPx: Float,
+    barSpacingPx: Float,
+    itemCount: Int,
+): Int {
+    if (itemCount <= 0) return 0
+    val stridePx = barWidthPx + barSpacingPx
+    if (stridePx <= 0f) return 0
+    return (scrollOffsetPx / stridePx).toInt().coerceIn(0, itemCount - 1)
 }
 
 @Composable
@@ -299,7 +307,16 @@ private fun WeeklyChartCard(
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
+    val density = LocalDensity.current
     val resolvedMaxCalories = maxCalories.coerceAtLeast(1)
+    val chartBarWidthPx = with(density) { ChartBarWidth.toPx() }
+    val chartBarSpacingPx = with(density) { ChartBarSpacing.toPx() }
+    val leftVisibleIndex = calculateLeftVisibleChartIndex(
+        scrollOffsetPx = scrollState.value,
+        barWidthPx = chartBarWidthPx,
+        barSpacingPx = chartBarSpacingPx,
+        itemCount = stacks.size,
+    )
     LaunchedEffect(stacks.size) {
         scrollState.scrollTo(scrollState.maxValue)
     }
@@ -333,9 +350,8 @@ private fun WeeklyChartCard(
                         stack = stack,
                         maxCalories = resolvedMaxCalories,
                         dateLabel = formatChartDateLabel(
-                            index = index,
                             date = stack.date,
-                            previousDate = stacks.getOrNull(index - 1)?.date,
+                            isLeftVisible = index == leftVisibleIndex,
                         ),
                         isSunday = stack.date.dayOfWeek == DayOfWeek.SUNDAY,
                     )
@@ -383,7 +399,7 @@ private fun DayStackBar(
 ) {
     val formatter = DateTimeFormatter.ofPattern("MM/dd", Locale.JAPAN)
     Column(
-        modifier = Modifier.width(39.dp),
+        modifier = Modifier.width(ChartBarWidth),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
