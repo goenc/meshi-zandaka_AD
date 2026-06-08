@@ -1,0 +1,104 @@
+package com.gonec009.meshizandaka.data.repository
+
+import com.gonec009.meshizandaka.data.local.dao.MealRecordDao
+import com.gonec009.meshizandaka.data.local.entity.MealRecordEntity
+import com.gonec009.meshizandaka.data.local.entity.MealRecordOptionEntity
+import com.gonec009.meshizandaka.data.local.entity.MealRecordWithRelations
+import com.gonec009.meshizandaka.domain.model.MealRecord
+import com.gonec009.meshizandaka.domain.model.MealRecordOption
+import com.gonec009.meshizandaka.domain.model.MealType
+import com.gonec009.meshizandaka.domain.model.SourceType
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+class MealRecordRepository(private val dao: MealRecordDao) {
+    fun observeRecentRecords(limit: Int = 10): Flow<List<MealRecord>> =
+        dao.observeRecentRecords(limit).map { items -> items.map(::toModel) }
+
+    fun observeRecordsBetween(startInclusive: Long, endInclusive: Long): Flow<List<MealRecord>> =
+        dao.observeRecordsBetween(startInclusive, endInclusive).map { items -> items.map(::toModel) }
+
+    fun observeRecord(recordId: Long): Flow<MealRecord?> = dao.observeRecord(recordId).map { it?.let(::toModel) }
+
+    suspend fun insertRecord(record: MealRecord): Long {
+        val recordId = dao.insertRecord(
+            MealRecordEntity(
+                eatenAt = record.eatenAt,
+                mealType = record.mealType.name,
+                templateId = record.templateId,
+                templateNameSnapshot = record.templateNameSnapshot,
+                totalCalories = record.totalCalories,
+                proteinG = record.proteinG,
+                fatG = record.fatG,
+                carbG = record.carbG,
+                isSpecial = record.isSpecial,
+                specialDeltaCalories = record.specialDeltaCalories,
+                sourceType = record.sourceType.name,
+                memo = record.memo,
+            ),
+        )
+        if (record.selectedOptions.isNotEmpty()) {
+            dao.insertRecordOptions(
+                record.selectedOptions.map { option ->
+                    MealRecordOptionEntity(
+                        mealRecordId = recordId,
+                        optionGroupNameSnapshot = option.optionGroupNameSnapshot,
+                        optionNameSnapshot = option.optionNameSnapshot,
+                        calorieDelta = option.calorieDelta,
+                        proteinDeltaG = option.proteinDeltaG,
+                        fatDeltaG = option.fatDeltaG,
+                        carbDeltaG = option.carbDeltaG,
+                    )
+                },
+            )
+        }
+        return recordId
+    }
+
+    suspend fun updateRecord(record: MealRecord) {
+        val current = dao.getRecord(record.id) ?: return
+        dao.updateRecord(
+            current.copy(
+                totalCalories = record.totalCalories,
+                isSpecial = record.isSpecial,
+                specialDeltaCalories = record.specialDeltaCalories,
+                memo = record.memo,
+                sourceType = record.sourceType.name,
+            ),
+        )
+    }
+
+    suspend fun deleteRecord(recordId: Long) {
+        dao.deleteRecord(recordId)
+    }
+
+    private fun toModel(item: MealRecordWithRelations): MealRecord {
+        return MealRecord(
+            id = item.record.id,
+            eatenAt = item.record.eatenAt,
+            mealType = MealType.valueOf(item.record.mealType),
+            templateId = item.record.templateId,
+            templateNameSnapshot = item.record.templateNameSnapshot,
+            totalCalories = item.record.totalCalories,
+            proteinG = item.record.proteinG,
+            fatG = item.record.fatG,
+            carbG = item.record.carbG,
+            isSpecial = item.record.isSpecial,
+            specialDeltaCalories = item.record.specialDeltaCalories,
+            sourceType = SourceType.valueOf(item.record.sourceType),
+            memo = item.record.memo,
+            selectedOptions = item.selectedOptions.map { option ->
+                MealRecordOption(
+                    id = option.id,
+                    mealRecordId = option.mealRecordId,
+                    optionGroupNameSnapshot = option.optionGroupNameSnapshot,
+                    optionNameSnapshot = option.optionNameSnapshot,
+                    calorieDelta = option.calorieDelta,
+                    proteinDeltaG = option.proteinDeltaG,
+                    fatDeltaG = option.fatDeltaG,
+                    carbDeltaG = option.carbDeltaG,
+                )
+            },
+        )
+    }
+}

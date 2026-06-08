@@ -1,0 +1,37 @@
+package com.gonec009.meshizandaka.domain.model
+
+data class MealTemplate(
+    val id: Long = 0,
+    val name: String,
+    val mealType: MealType,
+    val baseCalories: Int,
+    val proteinG: Int,
+    val fatG: Int,
+    val carbG: Int,
+    val isSpecial: Boolean,
+    val comparisonTemplateId: Long?,
+    val weeklyLimitCount: Int?,
+    val monthlyLimitCount: Int?,
+    val memo: String,
+    val isActive: Boolean = true,
+    val optionGroups: List<TemplateOptionGroup> = emptyList(),
+)
+
+data class TemplateOptionGroup(
+    val id: Long = 0,
+    val templateId: Long = 0,
+    val name: String,
+    val selectionType: SelectionType,
+    val options: List<TemplateOption> = emptyList(),
+)
+
+data class TemplateOption(
+    val id: Long = 0,
+    val groupId: Long = 0,
+    val name: String,
+    val calorieDelta: Int,
+    val proteinDeltaG: Int,
+    val fatDeltaG: Int,
+    val carbDeltaG: Int,
+    val sortOrder: Int,
+)

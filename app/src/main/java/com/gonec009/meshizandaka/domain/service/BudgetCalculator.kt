@@ -1,0 +1,37 @@
+package com.gonec009.meshizandaka.domain.service
+
+import com.gonec009.meshizandaka.domain.model.AppSettings
+import com.gonec009.meshizandaka.domain.model.DashboardSummary
+import com.gonec009.meshizandaka.domain.model.MealRecord
+import com.gonec009.meshizandaka.util.TimeRangeUtils
+import java.time.ZoneId
+
+class BudgetCalculator {
+    fun buildSummary(
+        records: List<MealRecord>,
+        settings: AppSettings,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        nowMillis: Long = System.currentTimeMillis(),
+    ): DashboardSummary {
+        val todayRange = TimeRangeUtils.todayRange(nowMillis, zoneId)
+        val weekRange = TimeRangeUtils.weekRange(nowMillis, zoneId, settings.weekStartsOn)
+        val monthRange = TimeRangeUtils.monthRange(nowMillis, zoneId)
+
+        val todayRecords = records.filter { it.eatenAt in todayRange.first..todayRange.second }
+        val weekRecords = records.filter { it.eatenAt in weekRange.first..weekRange.second }
+        val monthRecords = records.filter { it.eatenAt in monthRange.first..monthRange.second }
+
+        val todayConsumed = todayRecords.sumOf(MealRecord::totalCalories)
+        val weekConsumed = weekRecords.sumOf(MealRecord::totalCalories)
+        val monthConsumed = monthRecords.sumOf(MealRecord::totalCalories)
+
+        return DashboardSummary(
+            todayConsumedCalories = todayConsumed,
+            todayBalanceCalories = settings.targetCaloriesPerDay - todayConsumed,
+            weekBalanceCalories = (settings.targetCaloriesPerDay * 7) - weekConsumed,
+            monthBalanceCalories = (settings.targetCaloriesPerDay * TimeRangeUtils.daysInCurrentMonth(nowMillis, zoneId)) - monthConsumed,
+            monthSpecialCount = monthRecords.count { it.isSpecial },
+            monthSpecialDeltaCalories = monthRecords.sumOf(MealRecord::specialDeltaCalories),
+        )
+    }
+}
