@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,7 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
@@ -133,14 +136,16 @@ private fun TemplateEditorDialog(
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 OutlinedTextField(
                     value = editor.name,
                     onValueChange = { onUpdateEditor { current -> current.copy(name = it) } },
                     label = { Text(stringResource(R.string.template_name)) },
                     enabled = !isLockedTemplate,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = compactFieldModifier(),
+                    textStyle = compactFieldTextStyle(),
+                    singleLine = true,
                 )
                 ExposedDropdownMenuBox(
                     expanded = mealTypeExpanded,
@@ -153,9 +158,9 @@ private fun TemplateEditorDialog(
                         enabled = !isLockedTemplate,
                         label = { Text(stringResource(R.string.meal_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = mealTypeExpanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
+                        modifier = compactFieldModifier().menuAnchor(),
+                        textStyle = compactFieldTextStyle(),
+                        singleLine = true,
                     )
                     DropdownMenu(
                         expanded = mealTypeExpanded,
@@ -176,25 +181,33 @@ private fun TemplateEditorDialog(
                     value = editor.baseCalories,
                     onValueChange = { onUpdateEditor { current -> current.copy(baseCalories = it) } },
                     label = { Text(stringResource(R.string.base_calories)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = compactFieldModifier(),
+                    textStyle = compactFieldTextStyle(),
+                    singleLine = true,
                 )
                 OutlinedTextField(
                     value = editor.proteinG,
                     onValueChange = { onUpdateEditor { current -> current.copy(proteinG = it) } },
                     label = { Text(stringResource(R.string.protein)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = compactFieldModifier(),
+                    textStyle = compactFieldTextStyle(),
+                    singleLine = true,
                 )
                 OutlinedTextField(
                     value = editor.fatG,
                     onValueChange = { onUpdateEditor { current -> current.copy(fatG = it) } },
                     label = { Text(stringResource(R.string.fat)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = compactFieldModifier(),
+                    textStyle = compactFieldTextStyle(),
+                    singleLine = true,
                 )
                 OutlinedTextField(
                     value = editor.carbG,
                     onValueChange = { onUpdateEditor { current -> current.copy(carbG = it) } },
                     label = { Text(stringResource(R.string.carb)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = compactFieldModifier(),
+                    textStyle = compactFieldTextStyle(),
+                    singleLine = true,
                 )
                 Surface(
                     shape = MaterialTheme.shapes.medium,
@@ -202,7 +215,7 @@ private fun TemplateEditorDialog(
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         ExposedDropdownMenuBox(
                             expanded = weeklyLimitExpanded,
@@ -214,9 +227,9 @@ private fun TemplateEditorDialog(
                                 readOnly = true,
                                 label = { Text(stringResource(R.string.weekly_limit)) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = weeklyLimitExpanded) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(),
+                                modifier = compactFieldModifier().menuAnchor(),
+                                textStyle = compactFieldTextStyle(),
+                                singleLine = true,
                             )
                             DropdownMenu(
                                 expanded = weeklyLimitExpanded,
@@ -245,9 +258,9 @@ private fun TemplateEditorDialog(
                                 readOnly = true,
                                 label = { Text(stringResource(R.string.monthly_limit)) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthlyLimitExpanded) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(),
+                                modifier = compactFieldModifier().menuAnchor(),
+                                textStyle = compactFieldTextStyle(),
+                                singleLine = true,
                             )
                             DropdownMenu(
                                 expanded = monthlyLimitExpanded,
@@ -272,7 +285,10 @@ private fun TemplateEditorDialog(
                     value = editor.memo,
                     onValueChange = { onUpdateEditor { current -> current.copy(memo = it) } },
                     label = { Text(stringResource(R.string.memo)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = compactFieldModifier(),
+                    textStyle = compactFieldTextStyle(),
+                    minLines = 2,
+                    maxLines = 4,
                 )
                 if (isLockedTemplate) {
                     Text(
@@ -299,4 +315,14 @@ private fun TemplateEditorDialog(
 @Composable
 private fun limitCountLabel(value: String): String {
     return value.ifBlank { stringResource(R.string.no_limit) }
+}
+
+private fun compactFieldModifier(): Modifier {
+    return Modifier
+        .fillMaxWidth()
+        .heightIn(min = 52.dp)
+}
+
+private fun compactFieldTextStyle(): TextStyle {
+    return TextStyle(fontSize = 14.sp)
 }
