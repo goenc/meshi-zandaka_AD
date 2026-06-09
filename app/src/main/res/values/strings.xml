@@ -63,6 +63,7 @@
     <string name="memo">メモ</string>
     <string name="save">保存する</string>
     <string name="cancel">キャンセル</string>
+    <string name="close">閉じる</string>
     <string name="target_calories">目標摂取カロリー</string>
     <string name="maintenance_calories">維持カロリー</string>
     <string name="week_start_day">週の開始曜日</string>

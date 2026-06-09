@@ -64,9 +64,13 @@ class BudgetCalculator {
     ): DailyMealStack {
         return DailyMealStack(
             date = date,
+            breakfastRecords = records.filter { it.mealType == MealType.BREAKFAST },
             breakfastCalories = records.filter { it.mealType == MealType.BREAKFAST }.sumOf(MealRecord::totalCalories),
+            lunchRecords = records.filter { it.mealType == MealType.LUNCH },
             lunchCalories = records.filter { it.mealType == MealType.LUNCH }.sumOf(MealRecord::totalCalories),
+            dinnerRecords = records.filter { it.mealType == MealType.DINNER },
             dinnerCalories = records.filter { it.mealType == MealType.DINNER }.sumOf(MealRecord::totalCalories),
+            snackRecords = records.filter { it.mealType == MealType.SNACK || it.mealType == MealType.EATING_OUT },
             snackCalories = records.filter { it.mealType == MealType.SNACK || it.mealType == MealType.EATING_OUT }.sumOf(MealRecord::totalCalories),
         )
     }

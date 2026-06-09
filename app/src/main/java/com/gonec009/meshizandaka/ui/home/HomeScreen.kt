@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,8 +17,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,7 +40,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,6 +51,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,10 +79,37 @@ private data class SummaryItem(
     val value: String,
 )
 
+private enum class ChartMealSection {
+    BREAKFAST,
+    LUNCH,
+    DINNER,
+    SNACK,
+}
+
+private data class ChartMealDialogState(
+    val date: LocalDate,
+    val section: ChartMealSection,
+    val records: List<MealRecord>,
+)
+
 private val ChartBarWidth = 39.dp
 
 private fun formatChartCalories(calories: Int): String {
     return "${calories}K"
+}
+
+private fun ChartMealSection.labelResId(): Int = when (this) {
+    ChartMealSection.BREAKFAST -> R.string.meal_type_breakfast
+    ChartMealSection.LUNCH -> R.string.meal_type_lunch
+    ChartMealSection.DINNER -> R.string.meal_type_dinner
+    ChartMealSection.SNACK -> R.string.chart_snack
+}
+
+private fun DailyMealStack.recordsForSection(section: ChartMealSection): List<MealRecord> = when (section) {
+    ChartMealSection.BREAKFAST -> breakfastRecords
+    ChartMealSection.LUNCH -> lunchRecords
+    ChartMealSection.DINNER -> dinnerRecords
+    ChartMealSection.SNACK -> snackRecords
 }
 
 internal fun formatChartDateLabel(
@@ -298,6 +329,7 @@ private fun WeeklyChartCard(
 ) {
     val scrollState = rememberScrollState()
     val resolvedMaxCalories = maxCalories.coerceAtLeast(1)
+    var dialogState by remember { mutableStateOf<ChartMealDialogState?>(null) }
     LaunchedEffect(stacks.size) {
         scrollState.scrollTo(scrollState.maxValue)
     }
@@ -335,10 +367,26 @@ private fun WeeklyChartCard(
                             previousDate = stacks.getOrNull(index - 1)?.date,
                         ),
                         isSunday = stack.date.dayOfWeek == DayOfWeek.SUNDAY,
+                        onSectionClick = { section ->
+                            val records = stack.recordsForSection(section)
+                            if (records.isNotEmpty()) {
+                                dialogState = ChartMealDialogState(
+                                    date = stack.date,
+                                    section = section,
+                                    records = records,
+                                )
+                            }
+                        },
                     )
                 }
             }
         }
+    }
+    dialogState?.let { detail ->
+        ChartMealDetailDialog(
+            state = detail,
+            onDismiss = { dialogState = null },
+        )
     }
 }
 
@@ -377,6 +425,7 @@ private fun DayStackBar(
     maxCalories: Int,
     dateLabel: String,
     isSunday: Boolean,
+    onSectionClick: (ChartMealSection) -> Unit,
 ) {
     val formatter = DateTimeFormatter.ofPattern("MM/dd", Locale.JAPAN)
     Column(
@@ -394,6 +443,16 @@ private fun DayStackBar(
             modifier = Modifier
                 .width(24.dp)
                 .height(184.dp)
+                .pointerInput(stack, maxCalories) {
+                    detectTapGestures { offset ->
+                        detectTappedMealSection(
+                            offsetY = offset.y,
+                            height = size.height.toFloat(),
+                            stack = stack,
+                            maxCalories = maxCalories,
+                        )?.let(onSectionClick)
+                    }
+                }
                 .testTag("weekly_chart_bar_${formatter.format(stack.date)}"),
         ) {
             drawBarBackground()
@@ -419,6 +478,82 @@ private fun DayStackBar(
             color = if (isSunday) Color(0xFFC62828) else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+private fun detectTappedMealSection(
+    offsetY: Float,
+    height: Float,
+    stack: DailyMealStack,
+    maxCalories: Int,
+): ChartMealSection? {
+    if (maxCalories <= 0) return null
+    val totalHeight = height
+    val breakfastTop = totalHeight - totalHeight * (stack.breakfastCalories.toFloat() / maxCalories.toFloat())
+    val lunchTop = breakfastTop - totalHeight * (stack.lunchCalories.toFloat() / maxCalories.toFloat())
+    val dinnerTop = lunchTop - totalHeight * (stack.dinnerCalories.toFloat() / maxCalories.toFloat())
+    val snackTop = dinnerTop - totalHeight * (stack.snackCalories.toFloat() / maxCalories.toFloat())
+
+    return when {
+        stack.snackCalories > 0 && offsetY in snackTop..dinnerTop -> ChartMealSection.SNACK
+        stack.dinnerCalories > 0 && offsetY in dinnerTop..lunchTop -> ChartMealSection.DINNER
+        stack.lunchCalories > 0 && offsetY in lunchTop..breakfastTop -> ChartMealSection.LUNCH
+        stack.breakfastCalories > 0 && offsetY in breakfastTop..totalHeight -> ChartMealSection.BREAKFAST
+        else -> null
+    }
+}
+
+@Composable
+private fun ChartMealDetailDialog(
+    state: ChartMealDialogState,
+    onDismiss: () -> Unit,
+) {
+    val titleDateFormatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.JAPAN) }
+    val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.JAPAN) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.close))
+            }
+        },
+        title = {
+            Text("${titleDateFormatter.format(state.date)} ${stringResource(state.section.labelResId())}")
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                state.records.forEach { record ->
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = record.templateNameSnapshot,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = "${timeFormatter.format(Date(record.eatenAt))}  ${stringResource(R.string.kcal_format, record.totalCalories)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        if (record.selectedOptions.isNotEmpty()) {
+                            Text(
+                                text = record.selectedOptions.joinToString(" / ") { option -> option.optionNameSnapshot },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (record.memo.isNotBlank()) {
+                            Text(
+                                text = record.memo,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+    )
 }
 
 private fun DrawScope.drawBarBackground() {

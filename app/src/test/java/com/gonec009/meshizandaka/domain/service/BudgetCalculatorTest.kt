@@ -103,6 +103,28 @@ class BudgetCalculatorTest {
         assertEquals(650, chart.days.last().totalCalories)
     }
 
+    @Test
+    fun グラフ詳細表示用に食事区分ごとの記録一覧を保持する() {
+        val chart = calculator.buildWeeklyChart(
+            records = listOf(
+                recordAt(2026, 6, 8, 7, 30, 300, mealType = MealType.BREAKFAST),
+                recordAt(2026, 6, 8, 12, 0, 650, mealType = MealType.LUNCH),
+                recordAt(2026, 6, 8, 19, 0, 700, mealType = MealType.DINNER),
+                recordAt(2026, 6, 8, 21, 0, 200, mealType = MealType.SNACK),
+                recordAt(2026, 6, 7, 20, 0, 900, mealType = MealType.EATING_OUT),
+            ),
+            zoneId = zoneId,
+            nowMillis = nowMillis,
+        )
+
+        assertEquals(1, chart.days.last().breakfastRecords.size)
+        assertEquals(1, chart.days.last().lunchRecords.size)
+        assertEquals(1, chart.days.last().dinnerRecords.size)
+        assertEquals(1, chart.days.last().snackRecords.size)
+        assertEquals(MealType.SNACK, chart.days.last().snackRecords.single().mealType)
+        assertEquals(MealType.EATING_OUT, chart.days[chart.days.lastIndex - 1].snackRecords.single().mealType)
+    }
+
     private fun recordAt(
         year: Int,
         month: Int,
