@@ -206,11 +206,11 @@ private fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding),
-        contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 RecordDateSelector(
                     selectedDate = state.selectedRecordDate,
                     onPreviousDateClick = { onMoveSelectedDate(-1L) },
@@ -369,8 +369,8 @@ private fun WeeklyChartCard(
         ),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             LegendRow()
             Row(
@@ -468,7 +468,7 @@ private fun DayStackBar(
         Canvas(
             modifier = Modifier
                 .width(24.dp)
-                .height(184.dp)
+                .height(160.dp)
                 .pointerInput(stack, maxCalories) {
                     detectTapGestures { offset ->
                         detectTappedMealSection(
@@ -685,11 +685,11 @@ private fun CompactSummaryPanel(items: List<SummaryItem>) {
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         tonalElevation = 0.dp,
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
             items.chunked(2).forEachIndexed { rowIndex, rowItems ->
                 if (rowIndex > 0) {
                     HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
+                        modifier = Modifier.padding(vertical = 5.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
                     )
                 }
@@ -721,7 +721,7 @@ private fun CompactSummaryItem(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(
             text = title,
