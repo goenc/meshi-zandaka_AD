@@ -205,7 +205,7 @@ private fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding),
-        contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
+        contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
@@ -305,22 +305,24 @@ private fun HomeScreen(
 
 @Composable
 private fun BalanceHero(todayBalanceCalories: Int) {
-    Column(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Bottom,
     ) {
         Text(
-            text = stringResource(R.string.today_balance),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = stringResource(R.string.home_title),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = stringResource(R.string.kcal_format_signed, todayBalanceCalories),
+            text = stringResource(R.string.kcal_format, todayBalanceCalories),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
         )
-    }
+    } 
 }
 
 @Composable
