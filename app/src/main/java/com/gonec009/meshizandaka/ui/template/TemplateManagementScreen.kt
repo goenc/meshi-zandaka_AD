@@ -39,7 +39,6 @@ import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import com.gonec009.meshizandaka.ui.mealTypeLabel
-import com.gonec009.meshizandaka.ui.templateShortcutRoleLabel
 
 @Composable
 fun TemplateManagementRoute(
@@ -82,15 +81,18 @@ private fun TemplateManagementScreen(
             }
         }
         items(state.templates, key = { it.id }) { template ->
+            val isLockedTemplate = template.shortcutRole != TemplateShortcutRole.NONE
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onEditClick(template) },
+                    .clickable(enabled = !isLockedTemplate) { onEditClick(template) },
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = template.name, style = MaterialTheme.typography.titleMedium)
                     Text(text = stringResource(R.string.kcal_format, template.baseCalories))
-                    Text(text = templateShortcutRoleLabel(template.shortcutRole))
+                    if (isLockedTemplate) {
+                        Text(text = stringResource(R.string.template_fixed_menu))
+                    }
                     Text(text = if (template.isSpecial) stringResource(R.string.special_meal) else stringResource(R.string.standard_meal))
                 }
             }
@@ -116,9 +118,8 @@ private fun TemplateEditorDialog(
     onSave: () -> Unit,
 ) {
     val editor = state.editorState
+    val isLockedTemplate = editor.shortcutRole != TemplateShortcutRole.NONE
     var mealTypeExpanded by remember { mutableStateOf(false) }
-    var roleExpanded by remember { mutableStateOf(false) }
-    var comparisonExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onCloseDialog,
@@ -138,6 +139,7 @@ private fun TemplateEditorDialog(
                         value = mealTypeLabel(editor.mealType),
                         onValueChange = {},
                         readOnly = true,
+                        enabled = !isLockedTemplate,
                         label = { Text(stringResource(R.string.meal_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = mealTypeExpanded) },
                         modifier = Modifier.menuAnchor(),
@@ -157,94 +159,47 @@ private fun TemplateEditorDialog(
                         }
                     }
                 }
-                ExposedDropdownMenuBox(
-                    expanded = roleExpanded,
-                    onExpandedChange = { roleExpanded = it },
-                ) {
-                    OutlinedTextField(
-                        value = templateShortcutRoleLabel(editor.shortcutRole),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.template_shortcut_role)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleExpanded) },
-                        modifier = Modifier.menuAnchor(),
-                    )
-                    DropdownMenu(
-                        expanded = roleExpanded,
-                        onDismissRequest = { roleExpanded = false },
-                    ) {
-                        TemplateShortcutRole.entries.forEach { role ->
-                            DropdownMenuItem(
-                                text = { Text(templateShortcutRoleLabel(role)) },
-                                onClick = {
-                                    roleExpanded = false
-                                    onUpdateEditor { current -> current.copy(shortcutRole = role) }
-                                },
-                            )
-                        }
-                    }
-                }
                 OutlinedTextField(
                     value = editor.baseCalories,
                     onValueChange = { onUpdateEditor { current -> current.copy(baseCalories = it) } },
                     label = { Text(stringResource(R.string.base_calories)) },
+                    enabled = !isLockedTemplate,
                 )
                 OutlinedTextField(
                     value = editor.proteinG,
                     onValueChange = { onUpdateEditor { current -> current.copy(proteinG = it) } },
                     label = { Text(stringResource(R.string.protein)) },
+                    enabled = !isLockedTemplate,
                 )
                 OutlinedTextField(
                     value = editor.fatG,
                     onValueChange = { onUpdateEditor { current -> current.copy(fatG = it) } },
                     label = { Text(stringResource(R.string.fat)) },
+                    enabled = !isLockedTemplate,
                 )
                 OutlinedTextField(
                     value = editor.carbG,
                     onValueChange = { onUpdateEditor { current -> current.copy(carbG = it) } },
                     label = { Text(stringResource(R.string.carb)) },
+                    enabled = !isLockedTemplate,
                 )
-                ExposedDropdownMenuBox(
-                    expanded = comparisonExpanded,
-                    onExpandedChange = { comparisonExpanded = it },
-                ) {
-                    OutlinedTextField(
-                        value = state.normalTemplates.firstOrNull { it.id == editor.comparisonTemplateId }?.name.orEmpty(),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.comparison_template)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = comparisonExpanded) },
-                        modifier = Modifier.menuAnchor(),
-                    )
-                    DropdownMenu(
-                        expanded = comparisonExpanded,
-                        onDismissRequest = { comparisonExpanded = false },
-                    ) {
-                        state.normalTemplates.forEach { template ->
-                            DropdownMenuItem(
-                                text = { Text(template.name) },
-                                onClick = {
-                                    comparisonExpanded = false
-                                    onUpdateEditor { current -> current.copy(comparisonTemplateId = template.id) }
-                                },
-                            )
-                        }
-                    }
-                }
                 OutlinedTextField(
                     value = editor.weeklyLimitCount,
                     onValueChange = { onUpdateEditor { current -> current.copy(weeklyLimitCount = it) } },
                     label = { Text(stringResource(R.string.weekly_limit)) },
+                    enabled = !isLockedTemplate,
                 )
                 OutlinedTextField(
                     value = editor.monthlyLimitCount,
                     onValueChange = { onUpdateEditor { current -> current.copy(monthlyLimitCount = it) } },
                     label = { Text(stringResource(R.string.monthly_limit)) },
+                    enabled = !isLockedTemplate,
                 )
                 OutlinedTextField(
                     value = editor.memo,
                     onValueChange = { onUpdateEditor { current -> current.copy(memo = it) } },
                     label = { Text(stringResource(R.string.memo)) },
+                    enabled = !isLockedTemplate,
                 )
                 androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Checkbox(
@@ -252,14 +207,17 @@ private fun TemplateEditorDialog(
                         onCheckedChange = { checked ->
                             onUpdateEditor { current -> current.copy(isSpecial = checked) }
                         },
+                        enabled = !isLockedTemplate,
                     )
                     Text(stringResource(R.string.special_meal))
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onSave) {
-                Text(stringResource(R.string.save))
+            if (!isLockedTemplate) {
+                TextButton(onClick = onSave) {
+                    Text(stringResource(R.string.save))
+                }
             }
         },
         dismissButton = {

@@ -83,5 +83,6 @@
     <string name="template_role_breakfast">朝セット</string>
     <string name="template_role_lunch">昼セット</string>
     <string name="template_role_dinner">夕セット</string>
+    <string name="template_fixed_menu">ホーム固定メニュー</string>
     <string name="delete">削除する</string>
 </resources>
