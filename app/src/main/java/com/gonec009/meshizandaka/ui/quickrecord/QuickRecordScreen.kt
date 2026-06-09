@@ -114,8 +114,8 @@ private fun QuickRecordScreen(
         }
         item {
             TemplateSection(
-                title = stringResource(R.string.special_meal),
-                templates = state.specialTemplates,
+                title = stringResource(R.string.quick_record_templates),
+                templates = state.availableTemplates,
                 selectedTemplateId = state.selectedTemplate?.id,
                 onTemplateSelect = onTemplateSelect,
             )

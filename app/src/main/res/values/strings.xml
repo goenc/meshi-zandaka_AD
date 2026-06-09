@@ -38,6 +38,7 @@
     <string name="count_format">%1$d回</string>
     <string name="standard_meal">いつものメシ</string>
     <string name="special_meal">特別メシ</string>
+    <string name="quick_record_templates">テンプレート</string>
     <string name="record_preview">記録内容</string>
     <string name="estimated_calories_label">見込み</string>
     <string name="not_selected">未選択</string>

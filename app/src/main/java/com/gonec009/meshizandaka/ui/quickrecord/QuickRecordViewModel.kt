@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
+import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.domain.usecase.DuplicateDailyMealException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class QuickRecordUiState(
-    val specialTemplates: List<MealTemplate> = emptyList(),
+    val availableTemplates: List<MealTemplate> = emptyList(),
     val selectedTemplate: MealTemplate? = null,
     val mealTypes: List<MealType> = listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK),
     val selectedMealType: MealType = MealType.LUNCH,
@@ -33,15 +34,17 @@ class QuickRecordViewModel(
     init {
         viewModelScope.launch {
             container.mealTemplateRepository.observeActiveTemplates().collect { templates ->
-                val specialTemplates = templates.filter { it.isSpecial }
+                val availableTemplates = templates.filter { template ->
+                    template.shortcutRole == TemplateShortcutRole.NONE
+                }
                 val currentSelection = _uiState.value.selectedTemplate
                 val selectedTemplate = currentSelection?.let { selected ->
-                    specialTemplates.firstOrNull { it.id == selected.id }
-                } ?: defaultTemplate(specialTemplates)
+                    availableTemplates.firstOrNull { it.id == selected.id }
+                } ?: defaultTemplate(availableTemplates)
                 val selectedOptionIds = selectedTemplate?.let(::defaultOptionIds).orEmpty()
                 _uiState.update {
                     it.copy(
-                        specialTemplates = specialTemplates,
+                        availableTemplates = availableTemplates,
                         selectedTemplate = selectedTemplate,
                         selectedOptionIds = if (currentSelection == null) selectedOptionIds else it.selectedOptionIds.ifEmpty { selectedOptionIds },
                         estimatedCalories = selectedTemplate?.let { template ->
@@ -121,8 +124,8 @@ class QuickRecordViewModel(
         _uiState.update { it.copy(message = null) }
     }
 
-    private fun defaultTemplate(specialTemplates: List<MealTemplate>): MealTemplate? {
-        return specialTemplates.firstOrNull()
+    private fun defaultTemplate(availableTemplates: List<MealTemplate>): MealTemplate? {
+        return availableTemplates.firstOrNull()
     }
 
     private fun defaultOptionIds(template: MealTemplate): Map<Long, Long> {
