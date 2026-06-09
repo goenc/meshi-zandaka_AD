@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">メシ残高</string>
     <string name="back">戻る</string>
-    <string name="home_title">ホーム</string>
+    <string name="home_title">残高</string>
     <string name="quick_record_title">クイック記録</string>
     <string name="template_management_title">テンプレート管理</string>
     <string name="settings_title">設定</string>
