@@ -39,6 +39,7 @@
     <string name="standard_meal">いつものメシ</string>
     <string name="special_meal">特別メシ</string>
     <string name="record_preview">記録内容</string>
+    <string name="estimated_calories_label">見込み</string>
     <string name="not_selected">未選択</string>
     <string name="take_meal_photo">食事の写真を撮る</string>
     <string name="meal_photo_added">写真を追加済み</string>
