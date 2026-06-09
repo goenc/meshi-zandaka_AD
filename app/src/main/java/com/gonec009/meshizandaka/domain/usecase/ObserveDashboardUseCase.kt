@@ -21,11 +21,9 @@ class ObserveDashboardUseCase(
         return combine(
             settingsRepository.settingsFlow,
             recordRepository.observeRecordsBetween(observeStart, observeEnd),
-            recordRepository.observeRecentRecords(),
-        ) { settings, monthRecords, recentRecords ->
+        ) { settings, monthRecords ->
             HomeDashboardData(
                 summary = budgetCalculator.buildSummary(monthRecords, settings, zoneId),
-                recentRecords = recentRecords,
                 weeklyChart = budgetCalculator.buildWeeklyChart(monthRecords, zoneId),
             )
         }

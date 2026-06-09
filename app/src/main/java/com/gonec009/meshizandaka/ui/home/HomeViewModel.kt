@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.AppSettings
 import com.gonec009.meshizandaka.domain.model.DashboardSummary
-import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.domain.model.WeeklyMealChart
 import com.gonec009.meshizandaka.domain.usecase.DuplicateDailyMealException
@@ -22,11 +21,9 @@ import java.time.ZoneId
 data class HomeUiState(
     val summary: DashboardSummary = DashboardSummary(),
     val weeklyChart: WeeklyMealChart = WeeklyMealChart(),
-    val recentRecords: List<MealRecord> = emptyList(),
     val settings: AppSettings = AppSettings(),
     val templates: List<com.gonec009.meshizandaka.domain.model.MealTemplate> = emptyList(),
     val selectedRecordDate: LocalDate = LocalDate.now(),
-    val isRecentRecordsExpanded: Boolean = false,
     val message: String? = null,
 )
 
@@ -46,7 +43,6 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                         it.copy(
                             summary = dashboard.summary,
                             weeklyChart = dashboard.weeklyChart,
-                            recentRecords = dashboard.recentRecords,
                             settings = settings,
                             templates = templates,
                         )
@@ -69,10 +65,6 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     fun consumeMessage() {
         _uiState.update { it.copy(message = null) }
-    }
-
-    fun toggleRecentRecords() {
-        _uiState.update { it.copy(isRecentRecordsExpanded = !it.isRecentRecordsExpanded) }
     }
 
     fun moveSelectedRecordDate(days: Long) {

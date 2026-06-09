@@ -82,7 +82,6 @@ fun MeshiZandakaAppRoot(container: AppContainer) {
                     innerPadding = innerPadding,
                     snackbarHostState = snackbarHostState,
                     onQuickRecordClick = { navController.navigate(AppDestination.QuickRecord.route) },
-                    onRecordClick = { navController.navigate(AppDestination.RecordEdit.route(it)) },
                 )
             }
             composable(AppDestination.QuickRecord.route) {

@@ -2,7 +2,6 @@ package com.gonec009.meshizandaka.ui.home
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -139,7 +138,6 @@ fun HomeRoute(
     innerPadding: PaddingValues,
     snackbarHostState: SnackbarHostState,
     onQuickRecordClick: () -> Unit,
-    onRecordClick: (Long) -> Unit,
 ) {
     val viewModel: HomeViewModel = viewModel(factory = AppViewModelFactory(container))
     val state by viewModel.uiState.collectAsState()
@@ -155,12 +153,10 @@ fun HomeRoute(
         onQuickRecordClick = onQuickRecordClick,
         onMoveSelectedDate = viewModel::moveSelectedRecordDate,
         onDateSelected = viewModel::updateSelectedRecordDate,
-    onBreakfastClick = viewModel::recordBreakfast,
-    onLunchClick = viewModel::recordLunch,
-    onDinnerClick = viewModel::recordDinner,
-    onToggleRecentRecords = viewModel::toggleRecentRecords,
-    onRecordClick = onRecordClick,
-    onDeleteRecord = viewModel::deleteRecord,
+        onBreakfastClick = viewModel::recordBreakfast,
+        onLunchClick = viewModel::recordLunch,
+        onDinnerClick = viewModel::recordDinner,
+        onDeleteRecord = viewModel::deleteRecord,
     )
 }
 
@@ -174,8 +170,6 @@ private fun HomeScreen(
     onBreakfastClick: () -> Unit,
     onLunchClick: () -> Unit,
     onDinnerClick: () -> Unit,
-    onToggleRecentRecords: () -> Unit,
-    onRecordClick: (Long) -> Unit,
     onDeleteRecord: (Long, () -> Unit) -> Unit,
 ) {
     var isDatePickerVisible by remember { mutableStateOf(false) }
@@ -252,14 +246,6 @@ private fun HomeScreen(
         }
         item {
             CompactSummaryPanel(items = summaryItems)
-        }
-        item {
-            RecentRecordsSection(
-                records = state.recentRecords,
-                expanded = state.isRecentRecordsExpanded,
-                onToggle = onToggleRecentRecords,
-                onRecordClick = onRecordClick,
-            )
         }
     }
 
@@ -690,45 +676,6 @@ private fun DrawScope.drawStackSegment(
 }
 
 @Composable
-private fun RecentRecordsSection(
-    records: List<MealRecord>,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    onRecordClick: (Long) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.recent_records),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            TextButton(onClick = onToggle) {
-                Text(
-                    text = stringResource(
-                        if (expanded) R.string.hide_recent_records else R.string.show_recent_records,
-                    ),
-                )
-            }
-        }
-        if (expanded) {
-            if (records.isEmpty()) {
-                Text(text = stringResource(R.string.no_records))
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    records.forEach { record ->
-                        RecordRow(record = record, onClick = { onRecordClick(record.id) })
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun CompactSummaryPanel(items: List<SummaryItem>) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -785,21 +732,5 @@ private fun CompactSummaryItem(
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
         )
-    }
-}
-
-@Composable
-private fun RecordRow(record: MealRecord, onClick: () -> Unit) {
-    val formatter = SimpleDateFormat("MM/dd HH:mm", Locale.JAPAN)
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = record.templateNameSnapshot, style = MaterialTheme.typography.titleMedium)
-            Text(text = formatter.format(Date(record.eatenAt)))
-            Text(text = stringResource(R.string.kcal_format, record.totalCalories))
-        }
     }
 }

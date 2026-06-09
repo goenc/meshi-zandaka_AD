@@ -26,6 +26,5 @@ data class WeeklyMealChart(
 
 data class HomeDashboardData(
     val summary: DashboardSummary = DashboardSummary(),
-    val recentRecords: List<MealRecord> = emptyList(),
     val weeklyChart: WeeklyMealChart = WeeklyMealChart(),
 )
