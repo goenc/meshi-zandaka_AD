@@ -85,7 +85,7 @@ private fun TemplateManagementScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(enabled = !isLockedTemplate) { onEditClick(template) },
+                    .clickable { onEditClick(template) },
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = template.name, style = MaterialTheme.typography.titleMedium)
@@ -130,10 +130,11 @@ private fun TemplateEditorDialog(
                     value = editor.name,
                     onValueChange = { onUpdateEditor { current -> current.copy(name = it) } },
                     label = { Text(stringResource(R.string.template_name)) },
+                    enabled = !isLockedTemplate,
                 )
                 ExposedDropdownMenuBox(
                     expanded = mealTypeExpanded,
-                    onExpandedChange = { mealTypeExpanded = it },
+                    onExpandedChange = { if (!isLockedTemplate) mealTypeExpanded = it },
                 ) {
                     OutlinedTextField(
                         value = mealTypeLabel(editor.mealType),
@@ -163,44 +164,44 @@ private fun TemplateEditorDialog(
                     value = editor.baseCalories,
                     onValueChange = { onUpdateEditor { current -> current.copy(baseCalories = it) } },
                     label = { Text(stringResource(R.string.base_calories)) },
-                    enabled = !isLockedTemplate,
                 )
                 OutlinedTextField(
                     value = editor.proteinG,
                     onValueChange = { onUpdateEditor { current -> current.copy(proteinG = it) } },
                     label = { Text(stringResource(R.string.protein)) },
-                    enabled = !isLockedTemplate,
                 )
                 OutlinedTextField(
                     value = editor.fatG,
                     onValueChange = { onUpdateEditor { current -> current.copy(fatG = it) } },
                     label = { Text(stringResource(R.string.fat)) },
-                    enabled = !isLockedTemplate,
                 )
                 OutlinedTextField(
                     value = editor.carbG,
                     onValueChange = { onUpdateEditor { current -> current.copy(carbG = it) } },
                     label = { Text(stringResource(R.string.carb)) },
-                    enabled = !isLockedTemplate,
                 )
                 OutlinedTextField(
                     value = editor.weeklyLimitCount,
                     onValueChange = { onUpdateEditor { current -> current.copy(weeklyLimitCount = it) } },
                     label = { Text(stringResource(R.string.weekly_limit)) },
-                    enabled = !isLockedTemplate,
                 )
                 OutlinedTextField(
                     value = editor.monthlyLimitCount,
                     onValueChange = { onUpdateEditor { current -> current.copy(monthlyLimitCount = it) } },
                     label = { Text(stringResource(R.string.monthly_limit)) },
-                    enabled = !isLockedTemplate,
                 )
                 OutlinedTextField(
                     value = editor.memo,
                     onValueChange = { onUpdateEditor { current -> current.copy(memo = it) } },
                     label = { Text(stringResource(R.string.memo)) },
-                    enabled = !isLockedTemplate,
                 )
+                if (isLockedTemplate) {
+                    Text(
+                        text = stringResource(R.string.template_fixed_menu_notice),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Checkbox(
                         checked = editor.isSpecial,
@@ -214,10 +215,8 @@ private fun TemplateEditorDialog(
             }
         },
         confirmButton = {
-            if (!isLockedTemplate) {
-                TextButton(onClick = onSave) {
-                    Text(stringResource(R.string.save))
-                }
+            TextButton(onClick = onSave) {
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {

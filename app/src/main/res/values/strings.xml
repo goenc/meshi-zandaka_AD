@@ -84,5 +84,6 @@
     <string name="template_role_lunch">昼セット</string>
     <string name="template_role_dinner">夕セット</string>
     <string name="template_fixed_menu">ホーム固定メニュー</string>
+    <string name="template_fixed_menu_notice">この固定メニューは名前、食事区分、特別メシ設定だけ固定です。カロリーやメモは編集できます。</string>
     <string name="delete">削除する</string>
 </resources>
