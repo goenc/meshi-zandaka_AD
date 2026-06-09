@@ -18,4 +18,5 @@ data class MealRecordEntity(
     val specialDeltaCalories: Int,
     val sourceType: String,
     val memo: String,
+    val photoUri: String? = null,
 )

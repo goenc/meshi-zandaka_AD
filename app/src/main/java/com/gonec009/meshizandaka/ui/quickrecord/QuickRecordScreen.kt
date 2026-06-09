@@ -1,5 +1,10 @@
 package com.gonec009.meshizandaka.ui.quickrecord
 
+import android.content.Context
+import android.net.Uri
+import android.os.Environment
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,20 +18,27 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
+import java.io.File
 
 @Composable
 fun QuickRecordRoute(
@@ -49,6 +61,7 @@ fun QuickRecordRoute(
         state = state,
         onTemplateSelect = viewModel::selectTemplate,
         onOptionSelect = viewModel::selectOption,
+        onPhotoCaptured = viewModel::setPhotoUri,
         onSaveClick = viewModel::saveRecord,
     )
 }
@@ -59,8 +72,16 @@ private fun QuickRecordScreen(
     state: QuickRecordUiState,
     onTemplateSelect: (MealTemplate) -> Unit,
     onOptionSelect: (Long, Long) -> Unit,
+    onPhotoCaptured: (String?) -> Unit,
     onSaveClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+    var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { captured ->
+        onPhotoCaptured(if (captured) pendingPhotoUri?.toString() else null)
+        pendingPhotoUri = null
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -68,14 +89,6 @@ private fun QuickRecordScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item {
-            TemplateSection(
-                title = stringResource(R.string.standard_meal),
-                templates = state.standardTemplates,
-                selectedTemplateId = state.selectedTemplate?.id,
-                onTemplateSelect = onTemplateSelect,
-            )
-        }
         item {
             TemplateSection(
                 title = stringResource(R.string.special_meal),
@@ -109,6 +122,23 @@ private fun QuickRecordScreen(
                     Text(text = stringResource(R.string.record_preview), style = MaterialTheme.typography.titleMedium)
                     Text(text = state.selectedTemplate?.name ?: stringResource(R.string.not_selected))
                     Text(text = stringResource(R.string.kcal_format, state.estimatedCalories))
+                    OutlinedButton(
+                        onClick = {
+                            val photoUri = createQuickRecordPhotoUri(context)
+                            pendingPhotoUri = photoUri
+                            photoLauncher.launch(photoUri)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.take_meal_photo))
+                    }
+                    Text(
+                        text = if (state.photoUri == null) {
+                            stringResource(R.string.meal_photo_not_added)
+                        } else {
+                            stringResource(R.string.meal_photo_added)
+                        },
+                    )
                     Button(
                         onClick = onSaveClick,
                         enabled = state.selectedTemplate != null && !state.isSaving,
@@ -120,6 +150,17 @@ private fun QuickRecordScreen(
             }
         }
     }
+}
+
+private fun createQuickRecordPhotoUri(context: Context): Uri {
+    val photoDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "quick_records")
+    photoDir.mkdirs()
+    val photoFile = File(photoDir, "quick_record_${System.currentTimeMillis()}.jpg")
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        photoFile,
+    )
 }
 
 @Composable

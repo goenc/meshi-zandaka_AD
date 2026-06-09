@@ -17,6 +17,7 @@ class CreateQuickRecordUseCase(
         templateId: Long,
         selectedOptionIds: Collection<Long>,
         memo: String = "",
+        photoUri: String? = null,
         nowMillis: Long = System.currentTimeMillis(),
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): Long {
@@ -63,6 +64,7 @@ class CreateQuickRecordUseCase(
                 specialDeltaCalories = if (template.isSpecial) totalCalories - comparisonCalories else 0,
                 sourceType = SourceType.QUICK_BUTTON,
                 memo = memo,
+                photoUri = photoUri,
                 selectedOptions = selectedOptions,
             ),
         )

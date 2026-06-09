@@ -41,6 +41,7 @@ class MealRecordRepository(private val dao: MealRecordDao) {
                 specialDeltaCalories = record.specialDeltaCalories,
                 sourceType = record.sourceType.name,
                 memo = record.memo,
+                photoUri = record.photoUri,
             ),
         )
         if (record.selectedOptions.isNotEmpty()) {
@@ -93,6 +94,7 @@ class MealRecordRepository(private val dao: MealRecordDao) {
             specialDeltaCalories = item.record.specialDeltaCalories,
             sourceType = SourceType.valueOf(item.record.sourceType),
             memo = item.record.memo,
+            photoUri = item.record.photoUri,
             selectedOptions = item.selectedOptions.map { option ->
                 MealRecordOption(
                     id = option.id,

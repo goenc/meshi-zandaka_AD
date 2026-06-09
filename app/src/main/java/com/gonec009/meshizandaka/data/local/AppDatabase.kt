@@ -20,7 +20,7 @@ import com.gonec009.meshizandaka.data.local.entity.TemplateOptionGroupEntity
         MealRecordEntity::class,
         MealRecordOptionEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {

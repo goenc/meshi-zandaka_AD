@@ -14,6 +14,7 @@ data class MealRecord(
     val specialDeltaCalories: Int,
     val sourceType: SourceType,
     val memo: String,
+    val photoUri: String? = null,
     val selectedOptions: List<MealRecordOption> = emptyList(),
 )
 
