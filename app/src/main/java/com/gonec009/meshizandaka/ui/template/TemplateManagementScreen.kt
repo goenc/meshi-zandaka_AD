@@ -192,10 +192,6 @@ private fun TemplateEditorDialog(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text(
-                            text = stringResource(R.string.limit_settings),
-                            style = MaterialTheme.typography.titleSmall,
-                        )
                         ExposedDropdownMenuBox(
                             expanded = weeklyLimitExpanded,
                             onExpandedChange = { weeklyLimitExpanded = it },

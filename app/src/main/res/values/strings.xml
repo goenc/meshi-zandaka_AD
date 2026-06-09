@@ -62,7 +62,6 @@
     <string name="fat">脂質</string>
     <string name="carb">糖質</string>
     <string name="comparison_template">比較対象通常食</string>
-    <string name="limit_settings">上限設定</string>
     <string name="weekly_limit">週上限回数</string>
     <string name="monthly_limit">月上限回数</string>
     <string name="no_limit">設定なし</string>
