@@ -76,7 +76,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
-import kotlin.math.ceil
 
 private data class SummaryItem(
     val title: String,
@@ -101,16 +100,13 @@ private data class PendingDeleteRecord(
 )
 
 private val ChartBarWidth = 39.dp
-private const val ChartBlockCalories = 100
+private const val ChartSectionCount = 4
 
 private fun formatChartCalories(calories: Int): String {
     return "${calories}K"
 }
 
-internal fun chartBlockCount(calories: Int): Int {
-    if (calories <= 0) return 0
-    return ceil(calories / ChartBlockCalories.toFloat()).toInt()
-}
+internal fun chartBlockCount(calories: Int): Int = if (calories > 0) 1 else 0
 
 private fun ChartMealSection.labelResId(): Int = when (this) {
     ChartMealSection.BREAKFAST -> R.string.meal_type_breakfast
@@ -544,7 +540,7 @@ private fun detectTappedMealSection(
     maxCalories: Int,
 ): ChartMealSection? {
     if (maxCalories <= 0) return null
-    val maxBlocks = chartBlockCount(maxCalories).coerceAtLeast(1)
+    val maxBlocks = ChartSectionCount
     val blockGap = 2f
     val blockHeight = ((height - (blockGap * (maxBlocks - 1))) / maxBlocks).coerceAtLeast(1f)
     val blockStride = blockHeight + blockGap
@@ -648,7 +644,7 @@ private fun DrawScope.drawBarBackground(maxCalories: Int) {
         size = Size(width = chartWidth, height = size.height),
         cornerRadius = CornerRadius(x = 18f, y = 18f),
     )
-    val blockRows = chartBlockCount(maxCalories).coerceAtLeast(4)
+    val blockRows = ChartSectionCount
     repeat(blockRows) { index ->
         val y = size.height - (size.height * ((index + 1) / blockRows.toFloat()))
         drawLine(
@@ -674,7 +670,7 @@ private fun DrawScope.drawStackSegment(
     lowerBlocks: Int = 0,
 ) {
     if (calories <= 0) return
-    val maxBlocks = chartBlockCount(maxCalories).coerceAtLeast(1)
+    val maxBlocks = ChartSectionCount
     val segmentBlocks = chartBlockCount(calories)
     val chartWidth = size.width * 0.7f
     val chartLeft = size.width * 0.15f

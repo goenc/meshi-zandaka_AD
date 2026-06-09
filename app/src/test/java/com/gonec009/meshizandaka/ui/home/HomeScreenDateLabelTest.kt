@@ -6,11 +6,12 @@ import java.time.LocalDate
 
 class HomeScreenDateLabelTest {
     @Test
-    fun カロリーは固定量ごとのブロック数に変換する() {
+    fun カロリーがあれば一ブロックだけ積む() {
         assertEquals(1, chartBlockCount(1))
         assertEquals(1, chartBlockCount(100))
-        assertEquals(2, chartBlockCount(101))
-        assertEquals(7, chartBlockCount(650))
+        assertEquals(1, chartBlockCount(101))
+        assertEquals(1, chartBlockCount(650))
+        assertEquals(0, chartBlockCount(0))
     }
 
     @Test
