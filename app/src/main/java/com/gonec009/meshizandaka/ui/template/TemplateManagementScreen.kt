@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -129,12 +131,16 @@ private fun TemplateEditorDialog(
         onDismissRequest = onCloseDialog,
         title = { Text(stringResource(R.string.template_editor_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedTextField(
                     value = editor.name,
                     onValueChange = { onUpdateEditor { current -> current.copy(name = it) } },
                     label = { Text(stringResource(R.string.template_name)) },
                     enabled = !isLockedTemplate,
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 ExposedDropdownMenuBox(
                     expanded = mealTypeExpanded,
@@ -147,7 +153,9 @@ private fun TemplateEditorDialog(
                         enabled = !isLockedTemplate,
                         label = { Text(stringResource(R.string.meal_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = mealTypeExpanded) },
-                        modifier = Modifier.menuAnchor(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
                     )
                     DropdownMenu(
                         expanded = mealTypeExpanded,
@@ -168,21 +176,25 @@ private fun TemplateEditorDialog(
                     value = editor.baseCalories,
                     onValueChange = { onUpdateEditor { current -> current.copy(baseCalories = it) } },
                     label = { Text(stringResource(R.string.base_calories)) },
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = editor.proteinG,
                     onValueChange = { onUpdateEditor { current -> current.copy(proteinG = it) } },
                     label = { Text(stringResource(R.string.protein)) },
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = editor.fatG,
                     onValueChange = { onUpdateEditor { current -> current.copy(fatG = it) } },
                     label = { Text(stringResource(R.string.fat)) },
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = editor.carbG,
                     onValueChange = { onUpdateEditor { current -> current.copy(carbG = it) } },
                     label = { Text(stringResource(R.string.carb)) },
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Surface(
                     shape = MaterialTheme.shapes.medium,
@@ -260,6 +272,7 @@ private fun TemplateEditorDialog(
                     value = editor.memo,
                     onValueChange = { onUpdateEditor { current -> current.copy(memo = it) } },
                     label = { Text(stringResource(R.string.memo)) },
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 if (isLockedTemplate) {
                     Text(
