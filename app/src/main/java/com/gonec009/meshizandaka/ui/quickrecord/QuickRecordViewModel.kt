@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.MealTemplate
+import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.usecase.DuplicateDailyMealException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +15,8 @@ import kotlinx.coroutines.launch
 data class QuickRecordUiState(
     val specialTemplates: List<MealTemplate> = emptyList(),
     val selectedTemplate: MealTemplate? = null,
+    val mealTypes: List<MealType> = listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK),
+    val selectedMealType: MealType = MealType.LUNCH,
     val selectedOptionIds: Map<Long, Long> = emptyMap(),
     val estimatedCalories: Int = 0,
     val photoUri: String? = null,
@@ -72,6 +75,10 @@ class QuickRecordViewModel(
         }
     }
 
+    fun selectMealType(mealType: MealType) {
+        _uiState.update { it.copy(selectedMealType = mealType) }
+    }
+
     fun setPhotoUri(photoUri: String?) {
         _uiState.update {
             it.copy(
@@ -90,6 +97,7 @@ class QuickRecordViewModel(
                     templateId = template.id,
                     selectedOptionIds = _uiState.value.selectedOptionIds.values,
                     photoUri = _uiState.value.photoUri,
+                    mealType = _uiState.value.selectedMealType,
                 )
                 _uiState.update {
                     it.copy(

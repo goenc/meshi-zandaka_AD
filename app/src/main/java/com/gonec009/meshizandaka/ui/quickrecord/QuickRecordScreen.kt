@@ -37,6 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.MealTemplate
+import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import java.io.File
 
@@ -60,6 +61,7 @@ fun QuickRecordRoute(
         innerPadding = innerPadding,
         state = state,
         onTemplateSelect = viewModel::selectTemplate,
+        onMealTypeSelect = viewModel::selectMealType,
         onOptionSelect = viewModel::selectOption,
         onPhotoCaptured = viewModel::setPhotoUri,
         onSaveClick = viewModel::saveRecord,
@@ -71,6 +73,7 @@ private fun QuickRecordScreen(
     innerPadding: PaddingValues,
     state: QuickRecordUiState,
     onTemplateSelect: (MealTemplate) -> Unit,
+    onMealTypeSelect: (MealType) -> Unit,
     onOptionSelect: (Long, Long) -> Unit,
     onPhotoCaptured: (String?) -> Unit,
     onSaveClick: () -> Unit,
@@ -89,6 +92,13 @@ private fun QuickRecordScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        item {
+            MealTypeSection(
+                mealTypes = state.mealTypes,
+                selectedMealType = state.selectedMealType,
+                onMealTypeSelect = onMealTypeSelect,
+            )
+        }
         item {
             TemplateSection(
                 title = stringResource(R.string.special_meal),
@@ -121,6 +131,7 @@ private fun QuickRecordScreen(
                 ) {
                     Text(text = stringResource(R.string.record_preview), style = MaterialTheme.typography.titleMedium)
                     Text(text = state.selectedTemplate?.name ?: stringResource(R.string.not_selected))
+                    Text(text = mealTypeLabel(state.selectedMealType))
                     Text(text = stringResource(R.string.kcal_format, state.estimatedCalories))
                     OutlinedButton(
                         onClick = {
@@ -161,6 +172,37 @@ private fun createQuickRecordPhotoUri(context: Context): Uri {
         "${context.packageName}.fileprovider",
         photoFile,
     )
+}
+
+@Composable
+private fun MealTypeSection(
+    mealTypes: List<MealType>,
+    selectedMealType: MealType,
+    onMealTypeSelect: (MealType) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = stringResource(R.string.meal_type), style = MaterialTheme.typography.titleMedium)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(mealTypes, key = { it.name }) { mealType ->
+                FilterChip(
+                    selected = selectedMealType == mealType,
+                    onClick = { onMealTypeSelect(mealType) },
+                    label = { Text(mealTypeLabel(mealType)) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun mealTypeLabel(mealType: MealType): String {
+    return when (mealType) {
+        MealType.BREAKFAST -> stringResource(R.string.meal_type_breakfast)
+        MealType.LUNCH -> stringResource(R.string.meal_type_lunch)
+        MealType.DINNER -> stringResource(R.string.meal_type_dinner)
+        MealType.SNACK -> stringResource(R.string.meal_type_snack)
+        MealType.EATING_OUT -> stringResource(R.string.meal_type_eating_out)
+    }
 }
 
 @Composable

@@ -18,11 +18,13 @@ class CreateQuickRecordUseCase(
         selectedOptionIds: Collection<Long>,
         memo: String = "",
         photoUri: String? = null,
+        mealType: MealType? = null,
         nowMillis: Long = System.currentTimeMillis(),
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): Long {
         val template = templateRepository.getTemplate(templateId) ?: error("Template not found: $templateId")
-        ensureDailyMealSlotAvailable(template.mealType, nowMillis, zoneId)
+        val recordMealType = mealType ?: template.mealType
+        ensureDailyMealSlotAvailable(recordMealType, nowMillis, zoneId)
         val selectedOptions = template.optionGroups.flatMap { group ->
             group.options.filter { it.id in selectedOptionIds }.map { option ->
                 MealRecordOption(
@@ -53,7 +55,7 @@ class CreateQuickRecordUseCase(
         return recordRepository.insertRecord(
             MealRecord(
                 eatenAt = nowMillis,
-                mealType = template.mealType,
+                mealType = recordMealType,
                 templateId = template.id,
                 templateNameSnapshot = template.name,
                 totalCalories = totalCalories,
