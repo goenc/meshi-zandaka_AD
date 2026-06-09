@@ -1,5 +1,7 @@
 package com.gonec009.meshizandaka.data.repository
 
+import android.content.Context
+import android.net.Uri
 import com.gonec009.meshizandaka.data.local.dao.MealRecordDao
 import com.gonec009.meshizandaka.data.local.entity.MealRecordEntity
 import com.gonec009.meshizandaka.data.local.entity.MealRecordOptionEntity
@@ -8,10 +10,15 @@ import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealRecordOption
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.SourceType
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
-class MealRecordRepository(private val dao: MealRecordDao) {
+class MealRecordRepository(
+    private val dao: MealRecordDao,
+    private val context: Context? = null,
+) {
     fun observeRecentRecords(limit: Int = 10): Flow<List<MealRecord>> =
         dao.observeRecentRecords(limit).map { items -> items.map(::toModel) }
 
@@ -76,7 +83,19 @@ class MealRecordRepository(private val dao: MealRecordDao) {
     }
 
     suspend fun deleteRecord(recordId: Long) {
+        val photoUri = dao.getRecord(recordId)?.photoUri
         dao.deleteRecord(recordId)
+        deletePhoto(photoUri)
+    }
+
+    private suspend fun deletePhoto(photoUri: String?) {
+        val appContext = context ?: return
+        if (photoUri.isNullOrBlank()) return
+        withContext(Dispatchers.IO) {
+            runCatching {
+                appContext.contentResolver.delete(Uri.parse(photoUri), null, null)
+            }
+        }
     }
 
     private fun toModel(item: MealRecordWithRelations): MealRecord {

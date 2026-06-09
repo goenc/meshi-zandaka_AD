@@ -16,7 +16,7 @@ class AppContainer(context: Context) {
 
     val settingsRepository by lazy { SettingsRepository(appContext) }
     val mealTemplateRepository by lazy { MealTemplateRepository(database.mealTemplateDao()) }
-    val mealRecordRepository by lazy { MealRecordRepository(database.mealRecordDao()) }
+    val mealRecordRepository by lazy { MealRecordRepository(database.mealRecordDao(), appContext) }
     val budgetCalculator by lazy { BudgetCalculator() }
 
     val ensureSeedDataUseCase by lazy {

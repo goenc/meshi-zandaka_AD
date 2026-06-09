@@ -67,6 +67,7 @@ import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.DailyMealStack
 import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
+import com.gonec009.meshizandaka.ui.common.MealPhoto
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
 import java.time.Instant
@@ -578,6 +579,14 @@ private fun ChartMealDetailDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.Top,
                     ) {
+                        MealPhoto(
+                            uriString = record.photoUri,
+                            contentDescription = record.templateNameSnapshot,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            maxSizePx = 160,
+                        )
                         Column(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(2.dp),
