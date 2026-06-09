@@ -1,5 +1,6 @@
 package com.gonec009.meshizandaka.ui.template
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -21,7 +23,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,9 +33,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -138,7 +142,7 @@ private fun TemplateEditorDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                OutlinedTextField(
+                CompactOutlinedField(
                     value = editor.name,
                     onValueChange = { onUpdateEditor { current -> current.copy(name = it) } },
                     label = { Text(stringResource(R.string.template_name)) },
@@ -151,7 +155,7 @@ private fun TemplateEditorDialog(
                     expanded = mealTypeExpanded,
                     onExpandedChange = { if (!isLockedTemplate) mealTypeExpanded = it },
                 ) {
-                    OutlinedTextField(
+                    CompactOutlinedField(
                         value = mealTypeLabel(editor.mealType),
                         onValueChange = {},
                         readOnly = true,
@@ -177,7 +181,7 @@ private fun TemplateEditorDialog(
                         }
                     }
                 }
-                OutlinedTextField(
+                CompactOutlinedField(
                     value = editor.baseCalories,
                     onValueChange = { onUpdateEditor { current -> current.copy(baseCalories = it) } },
                     label = { Text(stringResource(R.string.base_calories)) },
@@ -185,7 +189,7 @@ private fun TemplateEditorDialog(
                     textStyle = compactFieldTextStyle(),
                     singleLine = true,
                 )
-                OutlinedTextField(
+                CompactOutlinedField(
                     value = editor.proteinG,
                     onValueChange = { onUpdateEditor { current -> current.copy(proteinG = it) } },
                     label = { Text(stringResource(R.string.protein)) },
@@ -193,7 +197,7 @@ private fun TemplateEditorDialog(
                     textStyle = compactFieldTextStyle(),
                     singleLine = true,
                 )
-                OutlinedTextField(
+                CompactOutlinedField(
                     value = editor.fatG,
                     onValueChange = { onUpdateEditor { current -> current.copy(fatG = it) } },
                     label = { Text(stringResource(R.string.fat)) },
@@ -201,7 +205,7 @@ private fun TemplateEditorDialog(
                     textStyle = compactFieldTextStyle(),
                     singleLine = true,
                 )
-                OutlinedTextField(
+                CompactOutlinedField(
                     value = editor.carbG,
                     onValueChange = { onUpdateEditor { current -> current.copy(carbG = it) } },
                     label = { Text(stringResource(R.string.carb)) },
@@ -221,7 +225,7 @@ private fun TemplateEditorDialog(
                             expanded = weeklyLimitExpanded,
                             onExpandedChange = { weeklyLimitExpanded = it },
                         ) {
-                            OutlinedTextField(
+                            CompactOutlinedField(
                                 value = limitCountLabel(editor.weeklyLimitCount),
                                 onValueChange = {},
                                 readOnly = true,
@@ -252,7 +256,7 @@ private fun TemplateEditorDialog(
                             expanded = monthlyLimitExpanded,
                             onExpandedChange = { monthlyLimitExpanded = it },
                         ) {
-                            OutlinedTextField(
+                            CompactOutlinedField(
                                 value = limitCountLabel(editor.monthlyLimitCount),
                                 onValueChange = {},
                                 readOnly = true,
@@ -281,7 +285,7 @@ private fun TemplateEditorDialog(
                         }
                     }
                 }
-                OutlinedTextField(
+                CompactOutlinedField(
                     value = editor.memo,
                     onValueChange = { onUpdateEditor { current -> current.copy(memo = it) } },
                     label = { Text(stringResource(R.string.memo)) },
@@ -325,4 +329,55 @@ private fun compactFieldModifier(): Modifier {
 
 private fun compactFieldTextStyle(): TextStyle {
     return TextStyle(fontSize = 14.sp)
+}
+
+@Composable
+private fun CompactOutlinedField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: @Composable (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    singleLine: Boolean = false,
+    minLines: Int = 1,
+    maxLines: Int = Int.MAX_VALUE,
+    textStyle: TextStyle = compactFieldTextStyle(),
+    trailingIcon: @Composable (() -> Unit)? = null,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        enabled = enabled,
+        readOnly = readOnly,
+        singleLine = singleLine,
+        minLines = minLines,
+        maxLines = maxLines,
+        textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        interactionSource = interactionSource,
+        decorationBox = { innerTextField ->
+            OutlinedTextFieldDefaults.DecorationBox(
+                value = value,
+                innerTextField = innerTextField,
+                enabled = enabled,
+                singleLine = singleLine,
+                visualTransformation = VisualTransformation.None,
+                interactionSource = interactionSource,
+                label = label,
+                trailingIcon = trailingIcon,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                container = {
+                    OutlinedTextFieldDefaults.Container(
+                        enabled = enabled,
+                        isError = false,
+                        interactionSource = interactionSource,
+                        colors = OutlinedTextFieldDefaults.colors(),
+                    )
+                },
+            )
+        },
+    )
 }
