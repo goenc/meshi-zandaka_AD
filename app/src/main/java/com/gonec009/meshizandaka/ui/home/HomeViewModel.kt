@@ -83,6 +83,14 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         _uiState.update { it.copy(selectedRecordDate = date) }
     }
 
+    fun deleteRecord(recordId: Long, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            container.mealRecordRepository.deleteRecord(recordId)
+            _uiState.update { it.copy(message = "記録を削除しました") }
+            onComplete()
+        }
+    }
+
     private fun recordTemplate(templateId: Long?, successMessage: String) {
         if (templateId == null) {
             _uiState.update { it.copy(message = "設定でテンプレートを選んでください") }

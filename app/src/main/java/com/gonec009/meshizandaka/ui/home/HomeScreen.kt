@@ -28,6 +28,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
@@ -53,6 +55,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,6 +93,10 @@ private data class ChartMealDialogState(
     val date: LocalDate,
     val section: ChartMealSection,
     val records: List<MealRecord>,
+)
+
+private data class PendingDeleteRecord(
+    val record: MealRecord,
 )
 
 private val ChartBarWidth = 39.dp
@@ -145,11 +152,12 @@ fun HomeRoute(
         onQuickRecordClick = onQuickRecordClick,
         onMoveSelectedDate = viewModel::moveSelectedRecordDate,
         onDateSelected = viewModel::updateSelectedRecordDate,
-        onBreakfastClick = viewModel::recordBreakfast,
-        onLunchClick = viewModel::recordLunch,
-        onDinnerClick = viewModel::recordDinner,
-        onToggleRecentRecords = viewModel::toggleRecentRecords,
-        onRecordClick = onRecordClick,
+    onBreakfastClick = viewModel::recordBreakfast,
+    onLunchClick = viewModel::recordLunch,
+    onDinnerClick = viewModel::recordDinner,
+    onToggleRecentRecords = viewModel::toggleRecentRecords,
+    onRecordClick = onRecordClick,
+    onDeleteRecord = viewModel::deleteRecord,
     )
 }
 
@@ -165,8 +173,10 @@ private fun HomeScreen(
     onDinnerClick: () -> Unit,
     onToggleRecentRecords: () -> Unit,
     onRecordClick: (Long) -> Unit,
+    onDeleteRecord: (Long, () -> Unit) -> Unit,
 ) {
     var isDatePickerVisible by remember { mutableStateOf(false) }
+    var pendingDeleteRecord by remember { mutableStateOf<PendingDeleteRecord?>(null) }
     val summaryItems = listOf(
         SummaryItem(
             title = stringResource(R.string.today_consumed),
@@ -230,6 +240,11 @@ private fun HomeScreen(
                 stacks = state.weeklyChart.days,
                 maxCalories = state.weeklyChart.maxTotalCalories,
                 modifier = Modifier.testTag("weekly_chart_card"),
+                onDeleteRecordRequest = { _, record ->
+                    pendingDeleteRecord = PendingDeleteRecord(
+                        record = record,
+                    )
+                },
             )
         }
         item {
@@ -272,6 +287,29 @@ private fun HomeScreen(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+    pendingDeleteRecord?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteRecord = null },
+            title = { Text(stringResource(R.string.delete)) },
+            text = { Text(stringResource(R.string.delete_record_confirm_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteRecord(pending.record.id) {
+                            pendingDeleteRecord = null
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteRecord = null }) {
+                    Text(stringResource(R.string.no))
+                }
+            },
+        )
     }
 }
 
@@ -326,6 +364,7 @@ private fun WeeklyChartCard(
     stacks: List<DailyMealStack>,
     maxCalories: Int,
     modifier: Modifier = Modifier,
+    onDeleteRecordRequest: (ChartMealDialogState, MealRecord) -> Unit,
 ) {
     val scrollState = rememberScrollState()
     val resolvedMaxCalories = maxCalories.coerceAtLeast(1)
@@ -386,6 +425,10 @@ private fun WeeklyChartCard(
         ChartMealDetailDialog(
             state = detail,
             onDismiss = { dialogState = null },
+            onDeleteClick = { record ->
+                onDeleteRecordRequest(detail, record)
+                dialogState = null
+            },
         )
     }
 }
@@ -506,6 +549,7 @@ private fun detectTappedMealSection(
 private fun ChartMealDetailDialog(
     state: ChartMealDialogState,
     onDismiss: () -> Unit,
+    onDeleteClick: (MealRecord) -> Unit,
 ) {
     val titleDateFormatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.JAPAN) }
     val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.JAPAN) }
@@ -525,28 +569,44 @@ private fun ChartMealDetailDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 state.records.forEach { record ->
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = record.templateNameSnapshot,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text = "${timeFormatter.format(Date(record.eatenAt))}  ${stringResource(R.string.kcal_format, record.totalCalories)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        if (record.selectedOptions.isNotEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
                             Text(
-                                text = record.selectedOptions.joinToString(" / ") { option -> option.optionNameSnapshot },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = record.templateNameSnapshot,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
                             )
-                        }
-                        if (record.memo.isNotBlank()) {
                             Text(
-                                text = record.memo,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = "${timeFormatter.format(Date(record.eatenAt))}  ${stringResource(R.string.kcal_format, record.totalCalories)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            if (record.selectedOptions.isNotEmpty()) {
+                                Text(
+                                    text = record.selectedOptions.joinToString(" / ") { option -> option.optionNameSnapshot },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (record.memo.isNotBlank()) {
+                                Text(
+                                    text = record.memo,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        IconButton(onClick = { onDeleteClick(record) }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_delete),
+                                contentDescription = stringResource(R.string.delete),
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp),
                             )
                         }
                     }
