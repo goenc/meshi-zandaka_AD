@@ -1,5 +1,7 @@
 package com.gonec009.meshizandaka.navigation
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -10,6 +12,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -24,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
+import com.gonec009.meshizandaka.domain.model.HomeDashboardData
 import com.gonec009.meshizandaka.ui.home.HomeRoute
 import com.gonec009.meshizandaka.ui.quickrecord.QuickRecordRoute
 import com.gonec009.meshizandaka.ui.recordedit.RecordEditRoute
@@ -35,6 +39,7 @@ import com.gonec009.meshizandaka.ui.template.TemplateManagementRoute
 fun MeshiZandakaAppRoot(container: AppContainer) {
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
+    val dashboard by container.observeDashboardUseCase().collectAsState(initial = HomeDashboardData())
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val currentDestination = when {
@@ -49,7 +54,16 @@ fun MeshiZandakaAppRoot(container: AppContainer) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(currentDestination.titleResId)) },
+                title = {
+                    if (currentDestination == AppDestination.Home) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(stringResource(currentDestination.titleResId))
+                            Text(stringResource(R.string.kcal_format, dashboard.summary.todayBalanceCalories))
+                        }
+                    } else {
+                        Text(stringResource(currentDestination.titleResId))
+                    }
+                },
                 navigationIcon = {
                     if (currentDestination != AppDestination.Home) {
                         IconButton(onClick = { navController.popBackStack() }) {

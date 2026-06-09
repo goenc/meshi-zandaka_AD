@@ -210,7 +210,6 @@ private fun HomeScreen(
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                BalanceHero(todayBalanceCalories = state.summary.todayBalanceCalories)
                 RecordDateSelector(
                     selectedDate = state.selectedRecordDate,
                     onPreviousDateClick = { onMoveSelectedDate(-1L) },
@@ -301,28 +300,6 @@ private fun HomeScreen(
             },
         )
     }
-}
-
-@Composable
-private fun BalanceHero(todayBalanceCalories: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        Text(
-            text = stringResource(R.string.home_title),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            text = stringResource(R.string.kcal_format, todayBalanceCalories),
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    } 
 }
 
 @Composable
