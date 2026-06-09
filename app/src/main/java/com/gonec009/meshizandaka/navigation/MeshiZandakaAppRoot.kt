@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
@@ -56,7 +57,10 @@ fun MeshiZandakaAppRoot(container: AppContainer) {
             TopAppBar(
                 title = {
                     if (currentDestination == AppDestination.Home) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.Bottom,
+                        ) {
                             Text(stringResource(currentDestination.titleResId))
                             Text(stringResource(R.string.kcal_format, dashboard.summary.todayBalanceCalories))
                         }
