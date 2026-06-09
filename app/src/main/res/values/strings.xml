@@ -25,7 +25,6 @@
     <string name="month_special_count">今月の特別食回数</string>
     <string name="month_special_delta">特別メシ差分合計</string>
     <string name="recent_seven_days">直近7日</string>
-    <string name="weekly_chart_empty">まだ記録がありません。0 kcal の日も含めて直近7日を表示しています。</string>
     <string name="chart_breakfast">朝</string>
     <string name="chart_lunch">昼</string>
     <string name="chart_dinner">夕</string>

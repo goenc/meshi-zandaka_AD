@@ -373,13 +373,6 @@ private fun WeeklyChartCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             LegendRow()
-            if (maxCalories == 0) {
-                Text(
-                    text = stringResource(R.string.weekly_chart_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
