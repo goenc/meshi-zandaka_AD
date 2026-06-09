@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -124,7 +123,7 @@ private fun TemplateEditorDialog(
     var weeklyLimitExpanded by remember { mutableStateOf(false) }
     var monthlyLimitExpanded by remember { mutableStateOf(false) }
     val weeklyLimitOptions = remember { listOf(null) + (1..7).toList() }
-    val monthlyLimitOptions = remember { listOf(null) + (1..31).toList() }
+    val monthlyLimitOptions = remember { listOf(null) + (1..7).toList() }
 
     AlertDialog(
         onDismissRequest = onCloseDialog,
@@ -272,16 +271,6 @@ private fun TemplateEditorDialog(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                }
-                androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Checkbox(
-                        checked = editor.isSpecial,
-                        onCheckedChange = { checked ->
-                            onUpdateEditor { current -> current.copy(isSpecial = checked) }
-                        },
-                        enabled = !isLockedTemplate,
-                    )
-                    Text(stringResource(R.string.special_meal))
                 }
             }
         },
