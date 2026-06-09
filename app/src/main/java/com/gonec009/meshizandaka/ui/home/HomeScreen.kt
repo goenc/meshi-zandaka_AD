@@ -76,6 +76,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
+import kotlin.math.ceil
 
 private data class SummaryItem(
     val title: String,
@@ -100,9 +101,15 @@ private data class PendingDeleteRecord(
 )
 
 private val ChartBarWidth = 39.dp
+private const val ChartBlockCalories = 100
 
 private fun formatChartCalories(calories: Int): String {
     return "${calories}K"
+}
+
+internal fun chartBlockCount(calories: Int): Int {
+    if (calories <= 0) return 0
+    return ceil(calories / ChartBlockCalories.toFloat()).toInt()
 }
 
 private fun ChartMealSection.labelResId(): Int = when (this) {
@@ -498,20 +505,27 @@ private fun DayStackBar(
                 }
                 .testTag("weekly_chart_bar_${formatter.format(stack.date)}"),
         ) {
-            drawBarBackground()
+            drawBarBackground(maxCalories)
             drawStackSegment(stack.breakfastCalories, maxCalories, BreakfastChartColor)
-            drawStackSegment(stack.lunchCalories, maxCalories, LunchChartColor, stack.breakfastCalories)
+            drawStackSegment(
+                stack.lunchCalories,
+                maxCalories,
+                LunchChartColor,
+                chartBlockCount(stack.breakfastCalories),
+            )
             drawStackSegment(
                 stack.dinnerCalories,
                 maxCalories,
                 DinnerChartColor,
-                stack.breakfastCalories + stack.lunchCalories,
+                chartBlockCount(stack.breakfastCalories) + chartBlockCount(stack.lunchCalories),
             )
             drawStackSegment(
                 stack.snackCalories,
                 maxCalories,
                 SnackChartColor,
-                stack.breakfastCalories + stack.lunchCalories + stack.dinnerCalories,
+                chartBlockCount(stack.breakfastCalories) +
+                    chartBlockCount(stack.lunchCalories) +
+                    chartBlockCount(stack.dinnerCalories),
             )
         }
         Text(
@@ -530,17 +544,26 @@ private fun detectTappedMealSection(
     maxCalories: Int,
 ): ChartMealSection? {
     if (maxCalories <= 0) return null
-    val totalHeight = height
-    val breakfastTop = totalHeight - totalHeight * (stack.breakfastCalories.toFloat() / maxCalories.toFloat())
-    val lunchTop = breakfastTop - totalHeight * (stack.lunchCalories.toFloat() / maxCalories.toFloat())
-    val dinnerTop = lunchTop - totalHeight * (stack.dinnerCalories.toFloat() / maxCalories.toFloat())
-    val snackTop = dinnerTop - totalHeight * (stack.snackCalories.toFloat() / maxCalories.toFloat())
+    val maxBlocks = chartBlockCount(maxCalories).coerceAtLeast(1)
+    val blockGap = 2f
+    val blockHeight = ((height - (blockGap * (maxBlocks - 1))) / maxBlocks).coerceAtLeast(1f)
+    val blockStride = blockHeight + blockGap
+    val distanceFromBottom = height - offsetY
+    val positionInStride = distanceFromBottom % blockStride
+    if (positionInStride > blockHeight) return null
+    val blockIndexFromBottom = (distanceFromBottom / blockStride).toInt()
+    if (blockIndexFromBottom < 0 || blockIndexFromBottom >= maxBlocks) return null
+
+    val breakfastBlocks = chartBlockCount(stack.breakfastCalories)
+    val lunchBlocks = chartBlockCount(stack.lunchCalories)
+    val dinnerBlocks = chartBlockCount(stack.dinnerCalories)
+    val snackBlocks = chartBlockCount(stack.snackCalories)
 
     return when {
-        stack.snackCalories > 0 && offsetY in snackTop..dinnerTop -> ChartMealSection.SNACK
-        stack.dinnerCalories > 0 && offsetY in dinnerTop..lunchTop -> ChartMealSection.DINNER
-        stack.lunchCalories > 0 && offsetY in lunchTop..breakfastTop -> ChartMealSection.LUNCH
-        stack.breakfastCalories > 0 && offsetY in breakfastTop..totalHeight -> ChartMealSection.BREAKFAST
+        blockIndexFromBottom < breakfastBlocks -> ChartMealSection.BREAKFAST
+        blockIndexFromBottom < breakfastBlocks + lunchBlocks -> ChartMealSection.LUNCH
+        blockIndexFromBottom < breakfastBlocks + lunchBlocks + dinnerBlocks -> ChartMealSection.DINNER
+        blockIndexFromBottom < breakfastBlocks + lunchBlocks + dinnerBlocks + snackBlocks -> ChartMealSection.SNACK
         else -> null
     }
 }
@@ -616,7 +639,7 @@ private fun ChartMealDetailDialog(
     )
 }
 
-private fun DrawScope.drawBarBackground() {
+private fun DrawScope.drawBarBackground(maxCalories: Int) {
     val chartLeft = size.width * 0.15f
     val chartWidth = size.width * 0.7f
     drawRoundRect(
@@ -625,13 +648,14 @@ private fun DrawScope.drawBarBackground() {
         size = Size(width = chartWidth, height = size.height),
         cornerRadius = CornerRadius(x = 18f, y = 18f),
     )
-    repeat(4) { index ->
-        val y = size.height - (size.height * ((index + 1) / 4f))
+    val blockRows = chartBlockCount(maxCalories).coerceAtLeast(4)
+    repeat(blockRows) { index ->
+        val y = size.height - (size.height * ((index + 1) / blockRows.toFloat()))
         drawLine(
             color = Color(0x2A000000),
             start = Offset(x = chartLeft, y = y),
             end = Offset(x = chartLeft + chartWidth, y = y),
-            strokeWidth = 1.5f,
+            strokeWidth = 1f,
         )
     }
     drawRoundRect(
@@ -647,19 +671,26 @@ private fun DrawScope.drawStackSegment(
     calories: Int,
     maxCalories: Int,
     color: Color,
-    lowerCalories: Int = 0,
+    lowerBlocks: Int = 0,
 ) {
     if (calories <= 0) return
+    val maxBlocks = chartBlockCount(maxCalories).coerceAtLeast(1)
+    val segmentBlocks = chartBlockCount(calories)
     val chartWidth = size.width * 0.7f
     val chartLeft = size.width * 0.15f
-    val segmentHeight = size.height * (calories.toFloat() / maxCalories.toFloat())
-    val lowerHeight = size.height * (lowerCalories.toFloat() / maxCalories.toFloat())
-    drawRoundRect(
-        color = color,
-        topLeft = Offset(x = chartLeft, y = size.height - lowerHeight - segmentHeight),
-        size = Size(width = chartWidth, height = segmentHeight),
-        cornerRadius = CornerRadius(x = 18f, y = 18f),
-    )
+    val blockGap = 2f
+    val blockHeight = ((size.height - (blockGap * (maxBlocks - 1))) / maxBlocks).coerceAtLeast(1f)
+    val chartTop = size.height - (blockHeight * maxBlocks) - (blockGap * (maxBlocks - 1))
+    repeat(segmentBlocks) { index ->
+        val blockBottomIndex = lowerBlocks + index
+        val top = chartTop + ((maxBlocks - 1 - blockBottomIndex) * (blockHeight + blockGap))
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(x = chartLeft, y = top),
+            size = Size(width = chartWidth, height = blockHeight),
+            cornerRadius = CornerRadius(x = 4f, y = 4f),
+        )
+    }
 }
 
 @Composable
