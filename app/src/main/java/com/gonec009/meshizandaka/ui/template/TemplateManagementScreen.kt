@@ -2,9 +2,12 @@ package com.gonec009.meshizandaka.ui.template
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
@@ -23,7 +27,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,11 +36,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -140,7 +144,7 @@ private fun TemplateEditorDialog(
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 CompactOutlinedField(
                     value = editor.name,
@@ -214,12 +218,12 @@ private fun TemplateEditorDialog(
                     singleLine = true,
                 )
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         ExposedDropdownMenuBox(
                             expanded = weeklyLimitExpanded,
@@ -324,7 +328,7 @@ private fun limitCountLabel(value: String): String {
 private fun compactFieldModifier(): Modifier {
     return Modifier
         .fillMaxWidth()
-        .heightIn(min = 52.dp)
+        .heightIn(min = 44.dp)
 }
 
 private fun compactFieldTextStyle(): TextStyle {
@@ -346,38 +350,44 @@ private fun CompactOutlinedField(
     trailingIcon: @Composable (() -> Unit)? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier,
-        enabled = enabled,
-        readOnly = readOnly,
-        singleLine = singleLine,
-        minLines = minLines,
-        maxLines = maxLines,
-        textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        interactionSource = interactionSource,
-        decorationBox = { innerTextField ->
-            OutlinedTextFieldDefaults.DecorationBox(
-                value = value,
-                innerTextField = innerTextField,
-                enabled = enabled,
-                singleLine = singleLine,
-                visualTransformation = VisualTransformation.None,
-                interactionSource = interactionSource,
-                label = label,
-                trailingIcon = trailingIcon,
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                container = {
-                    OutlinedTextFieldDefaults.Container(
-                        enabled = enabled,
-                        isError = false,
-                        interactionSource = interactionSource,
-                        colors = OutlinedTextFieldDefaults.colors(),
-                    )
-                },
-            )
-        },
-    )
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        label?.invoke()
+        Surface(
+            modifier = modifier,
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    if (readOnly) {
+                        Text(
+                            text = value,
+                            style = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
+                            fontWeight = FontWeight.Normal,
+                        )
+                    } else {
+                        BasicTextField(
+                            value = value,
+                            onValueChange = onValueChange,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = enabled,
+                            readOnly = false,
+                            singleLine = singleLine,
+                            minLines = minLines,
+                            maxLines = maxLines,
+                            textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            interactionSource = interactionSource,
+                        )
+                    }
+                }
+                trailingIcon?.invoke()
+            }
+        }
+    }
 }
