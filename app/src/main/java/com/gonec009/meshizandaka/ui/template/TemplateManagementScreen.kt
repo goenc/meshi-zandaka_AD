@@ -75,6 +75,7 @@ fun TemplateManagementRoute(
         onCloseDialog = viewModel::closeDialog,
         onUpdateEditor = viewModel::updateEditor,
         onSave = viewModel::saveTemplate,
+        onDelete = viewModel::deleteTemplate,
     )
 }
 
@@ -87,6 +88,7 @@ private fun TemplateManagementScreen(
     onCloseDialog: () -> Unit,
     onUpdateEditor: ((TemplateEditorState) -> TemplateEditorState) -> Unit,
     onSave: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     var showCamera by remember { mutableStateOf(false) }
 
@@ -128,6 +130,7 @@ private fun TemplateManagementScreen(
                 onCloseDialog = onCloseDialog,
                 onUpdateEditor = onUpdateEditor,
                 onSave = onSave,
+                onDelete = onDelete,
                 onTakePhotoClick = { showCamera = true },
             )
         }
@@ -151,6 +154,7 @@ private fun TemplateEditorDialog(
     onCloseDialog: () -> Unit,
     onUpdateEditor: ((TemplateEditorState) -> TemplateEditorState) -> Unit,
     onSave: () -> Unit,
+    onDelete: () -> Unit,
     onTakePhotoClick: () -> Unit,
 ) {
     val editor = state.editorState
@@ -279,8 +283,15 @@ private fun TemplateEditorDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onCloseDialog) {
-                Text(stringResource(R.string.cancel))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (editor.id != 0L) {
+                    TextButton(onClick = onDelete) {
+                        Text(stringResource(R.string.delete))
+                    }
+                }
+                TextButton(onClick = onCloseDialog) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         },
     )

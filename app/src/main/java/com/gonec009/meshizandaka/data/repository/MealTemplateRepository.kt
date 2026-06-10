@@ -103,6 +103,13 @@ class MealTemplateRepository(
         }
     }
 
+    suspend fun deleteTemplate(templateId: Long) {
+        val photoUri = loadPhotoUri(templateId)
+        dao.deactivateTemplate(templateId)
+        savePhotoUri(templateId, null)
+        deletePhoto(photoUri)
+    }
+
     private fun toModel(item: MealTemplateWithRelations): MealTemplate {
         return MealTemplate(
             id = item.template.id,

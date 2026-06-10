@@ -42,4 +42,7 @@ interface MealTemplateDao {
 
     @Update
     suspend fun updateTemplate(template: MealTemplateEntity)
+
+    @Query("UPDATE meal_templates SET isActive = 0 WHERE id = :templateId")
+    suspend fun deactivateTemplate(templateId: Long)
 }

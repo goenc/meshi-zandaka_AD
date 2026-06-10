@@ -116,4 +116,16 @@ class TemplateManagementViewModel(
             _uiState.update { it.copy(isDialogOpen = false, editorState = TemplateEditorState()) }
         }
     }
+
+    fun deleteTemplate() {
+        val templateId = _uiState.value.editorState.id
+        if (templateId == 0L) {
+            _uiState.update { it.copy(isDialogOpen = false, editorState = TemplateEditorState()) }
+            return
+        }
+        viewModelScope.launch {
+            container.mealTemplateRepository.deleteTemplate(templateId)
+            _uiState.update { it.copy(isDialogOpen = false, editorState = TemplateEditorState()) }
+        }
+    }
 }
