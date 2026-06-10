@@ -61,6 +61,9 @@
     <string name="protein">たんぱく質</string>
     <string name="fat">脂質</string>
     <string name="carb">糖質</string>
+    <string name="protein_short">P</string>
+    <string name="fat_short">F</string>
+    <string name="carb_short">C</string>
     <string name="comparison_template">比較対象通常食</string>
     <string name="weekly_limit">週上限</string>
     <string name="monthly_limit">月上限</string>

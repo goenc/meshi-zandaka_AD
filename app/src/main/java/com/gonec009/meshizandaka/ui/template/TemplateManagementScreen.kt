@@ -194,30 +194,29 @@ private fun TemplateEditorDialog(
                     textStyle = compactFieldTextStyle(),
                     singleLine = true,
                 )
-                CompactOutlinedField(
-                    value = editor.proteinG,
-                    onValueChange = { onUpdateEditor { current -> current.copy(proteinG = it) } },
-                    label = { Text(stringResource(R.string.protein)) },
-                    modifier = compactFieldModifier(),
-                    textStyle = compactFieldTextStyle(),
-                    singleLine = true,
-                )
-                CompactOutlinedField(
-                    value = editor.fatG,
-                    onValueChange = { onUpdateEditor { current -> current.copy(fatG = it) } },
-                    label = { Text(stringResource(R.string.fat)) },
-                    modifier = compactFieldModifier(),
-                    textStyle = compactFieldTextStyle(),
-                    singleLine = true,
-                )
-                CompactOutlinedField(
-                    value = editor.carbG,
-                    onValueChange = { onUpdateEditor { current -> current.copy(carbG = it) } },
-                    label = { Text(stringResource(R.string.carb)) },
-                    modifier = compactFieldModifier(),
-                    textStyle = compactFieldTextStyle(),
-                    singleLine = true,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    CompactMacroField(
+                        label = stringResource(R.string.protein_short),
+                        value = editor.proteinG,
+                        onValueChange = { onUpdateEditor { current -> current.copy(proteinG = it) } },
+                        modifier = Modifier.weight(1f),
+                    )
+                    CompactMacroField(
+                        label = stringResource(R.string.fat_short),
+                        value = editor.fatG,
+                        onValueChange = { onUpdateEditor { current -> current.copy(fatG = it) } },
+                        modifier = Modifier.weight(1f),
+                    )
+                    CompactMacroField(
+                        label = stringResource(R.string.carb_short),
+                        value = editor.carbG,
+                        onValueChange = { onUpdateEditor { current -> current.copy(carbG = it) } },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
                 ExposedDropdownMenuBox(
                     expanded = weeklyLimitExpanded,
                     onExpandedChange = { weeklyLimitExpanded = it },
@@ -324,6 +323,43 @@ private fun compactFieldModifier(): Modifier {
 
 private fun compactFieldTextStyle(): TextStyle {
     return TextStyle(fontSize = 14.sp)
+}
+
+@Composable
+private fun CompactMacroField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Surface(
+        modifier = modifier.heightIn(min = 38.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = label,
+                style = compactFieldTextStyle(),
+                fontWeight = FontWeight.Medium,
+            )
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                textStyle = compactFieldTextStyle().copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                interactionSource = interactionSource,
+            )
+        }
+    }
 }
 
 @Composable
