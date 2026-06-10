@@ -1,7 +1,7 @@
 package com.gonec009.meshizandaka.ui.template
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
@@ -88,9 +88,10 @@ private fun TemplateManagementScreen(
     onCloseDialog: () -> Unit,
     onUpdateEditor: ((TemplateEditorState) -> TemplateEditorState) -> Unit,
     onSave: () -> Unit,
-    onDelete: () -> Unit,
+    onDelete: (Long) -> Unit,
 ) {
     var showCamera by remember { mutableStateOf(false) }
+    var templatePendingDelete by remember { mutableStateOf<MealTemplate?>(null) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -110,7 +111,10 @@ private fun TemplateManagementScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onEditClick(template) },
+                        .combinedClickable(
+                            onClick = { onEditClick(template) },
+                            onLongClick = { templatePendingDelete = template },
+                        ),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(text = template.name, style = MaterialTheme.typography.titleMedium)
@@ -130,8 +134,28 @@ private fun TemplateManagementScreen(
                 onCloseDialog = onCloseDialog,
                 onUpdateEditor = onUpdateEditor,
                 onSave = onSave,
-                onDelete = onDelete,
                 onTakePhotoClick = { showCamera = true },
+            )
+        }
+        if (templatePendingDelete != null) {
+            AlertDialog(
+                onDismissRequest = { templatePendingDelete = null },
+                text = { Text(stringResource(R.string.delete_template_confirm_message)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDelete(templatePendingDelete!!.id)
+                            templatePendingDelete = null
+                        },
+                    ) {
+                        Text(stringResource(R.string.yes))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { templatePendingDelete = null }) {
+                        Text(stringResource(R.string.no))
+                    }
+                },
             )
         }
         if (showCamera) {
@@ -154,7 +178,6 @@ private fun TemplateEditorDialog(
     onCloseDialog: () -> Unit,
     onUpdateEditor: ((TemplateEditorState) -> TemplateEditorState) -> Unit,
     onSave: () -> Unit,
-    onDelete: () -> Unit,
     onTakePhotoClick: () -> Unit,
 ) {
     val editor = state.editorState
@@ -284,11 +307,6 @@ private fun TemplateEditorDialog(
         },
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (editor.id != 0L) {
-                    TextButton(onClick = onDelete) {
-                        Text(stringResource(R.string.delete))
-                    }
-                }
                 TextButton(onClick = onCloseDialog) {
                     Text(stringResource(R.string.cancel))
                 }

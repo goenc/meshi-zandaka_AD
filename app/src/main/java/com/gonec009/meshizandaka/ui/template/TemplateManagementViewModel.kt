@@ -117,8 +117,7 @@ class TemplateManagementViewModel(
         }
     }
 
-    fun deleteTemplate() {
-        val templateId = _uiState.value.editorState.id
+    fun deleteTemplate(templateId: Long = _uiState.value.editorState.id) {
         if (templateId == 0L) {
             _uiState.update { it.copy(isDialogOpen = false, editorState = TemplateEditorState()) }
             return
