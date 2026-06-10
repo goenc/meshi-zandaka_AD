@@ -168,7 +168,9 @@ private fun TemplateEditorDialog(
                         expanded = mealTypeExpanded,
                         onDismissRequest = { mealTypeExpanded = false },
                     ) {
-                        MealType.entries.forEach { mealType ->
+                        MealType.entries
+                            .filterNot { it == MealType.EATING_OUT }
+                            .forEach { mealType ->
                             DropdownMenuItem(
                                 text = { Text(mealTypeLabel(mealType)) },
                                 onClick = {
