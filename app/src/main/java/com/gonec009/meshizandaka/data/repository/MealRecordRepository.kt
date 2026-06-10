@@ -91,6 +91,7 @@ class MealRecordRepository(
     private suspend fun deletePhoto(photoUri: String?) {
         val appContext = context ?: return
         if (photoUri.isNullOrBlank()) return
+        if (runCatching { Uri.parse(photoUri) }.getOrNull()?.path?.contains("/template_photos/") == true) return
         withContext(Dispatchers.IO) {
             runCatching {
                 appContext.contentResolver.delete(Uri.parse(photoUri), null, null)
