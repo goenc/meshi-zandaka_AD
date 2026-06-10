@@ -48,6 +48,11 @@
     <string name="meal_photo_not_added">写真なし</string>
     <string name="record_now">この内容で記録する</string>
     <string name="take_template_photo">テンプレートの写真を撮る</string>
+    <string name="camera_capture_title">写真を撮る</string>
+    <string name="camera_capture_hint">横長の枠に料理を合わせる</string>
+    <string name="camera_capture_button">この枠で撮る</string>
+    <string name="camera_permission_message">カメラを使うには権限が必要です</string>
+    <string name="camera_permission_action">カメラを許可する</string>
     <string name="add_template">テンプレートを追加する</string>
     <string name="template_editor_title">テンプレート編集</string>
     <string name="template_name">名前</string>

@@ -17,6 +17,11 @@ private const val TARGET_HEIGHT = 720
 private const val JPEG_QUALITY = 82
 private const val TARGET_MAX_DECODE = 2560
 
+data class ManagedPhotoTarget(
+    val file: File,
+    val uri: Uri,
+)
+
 suspend fun optimizeCapturedPhoto(context: Context, photoUri: Uri): String? = withContext(Dispatchers.IO) {
     runCatching {
         val oriented = decodeOrientedBitmap(context, photoUri) ?: return@runCatching photoUri.toString()
@@ -46,13 +51,24 @@ fun createManagedPhotoUri(
     folderName: String,
     filePrefix: String,
 ): Uri {
+    return createManagedPhotoTarget(context, folderName, filePrefix).uri
+}
+
+fun createManagedPhotoTarget(
+    context: Context,
+    folderName: String,
+    filePrefix: String,
+): ManagedPhotoTarget {
     val photoDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), folderName)
     photoDir.mkdirs()
     val photoFile = File(photoDir, "${filePrefix}_${System.currentTimeMillis()}.jpg")
-    return FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        photoFile,
+    return ManagedPhotoTarget(
+        file = photoFile,
+        uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            photoFile,
+        ),
     )
 }
 

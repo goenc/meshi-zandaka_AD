@@ -1,8 +1,5 @@
 package com.gonec009.meshizandaka.ui.template
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
@@ -43,12 +40,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -61,12 +56,9 @@ import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
-import com.gonec009.meshizandaka.ui.common.createManagedPhotoUri
-import com.gonec009.meshizandaka.ui.common.discardCapturedPhoto
+import com.gonec009.meshizandaka.ui.common.InAppCameraCapture
 import com.gonec009.meshizandaka.ui.common.MealPhoto
-import com.gonec009.meshizandaka.ui.common.optimizeCapturedPhoto
 import com.gonec009.meshizandaka.ui.mealTypeLabel
-import kotlinx.coroutines.launch
 
 @Composable
 fun TemplateManagementRoute(
@@ -96,44 +88,59 @@ private fun TemplateManagementScreen(
     onUpdateEditor: ((TemplateEditorState) -> TemplateEditorState) -> Unit,
     onSave: () -> Unit,
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Button(onClick = onAddClick, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.add_template))
+    var showCamera by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                Button(onClick = onAddClick, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.add_template))
+                }
             }
-        }
-        items(state.templates, key = { it.id }) { template ->
-            val isLockedTemplate = template.shortcutRole != TemplateShortcutRole.NONE
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onEditClick(template) },
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = template.name, style = MaterialTheme.typography.titleMedium)
-                    Text(text = stringResource(R.string.kcal_format, template.baseCalories))
-                    if (isLockedTemplate) {
-                        Text(text = stringResource(R.string.template_fixed_menu))
+            items(state.templates, key = { it.id }) { template ->
+                val isLockedTemplate = template.shortcutRole != TemplateShortcutRole.NONE
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onEditClick(template) },
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = template.name, style = MaterialTheme.typography.titleMedium)
+                        Text(text = stringResource(R.string.kcal_format, template.baseCalories))
+                        if (isLockedTemplate) {
+                            Text(text = stringResource(R.string.template_fixed_menu))
+                        }
+                        Text(text = if (template.isSpecial) stringResource(R.string.special_meal) else stringResource(R.string.standard_meal))
                     }
-                    Text(text = if (template.isSpecial) stringResource(R.string.special_meal) else stringResource(R.string.standard_meal))
                 }
             }
         }
-    }
 
-    if (state.isDialogOpen) {
-        TemplateEditorDialog(
-            state = state,
-            onCloseDialog = onCloseDialog,
-            onUpdateEditor = onUpdateEditor,
-            onSave = onSave,
-        )
+        if (state.isDialogOpen) {
+            TemplateEditorDialog(
+                state = state,
+                onCloseDialog = onCloseDialog,
+                onUpdateEditor = onUpdateEditor,
+                onSave = onSave,
+                onTakePhotoClick = { showCamera = true },
+            )
+        }
+        if (showCamera) {
+            InAppCameraCapture(
+                folderName = "template_photos",
+                filePrefix = "template",
+                onCaptured = { photoUri ->
+                    onUpdateEditor { current -> current.copy(photoUri = photoUri) }
+                },
+                onDismiss = { showCamera = false },
+            )
+        }
     }
 }
 
@@ -144,24 +151,10 @@ private fun TemplateEditorDialog(
     onCloseDialog: () -> Unit,
     onUpdateEditor: ((TemplateEditorState) -> TemplateEditorState) -> Unit,
     onSave: () -> Unit,
+    onTakePhotoClick: () -> Unit,
 ) {
     val editor = state.editorState
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var mealTypeExpanded by remember { mutableStateOf(false) }
-    var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
-    val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { captured ->
-        val photoUri = pendingPhotoUri
-        pendingPhotoUri = null
-        scope.launch {
-            if (captured && photoUri != null) {
-                val optimizedUri = optimizeCapturedPhoto(context, photoUri)
-                onUpdateEditor { current -> current.copy(photoUri = optimizedUri) }
-            } else {
-                discardCapturedPhoto(context, photoUri)
-            }
-        }
-    }
     AlertDialog(
         onDismissRequest = onCloseDialog,
         title = { Text(stringResource(R.string.template_editor_title)) },
@@ -250,15 +243,7 @@ private fun TemplateEditorDialog(
                     maxLines = 6,
                 )
                 Button(
-                    onClick = {
-                        val photoUri = createManagedPhotoUri(
-                            context = context,
-                            folderName = "template_photos",
-                            filePrefix = "template",
-                        )
-                        pendingPhotoUri = photoUri
-                        photoLauncher.launch(photoUri)
-                    },
+                    onClick = onTakePhotoClick,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.take_template_photo))

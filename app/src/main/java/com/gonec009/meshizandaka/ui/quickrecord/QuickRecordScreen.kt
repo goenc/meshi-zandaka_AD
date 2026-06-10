@@ -1,8 +1,5 @@
 package com.gonec009.meshizandaka.ui.quickrecord
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
@@ -34,12 +31,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,11 +45,8 @@ import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
-import com.gonec009.meshizandaka.ui.common.createManagedPhotoUri
-import com.gonec009.meshizandaka.ui.common.discardCapturedPhoto
+import com.gonec009.meshizandaka.ui.common.InAppCameraCapture
 import com.gonec009.meshizandaka.ui.common.MealPhoto
-import com.gonec009.meshizandaka.ui.common.optimizeCapturedPhoto
-import kotlinx.coroutines.launch
 
 @Composable
 fun QuickRecordRoute(
@@ -93,176 +85,165 @@ private fun QuickRecordScreen(
     onPhotoCaptured: (String?) -> Unit,
     onSaveClick: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
-    val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { captured ->
-        val photoUri = pendingPhotoUri
-        pendingPhotoUri = null
-        scope.launch {
-            if (captured && photoUri != null) {
-                onPhotoCaptured(optimizeCapturedPhoto(context, photoUri))
-            } else {
-                discardCapturedPhoto(context, photoUri)
-                onPhotoCaptured(null)
-            }
-        }
-    }
+    var showCamera by remember { mutableStateOf(false) }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        item {
-            MealTypeSection(
-                mealTypes = state.mealTypes,
-                selectedMealType = state.selectedMealType,
-                onMealTypeSelect = onMealTypeSelect,
-            )
-        }
-        item {
-            TemplateSection(
-                title = stringResource(R.string.quick_record_templates),
-                templates = state.availableTemplates,
-                selectedTemplateId = state.selectedTemplate?.id,
-                onTemplateSelect = onTemplateSelect,
-            )
-        }
-        state.selectedTemplate?.let { template ->
-            items(template.optionGroups, key = { it.id }) { group ->
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = group.name, style = MaterialTheme.typography.titleMedium)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(group.options, key = { it.id }) { option ->
-                            FilterChip(
-                                selected = state.selectedOptionIds[group.id] == option.id,
-                                onClick = { onOptionSelect(group.id, option.id) },
-                                label = { Text(option.name) },
-                            )
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item {
+                MealTypeSection(
+                    mealTypes = state.mealTypes,
+                    selectedMealType = state.selectedMealType,
+                    onMealTypeSelect = onMealTypeSelect,
+                )
+            }
+            item {
+                TemplateSection(
+                    title = stringResource(R.string.quick_record_templates),
+                    templates = state.availableTemplates,
+                    selectedTemplateId = state.selectedTemplate?.id,
+                    onTemplateSelect = onTemplateSelect,
+                )
+            }
+            state.selectedTemplate?.let { template ->
+                items(template.optionGroups, key = { it.id }) { group ->
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = group.name, style = MaterialTheme.typography.titleMedium)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(group.options, key = { it.id }) { option ->
+                                FilterChip(
+                                    selected = state.selectedOptionIds[group.id] == option.id,
+                                    onClick = { onOptionSelect(group.id, option.id) },
+                                    label = { Text(option.name) },
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-        item {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                ),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    ),
                 ) {
-                    Text(
-                        text = stringResource(R.string.record_preview),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.Bottom,
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(4.dp)
-                                    .height(48.dp)
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(MaterialTheme.colorScheme.primary),
-                            )
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Text(
-                                    text = state.selectedTemplate?.name ?: stringResource(R.string.not_selected),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Text(
-                                    text = mealTypeLabel(state.selectedMealType),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Column(
-                                horizontalAlignment = Alignment.End,
-                                verticalArrangement = Arrangement.spacedBy(2.dp),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.estimated_calories_label),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    text = stringResource(R.string.kcal_format, state.estimatedCalories),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.End,
-                                )
-                            }
-                        }
-                    }
-                    Button(
-                        onClick = {
-                            val photoUri = createManagedPhotoUri(
-                                context = context,
-                                folderName = "quick_records",
-                                filePrefix = "quick_record",
-                            )
-                            pendingPhotoUri = photoUri
-                            photoLauncher.launch(photoUri)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                    ) {
-                        Text(stringResource(R.string.take_meal_photo))
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
                         Text(
-                            text = if (state.photoUri == null) {
-                                stringResource(R.string.meal_photo_not_added)
-                            } else {
-                                stringResource(R.string.meal_photo_added)
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = stringResource(R.string.record_preview),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
                         )
-                    }
-                    MealPhoto(
-                        uriString = state.photoUri,
-                        contentDescription = stringResource(R.string.meal_photo_added),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(16f / 9f)
-                            .clip(RoundedCornerShape(8.dp)),
-                    )
-                    Button(
-                        onClick = onSaveClick,
-                        enabled = state.selectedTemplate != null && !state.isSaving,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.record_now))
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.Bottom,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(4.dp)
+                                        .height(48.dp)
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(MaterialTheme.colorScheme.primary),
+                                )
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Text(
+                                        text = state.selectedTemplate?.name ?: stringResource(R.string.not_selected),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                    Text(
+                                        text = mealTypeLabel(state.selectedMealType),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Column(
+                                    horizontalAlignment = Alignment.End,
+                                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.estimated_calories_label),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.kcal_format, state.estimatedCalories),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.End,
+                                    )
+                                }
+                            }
+                        }
+                        Button(
+                            onClick = { showCamera = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                        ) {
+                            Text(stringResource(R.string.take_meal_photo))
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        ) {
+                            Text(
+                                text = if (state.photoUri == null) {
+                                    stringResource(R.string.meal_photo_not_added)
+                                } else {
+                                    stringResource(R.string.meal_photo_added)
+                                },
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        MealPhoto(
+                            uriString = state.photoUri,
+                            contentDescription = stringResource(R.string.meal_photo_added),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(8.dp)),
+                        )
+                        Button(
+                            onClick = onSaveClick,
+                            enabled = state.selectedTemplate != null && !state.isSaving,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.record_now))
+                        }
                     }
                 }
             }
+        }
+
+        if (showCamera) {
+            InAppCameraCapture(
+                folderName = "quick_records",
+                filePrefix = "quick_record",
+                onCaptured = onPhotoCaptured,
+                onDismiss = { showCamera = false },
+            )
         }
     }
 }
