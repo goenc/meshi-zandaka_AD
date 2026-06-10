@@ -15,7 +15,13 @@ class CreateQuickRecordUseCase(
 ) {
     suspend operator fun invoke(
         templateId: Long,
-        selectedOptionIds: Collection<Long>,
+        selectedOptionIds: Collection<Long> = emptyList(),
+        templateNameSnapshot: String? = null,
+        totalCaloriesOverride: Int? = null,
+        proteinOverride: Int? = null,
+        fatOverride: Int? = null,
+        carbOverride: Int? = null,
+        isSpecialOverride: Boolean? = null,
         memo: String = "",
         photoUri: String? = null,
         mealType: MealType? = null,
@@ -47,23 +53,24 @@ class CreateQuickRecordUseCase(
                 }
             }
             ?: 0
-        val totalCalories = template.baseCalories + selectedOptions.sumOf { it.calorieDelta }
-        val protein = template.proteinG + selectedOptions.sumOf { it.proteinDeltaG }
-        val fat = template.fatG + selectedOptions.sumOf { it.fatDeltaG }
-        val carb = template.carbG + selectedOptions.sumOf { it.carbDeltaG }
+        val totalCalories = totalCaloriesOverride ?: template.baseCalories + selectedOptions.sumOf { it.calorieDelta }
+        val protein = proteinOverride ?: template.proteinG + selectedOptions.sumOf { it.proteinDeltaG }
+        val fat = fatOverride ?: template.fatG + selectedOptions.sumOf { it.fatDeltaG }
+        val carb = carbOverride ?: template.carbG + selectedOptions.sumOf { it.carbDeltaG }
+        val isSpecial = isSpecialOverride ?: template.isSpecial
 
         return recordRepository.insertRecord(
             MealRecord(
                 eatenAt = nowMillis,
                 mealType = recordMealType,
                 templateId = template.id,
-                templateNameSnapshot = template.name,
+                templateNameSnapshot = templateNameSnapshot ?: template.name,
                 totalCalories = totalCalories,
                 proteinG = protein,
                 fatG = fat,
                 carbG = carb,
-                isSpecial = template.isSpecial,
-                specialDeltaCalories = if (template.isSpecial) totalCalories - comparisonCalories else 0,
+                isSpecial = isSpecial,
+                specialDeltaCalories = if (isSpecial) totalCalories - comparisonCalories else 0,
                 sourceType = SourceType.QUICK_BUTTON,
                 memo = memo,
                 photoUri = photoUri,

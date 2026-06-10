@@ -16,10 +16,13 @@ import kotlinx.coroutines.launch
 data class QuickRecordUiState(
     val availableTemplates: List<MealTemplate> = emptyList(),
     val selectedTemplate: MealTemplate? = null,
-    val mealTypes: List<MealType> = listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK),
     val selectedMealType: MealType = MealType.LUNCH,
-    val selectedOptionIds: Map<Long, Long> = emptyMap(),
-    val estimatedCalories: Int = 0,
+    val isSpecial: Boolean = false,
+    val totalCalories: String = "",
+    val proteinG: String = "",
+    val fatG: String = "",
+    val carbG: String = "",
+    val memo: String = "",
     val photoUri: String? = null,
     val isSaving: Boolean = false,
     val message: String? = null,
@@ -41,45 +44,60 @@ class QuickRecordViewModel(
                 val selectedTemplate = currentSelection?.let { selected ->
                     availableTemplates.firstOrNull { it.id == selected.id }
                 } ?: defaultTemplate(availableTemplates)
-                val selectedOptionIds = selectedTemplate?.let(::defaultOptionIds).orEmpty()
                 _uiState.update {
-                    it.copy(
-                        availableTemplates = availableTemplates,
-                        selectedTemplate = selectedTemplate,
-                        selectedOptionIds = if (currentSelection == null) selectedOptionIds else it.selectedOptionIds.ifEmpty { selectedOptionIds },
-                        estimatedCalories = selectedTemplate?.let { template ->
-                            calculateCalories(template, if (currentSelection == null) selectedOptionIds else it.selectedOptionIds.ifEmpty { selectedOptionIds })
-                        } ?: 0,
-                    )
+                    when {
+                        selectedTemplate == null -> it.copy(
+                            availableTemplates = availableTemplates,
+                            selectedTemplate = null,
+                        )
+                        currentSelection == null -> applyTemplate(
+                            state = it.copy(availableTemplates = availableTemplates),
+                            template = selectedTemplate,
+                        )
+                        currentSelection.id != selectedTemplate.id -> applyTemplate(
+                            state = it.copy(availableTemplates = availableTemplates),
+                            template = selectedTemplate,
+                        )
+                        else -> it.copy(
+                            availableTemplates = availableTemplates,
+                            selectedTemplate = selectedTemplate,
+                        )
+                    }
                 }
             }
         }
     }
 
     fun selectTemplate(template: MealTemplate) {
-        val optionIds = defaultOptionIds(template)
-        _uiState.update {
-            it.copy(
-                selectedTemplate = template,
-                selectedOptionIds = optionIds,
-                estimatedCalories = calculateCalories(template, optionIds),
-            )
-        }
-    }
-
-    fun selectOption(groupId: Long, optionId: Long) {
-        _uiState.update { state ->
-            val template = state.selectedTemplate ?: return@update state
-            val selected = state.selectedOptionIds + (groupId to optionId)
-            state.copy(
-                selectedOptionIds = selected,
-                estimatedCalories = calculateCalories(template, selected),
-            )
-        }
+        _uiState.update { applyTemplate(it, template) }
     }
 
     fun selectMealType(mealType: MealType) {
         _uiState.update { it.copy(selectedMealType = mealType) }
+    }
+
+    fun setSpecial(isSpecial: Boolean) {
+        _uiState.update { it.copy(isSpecial = isSpecial) }
+    }
+
+    fun setTotalCalories(value: String) {
+        _uiState.update { it.copy(totalCalories = value) }
+    }
+
+    fun setProtein(value: String) {
+        _uiState.update { it.copy(proteinG = value) }
+    }
+
+    fun setFat(value: String) {
+        _uiState.update { it.copy(fatG = value) }
+    }
+
+    fun setCarb(value: String) {
+        _uiState.update { it.copy(carbG = value) }
+    }
+
+    fun setMemo(value: String) {
+        _uiState.update { it.copy(memo = value) }
     }
 
     fun setPhotoUri(photoUri: String?) {
@@ -98,13 +116,20 @@ class QuickRecordViewModel(
             try {
                 container.createQuickRecordUseCase(
                     templateId = template.id,
-                    selectedOptionIds = _uiState.value.selectedOptionIds.values,
+                    templateNameSnapshot = template.name,
+                    totalCaloriesOverride = _uiState.value.totalCalories.toIntOrNull() ?: 0,
+                    proteinOverride = _uiState.value.proteinG.toIntOrNull() ?: 0,
+                    fatOverride = _uiState.value.fatG.toIntOrNull() ?: 0,
+                    carbOverride = _uiState.value.carbG.toIntOrNull() ?: 0,
+                    isSpecialOverride = _uiState.value.isSpecial,
+                    memo = _uiState.value.memo,
                     photoUri = _uiState.value.photoUri,
                     mealType = _uiState.value.selectedMealType,
                 )
                 _uiState.update {
                     it.copy(
                         isSaving = false,
+                        memo = "",
                         photoUri = null,
                         message = "記録しました",
                     )
@@ -128,15 +153,17 @@ class QuickRecordViewModel(
         return availableTemplates.firstOrNull()
     }
 
-    private fun defaultOptionIds(template: MealTemplate): Map<Long, Long> {
-        return template.optionGroups.mapNotNull { group ->
-            group.options.firstOrNull()?.let { option -> group.id to option.id }
-        }.toMap()
-    }
-
-    private fun calculateCalories(template: MealTemplate, selectedOptionIds: Map<Long, Long>): Int {
-        return template.baseCalories + template.optionGroups.sumOf { group ->
-            group.options.firstOrNull { option -> option.id == selectedOptionIds[group.id] }?.calorieDelta ?: 0
-        }
+    private fun applyTemplate(state: QuickRecordUiState, template: MealTemplate): QuickRecordUiState {
+        return state.copy(
+            selectedTemplate = template,
+            selectedMealType = template.mealType,
+            isSpecial = template.isSpecial,
+            totalCalories = template.baseCalories.toString(),
+            proteinG = template.proteinG.toString(),
+            fatG = template.fatG.toString(),
+            carbG = template.carbG.toString(),
+            memo = template.memo,
+            photoUri = template.photoUri,
+        )
     }
 }
