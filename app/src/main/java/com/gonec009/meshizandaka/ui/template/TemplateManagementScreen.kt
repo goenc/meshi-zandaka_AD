@@ -134,11 +134,6 @@ private fun TemplateEditorDialog(
     val editor = state.editorState
     val isLockedTemplate = editor.shortcutRole != TemplateShortcutRole.NONE
     var mealTypeExpanded by remember { mutableStateOf(false) }
-    var weeklyLimitExpanded by remember { mutableStateOf(false) }
-    var monthlyLimitExpanded by remember { mutableStateOf(false) }
-    val weeklyLimitOptions = remember { listOf(null) + (1..7).toList() }
-    val monthlyLimitOptions = remember { listOf(null) + (1..7).toList() }
-
     AlertDialog(
         onDismissRequest = onCloseDialog,
         title = { Text(stringResource(R.string.template_editor_title)) },
@@ -217,76 +212,14 @@ private fun TemplateEditorDialog(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                ExposedDropdownMenuBox(
-                    expanded = weeklyLimitExpanded,
-                    onExpandedChange = { weeklyLimitExpanded = it },
-                ) {
-                    CompactOutlinedField(
-                        value = limitCountLabel(editor.weeklyLimitCount),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.weekly_limit)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = weeklyLimitExpanded) },
-                        modifier = compactFieldModifier().menuAnchor(),
-                        textStyle = compactFieldTextStyle(),
-                        singleLine = true,
-                    )
-                    DropdownMenu(
-                        expanded = weeklyLimitExpanded,
-                        onDismissRequest = { weeklyLimitExpanded = false },
-                    ) {
-                        weeklyLimitOptions.forEach { count ->
-                            DropdownMenuItem(
-                                text = { Text(limitCountLabel(count?.toString().orEmpty())) },
-                                onClick = {
-                                    weeklyLimitExpanded = false
-                                    onUpdateEditor { current ->
-                                        current.copy(weeklyLimitCount = count?.toString().orEmpty())
-                                    }
-                                },
-                            )
-                        }
-                    }
-                }
-                ExposedDropdownMenuBox(
-                    expanded = monthlyLimitExpanded,
-                    onExpandedChange = { monthlyLimitExpanded = it },
-                ) {
-                    CompactOutlinedField(
-                        value = limitCountLabel(editor.monthlyLimitCount),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.monthly_limit)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthlyLimitExpanded) },
-                        modifier = compactFieldModifier().menuAnchor(),
-                        textStyle = compactFieldTextStyle(),
-                        singleLine = true,
-                    )
-                    DropdownMenu(
-                        expanded = monthlyLimitExpanded,
-                        onDismissRequest = { monthlyLimitExpanded = false },
-                    ) {
-                        monthlyLimitOptions.forEach { count ->
-                            DropdownMenuItem(
-                                text = { Text(limitCountLabel(count?.toString().orEmpty())) },
-                                onClick = {
-                                    monthlyLimitExpanded = false
-                                    onUpdateEditor { current ->
-                                        current.copy(monthlyLimitCount = count?.toString().orEmpty())
-                                    }
-                                },
-                            )
-                        }
-                    }
-                }
                 CompactOutlinedField(
                     value = editor.memo,
                     onValueChange = { onUpdateEditor { current -> current.copy(memo = it) } },
                     label = { Text(stringResource(R.string.memo)) },
                     modifier = compactFieldModifier(),
                     textStyle = compactFieldTextStyle(),
-                    minLines = 2,
-                    maxLines = 4,
+                    minLines = 4,
+                    maxLines = 6,
                 )
                 if (isLockedTemplate) {
                     Text(
@@ -308,11 +241,6 @@ private fun TemplateEditorDialog(
             }
         },
     )
-}
-
-@Composable
-private fun limitCountLabel(value: String): String {
-    return value.ifBlank { stringResource(R.string.no_limit) }
 }
 
 private fun compactFieldModifier(): Modifier {
