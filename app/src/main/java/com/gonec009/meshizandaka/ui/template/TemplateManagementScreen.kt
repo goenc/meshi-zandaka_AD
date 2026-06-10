@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -328,7 +329,7 @@ private fun limitCountLabel(value: String): String {
 private fun compactFieldModifier(): Modifier {
     return Modifier
         .fillMaxWidth()
-        .heightIn(min = 44.dp)
+        .heightIn(min = 38.dp)
 }
 
 private fun compactFieldTextStyle(): TextStyle {
@@ -350,16 +351,26 @@ private fun CompactOutlinedField(
     trailingIcon: @Composable (() -> Unit)? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        label?.invoke()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(84.dp)
+                .padding(top = 8.dp),
+        ) {
+            label?.invoke()
+        }
         Surface(
-            modifier = modifier,
+            modifier = modifier.weight(1f),
             shape = RoundedCornerShape(8.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
                 verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
