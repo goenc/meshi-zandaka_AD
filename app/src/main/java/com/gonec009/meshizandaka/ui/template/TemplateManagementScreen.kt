@@ -133,7 +133,6 @@ private fun TemplateEditorDialog(
     onSave: () -> Unit,
 ) {
     val editor = state.editorState
-    val isLockedTemplate = editor.shortcutRole != TemplateShortcutRole.NONE
     var mealTypeExpanded by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onCloseDialog,
@@ -147,25 +146,23 @@ private fun TemplateEditorDialog(
                     value = editor.name,
                     onValueChange = { onUpdateEditor { current -> current.copy(name = it) } },
                     label = { Text(stringResource(R.string.template_name)) },
-                    enabled = !isLockedTemplate,
                     modifier = compactFieldModifier(),
                     textStyle = compactFieldTextStyle(),
                     singleLine = true,
                 )
                 ExposedDropdownMenuBox(
                     expanded = mealTypeExpanded,
-                    onExpandedChange = { if (!isLockedTemplate) mealTypeExpanded = it },
+                    onExpandedChange = { mealTypeExpanded = it },
                 ) {
                     LabeledMealSettingField(
                         mealTypeLabel = stringResource(R.string.meal_type),
                         selectedMealType = mealTypeLabel(editor.mealType),
                         isSpecial = editor.isSpecial,
-                        enabled = !isLockedTemplate,
                         expanded = mealTypeExpanded,
                         onSpecialCheckedChange = { checked ->
                             onUpdateEditor { current -> current.copy(isSpecial = checked) }
                         },
-                        modifier = Modifier.menuAnchor(),
+                        mealFieldModifier = Modifier.menuAnchor(),
                     )
                     DropdownMenu(
                         expanded = mealTypeExpanded,
@@ -222,13 +219,6 @@ private fun TemplateEditorDialog(
                     minLines = 4,
                     maxLines = 6,
                 )
-                if (isLockedTemplate) {
-                    Text(
-                        text = stringResource(R.string.template_fixed_menu_notice),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
         },
         confirmButton = {
@@ -260,10 +250,9 @@ private fun LabeledMealSettingField(
     mealTypeLabel: String,
     selectedMealType: String,
     isSpecial: Boolean,
-    enabled: Boolean,
     expanded: Boolean,
     onSpecialCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
+    mealFieldModifier: Modifier = Modifier,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -274,12 +263,12 @@ private fun LabeledMealSettingField(
             Text(mealTypeLabel)
         }
         Row(
-            modifier = modifier.weight(1f),
+            modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
-                modifier = Modifier.weight(1f),
+                modifier = mealFieldModifier.weight(1f),
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
@@ -297,27 +286,20 @@ private fun LabeledMealSettingField(
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 }
             }
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
+            Row(
+                modifier = Modifier.padding(end = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Row(
-                    modifier = Modifier.padding(start = 6.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.special_short),
-                        style = compactFieldTextStyle(),
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Checkbox(
-                        checked = isSpecial,
-                        onCheckedChange = onSpecialCheckedChange,
-                        enabled = enabled,
-                    )
-                }
+                Text(
+                    text = stringResource(R.string.special_short),
+                    style = compactFieldTextStyle(),
+                    fontWeight = FontWeight.Medium,
+                )
+                Checkbox(
+                    checked = isSpecial,
+                    onCheckedChange = onSpecialCheckedChange,
+                )
             }
         }
     }
