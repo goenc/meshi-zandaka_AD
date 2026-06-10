@@ -1,14 +1,13 @@
 package com.gonec009.meshizandaka.ui.template
 
-import android.content.Context
 import android.net.Uri
-import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -44,6 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.SolidColor
@@ -54,7 +54,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
@@ -62,9 +61,12 @@ import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
+import com.gonec009.meshizandaka.ui.common.createManagedPhotoUri
+import com.gonec009.meshizandaka.ui.common.discardCapturedPhoto
 import com.gonec009.meshizandaka.ui.common.MealPhoto
+import com.gonec009.meshizandaka.ui.common.optimizeCapturedPhoto
 import com.gonec009.meshizandaka.ui.mealTypeLabel
-import java.io.File
+import kotlinx.coroutines.launch
 
 @Composable
 fun TemplateManagementRoute(
@@ -145,14 +147,20 @@ private fun TemplateEditorDialog(
 ) {
     val editor = state.editorState
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var mealTypeExpanded by remember { mutableStateOf(false) }
     var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
     val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { captured ->
-        val newPhotoUri = pendingPhotoUri?.toString()
-        onUpdateEditor { current ->
-            current.copy(photoUri = if (captured) newPhotoUri else current.photoUri)
-        }
+        val photoUri = pendingPhotoUri
         pendingPhotoUri = null
+        scope.launch {
+            if (captured && photoUri != null) {
+                val optimizedUri = optimizeCapturedPhoto(context, photoUri)
+                onUpdateEditor { current -> current.copy(photoUri = optimizedUri) }
+            } else {
+                discardCapturedPhoto(context, photoUri)
+            }
+        }
     }
     AlertDialog(
         onDismissRequest = onCloseDialog,
@@ -243,7 +251,11 @@ private fun TemplateEditorDialog(
                 )
                 Button(
                     onClick = {
-                        val photoUri = createTemplatePhotoUri(context)
+                        val photoUri = createManagedPhotoUri(
+                            context = context,
+                            folderName = "template_photos",
+                            filePrefix = "template",
+                        )
                         pendingPhotoUri = photoUri
                         photoLauncher.launch(photoUri)
                     },
@@ -271,7 +283,7 @@ private fun TemplateEditorDialog(
                     contentDescription = stringResource(R.string.meal_photo_added),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp)
+                        .aspectRatio(16f / 9f)
                         .clip(RoundedCornerShape(8.dp)),
                 )
             }
@@ -286,17 +298,6 @@ private fun TemplateEditorDialog(
                 Text(stringResource(R.string.cancel))
             }
         },
-    )
-}
-
-private fun createTemplatePhotoUri(context: Context): Uri {
-    val photoDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "template_photos")
-    photoDir.mkdirs()
-    val photoFile = File(photoDir, "template_${System.currentTimeMillis()}.jpg")
-    return FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        photoFile,
     )
 }
 

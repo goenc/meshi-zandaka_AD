@@ -1,11 +1,10 @@
 package com.gonec009.meshizandaka.ui.quickrecord
 
-import android.content.Context
 import android.net.Uri
-import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,15 +44,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
+import com.gonec009.meshizandaka.ui.common.createManagedPhotoUri
+import com.gonec009.meshizandaka.ui.common.discardCapturedPhoto
 import com.gonec009.meshizandaka.ui.common.MealPhoto
-import java.io.File
+import com.gonec009.meshizandaka.ui.common.optimizeCapturedPhoto
+import kotlinx.coroutines.launch
 
 @Composable
 fun QuickRecordRoute(
@@ -92,10 +94,19 @@ private fun QuickRecordScreen(
     onSaveClick: () -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
     val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { captured ->
-        onPhotoCaptured(if (captured) pendingPhotoUri?.toString() else null)
+        val photoUri = pendingPhotoUri
         pendingPhotoUri = null
+        scope.launch {
+            if (captured && photoUri != null) {
+                onPhotoCaptured(optimizeCapturedPhoto(context, photoUri))
+            } else {
+                discardCapturedPhoto(context, photoUri)
+                onPhotoCaptured(null)
+            }
+        }
     }
 
     LazyColumn(
@@ -204,7 +215,11 @@ private fun QuickRecordScreen(
                     }
                     Button(
                         onClick = {
-                            val photoUri = createQuickRecordPhotoUri(context)
+                            val photoUri = createManagedPhotoUri(
+                                context = context,
+                                folderName = "quick_records",
+                                filePrefix = "quick_record",
+                            )
                             pendingPhotoUri = photoUri
                             photoLauncher.launch(photoUri)
                         },
@@ -236,7 +251,7 @@ private fun QuickRecordScreen(
                         contentDescription = stringResource(R.string.meal_photo_added),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp)
+                            .aspectRatio(16f / 9f)
                             .clip(RoundedCornerShape(8.dp)),
                     )
                     Button(
@@ -250,17 +265,6 @@ private fun QuickRecordScreen(
             }
         }
     }
-}
-
-private fun createQuickRecordPhotoUri(context: Context): Uri {
-    val photoDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "quick_records")
-    photoDir.mkdirs()
-    val photoFile = File(photoDir, "quick_record_${System.currentTimeMillis()}.jpg")
-    return FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        photoFile,
-    )
 }
 
 @Composable
