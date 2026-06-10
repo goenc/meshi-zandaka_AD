@@ -1,5 +1,7 @@
 package com.gonec009.meshizandaka.data.repository
 
+import android.content.Context
+import android.net.Uri
 import com.gonec009.meshizandaka.data.local.dao.MealTemplateDao
 import com.gonec009.meshizandaka.data.local.entity.MealTemplateEntity
 import com.gonec009.meshizandaka.data.local.entity.MealTemplateWithRelations
@@ -11,10 +13,17 @@ import com.gonec009.meshizandaka.domain.model.SelectionType
 import com.gonec009.meshizandaka.domain.model.TemplateOption
 import com.gonec009.meshizandaka.domain.model.TemplateOptionGroup
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
-class MealTemplateRepository(private val dao: MealTemplateDao) {
+class MealTemplateRepository(
+    private val dao: MealTemplateDao,
+    private val context: Context? = null,
+) {
+    private val photoPrefs = context?.getSharedPreferences(TEMPLATE_PHOTO_PREFS, Context.MODE_PRIVATE)
+
     fun observeActiveTemplates(): Flow<List<MealTemplate>> =
         dao.observeActiveTemplates().map { items -> items.map(::toModel) }
 
@@ -35,6 +44,7 @@ class MealTemplateRepository(private val dao: MealTemplateDao) {
                     weeklyLimitCount = entity.weeklyLimitCount,
                     monthlyLimitCount = entity.monthlyLimitCount,
                     memo = entity.memo,
+                    photoUri = loadPhotoUri(entity.id),
                     isActive = entity.isActive,
                 )
             }
@@ -80,10 +90,16 @@ class MealTemplateRepository(private val dao: MealTemplateDao) {
             memo = template.memo,
             isActive = template.isActive,
         )
-        if (template.id == 0L) {
+        val previousPhotoUri = if (template.id == 0L) null else loadPhotoUri(template.id)
+        val templateId = if (template.id == 0L) {
             dao.insertTemplate(entity)
         } else {
             dao.updateTemplate(entity)
+            template.id
+        }
+        savePhotoUri(templateId, template.photoUri)
+        if (previousPhotoUri != template.photoUri) {
+            deletePhoto(previousPhotoUri)
         }
     }
 
@@ -102,6 +118,7 @@ class MealTemplateRepository(private val dao: MealTemplateDao) {
             weeklyLimitCount = item.template.weeklyLimitCount,
             monthlyLimitCount = item.template.monthlyLimitCount,
             memo = item.template.memo,
+            photoUri = loadPhotoUri(item.template.id),
             isActive = item.template.isActive,
             optionGroups = item.optionGroups.map { group ->
                 TemplateOptionGroup(
@@ -124,5 +141,37 @@ class MealTemplateRepository(private val dao: MealTemplateDao) {
                 )
             },
         )
+    }
+
+    private fun loadPhotoUri(templateId: Long): String? {
+        if (templateId == 0L) return null
+        return photoPrefs?.getString(templatePhotoKey(templateId), null)
+    }
+
+    private fun savePhotoUri(templateId: Long, photoUri: String?) {
+        if (templateId == 0L) return
+        photoPrefs?.edit()?.apply {
+            if (photoUri.isNullOrBlank()) {
+                remove(templatePhotoKey(templateId))
+            } else {
+                putString(templatePhotoKey(templateId), photoUri)
+            }
+        }?.apply()
+    }
+
+    private suspend fun deletePhoto(photoUri: String?) {
+        val appContext = context ?: return
+        if (photoUri.isNullOrBlank()) return
+        withContext(Dispatchers.IO) {
+            runCatching {
+                appContext.contentResolver.delete(Uri.parse(photoUri), null, null)
+            }
+        }
+    }
+
+    private fun templatePhotoKey(templateId: Long): String = "template_photo_$templateId"
+
+    companion object {
+        private const val TEMPLATE_PHOTO_PREFS = "template_photo_prefs"
     }
 }

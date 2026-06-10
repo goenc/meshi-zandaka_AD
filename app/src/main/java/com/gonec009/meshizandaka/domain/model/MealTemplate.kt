@@ -14,6 +14,7 @@ data class MealTemplate(
     val weeklyLimitCount: Int?,
     val monthlyLimitCount: Int?,
     val memo: String,
+    val photoUri: String? = null,
     val isActive: Boolean = true,
     val optionGroups: List<TemplateOptionGroup> = emptyList(),
 )

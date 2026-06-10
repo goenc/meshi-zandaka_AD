@@ -27,6 +27,7 @@ data class TemplateEditorState(
     val weeklyLimitCount: String = "",
     val monthlyLimitCount: String = "",
     val memo: String = "",
+    val photoUri: String? = null,
 )
 
 data class TemplateManagementUiState(
@@ -77,6 +78,7 @@ class TemplateManagementViewModel(
                     weeklyLimitCount = template.weeklyLimitCount?.toString().orEmpty(),
                     monthlyLimitCount = template.monthlyLimitCount?.toString().orEmpty(),
                     memo = template.memo,
+                    photoUri = template.photoUri,
                 ),
             )
         }
@@ -108,6 +110,7 @@ class TemplateManagementViewModel(
                     weeklyLimitCount = editor.weeklyLimitCount.toIntOrNull(),
                     monthlyLimitCount = editor.monthlyLimitCount.toIntOrNull(),
                     memo = editor.memo,
+                    photoUri = editor.photoUri,
                 ),
             )
             _uiState.update { it.copy(isDialogOpen = false, editorState = TemplateEditorState()) }

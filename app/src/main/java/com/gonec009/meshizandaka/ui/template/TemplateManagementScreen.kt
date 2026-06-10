@@ -1,5 +1,10 @@
 package com.gonec009.meshizandaka.ui.template
 
+import android.content.Context
+import android.net.Uri
+import android.os.Environment
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
@@ -11,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -41,11 +48,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
@@ -53,7 +62,9 @@ import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
+import com.gonec009.meshizandaka.ui.common.MealPhoto
 import com.gonec009.meshizandaka.ui.mealTypeLabel
+import java.io.File
 
 @Composable
 fun TemplateManagementRoute(
@@ -133,7 +144,16 @@ private fun TemplateEditorDialog(
     onSave: () -> Unit,
 ) {
     val editor = state.editorState
+    val context = LocalContext.current
     var mealTypeExpanded by remember { mutableStateOf(false) }
+    var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { captured ->
+        val newPhotoUri = pendingPhotoUri?.toString()
+        onUpdateEditor { current ->
+            current.copy(photoUri = if (captured) newPhotoUri else current.photoUri)
+        }
+        pendingPhotoUri = null
+    }
     AlertDialog(
         onDismissRequest = onCloseDialog,
         title = { Text(stringResource(R.string.template_editor_title)) },
@@ -221,6 +241,39 @@ private fun TemplateEditorDialog(
                     minLines = 4,
                     maxLines = 6,
                 )
+                Button(
+                    onClick = {
+                        val photoUri = createTemplatePhotoUri(context)
+                        pendingPhotoUri = photoUri
+                        photoLauncher.launch(photoUri)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.take_template_photo))
+                }
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                ) {
+                    Text(
+                        text = if (editor.photoUri == null) {
+                            stringResource(R.string.meal_photo_not_added)
+                        } else {
+                            stringResource(R.string.meal_photo_added)
+                        },
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                MealPhoto(
+                    uriString = editor.photoUri,
+                    contentDescription = stringResource(R.string.meal_photo_added),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                )
             }
         },
         confirmButton = {
@@ -233,6 +286,17 @@ private fun TemplateEditorDialog(
                 Text(stringResource(R.string.cancel))
             }
         },
+    )
+}
+
+private fun createTemplatePhotoUri(context: Context): Uri {
+    val photoDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "template_photos")
+    photoDir.mkdirs()
+    val photoFile = File(photoDir, "template_${System.currentTimeMillis()}.jpg")
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        photoFile,
     )
 }
 
