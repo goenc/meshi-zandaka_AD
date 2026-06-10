@@ -12,9 +12,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-private const val TARGET_WIDTH = 1280
-private const val TARGET_HEIGHT = 720
-private const val JPEG_QUALITY = 82
+private const val TARGET_WIDTH = 1024
+private const val TARGET_HEIGHT = 576
+private const val JPEG_QUALITY = 75
 private const val TARGET_MAX_DECODE = 2560
 
 data class ManagedPhotoTarget(
