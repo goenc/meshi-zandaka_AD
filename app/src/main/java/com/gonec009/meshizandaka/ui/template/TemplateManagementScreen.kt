@@ -218,75 +218,65 @@ private fun TemplateEditorDialog(
                     textStyle = compactFieldTextStyle(),
                     singleLine = true,
                 )
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                ExposedDropdownMenuBox(
+                    expanded = weeklyLimitExpanded,
+                    onExpandedChange = { weeklyLimitExpanded = it },
                 ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    CompactOutlinedField(
+                        value = limitCountLabel(editor.weeklyLimitCount),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.weekly_limit)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = weeklyLimitExpanded) },
+                        modifier = compactFieldModifier().menuAnchor(),
+                        textStyle = compactFieldTextStyle(),
+                        singleLine = true,
+                    )
+                    DropdownMenu(
+                        expanded = weeklyLimitExpanded,
+                        onDismissRequest = { weeklyLimitExpanded = false },
                     ) {
-                        ExposedDropdownMenuBox(
-                            expanded = weeklyLimitExpanded,
-                            onExpandedChange = { weeklyLimitExpanded = it },
-                        ) {
-                            CompactOutlinedField(
-                                value = limitCountLabel(editor.weeklyLimitCount),
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text(stringResource(R.string.weekly_limit)) },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = weeklyLimitExpanded) },
-                                modifier = compactFieldModifier().menuAnchor(),
-                                textStyle = compactFieldTextStyle(),
-                                singleLine = true,
+                        weeklyLimitOptions.forEach { count ->
+                            DropdownMenuItem(
+                                text = { Text(limitCountLabel(count?.toString().orEmpty())) },
+                                onClick = {
+                                    weeklyLimitExpanded = false
+                                    onUpdateEditor { current ->
+                                        current.copy(weeklyLimitCount = count?.toString().orEmpty())
+                                    }
+                                },
                             )
-                            DropdownMenu(
-                                expanded = weeklyLimitExpanded,
-                                onDismissRequest = { weeklyLimitExpanded = false },
-                            ) {
-                                weeklyLimitOptions.forEach { count ->
-                                    DropdownMenuItem(
-                                        text = { Text(limitCountLabel(count?.toString().orEmpty())) },
-                                        onClick = {
-                                            weeklyLimitExpanded = false
-                                            onUpdateEditor { current ->
-                                                current.copy(weeklyLimitCount = count?.toString().orEmpty())
-                                            }
-                                        },
-                                    )
-                                }
-                            }
                         }
-                        ExposedDropdownMenuBox(
-                            expanded = monthlyLimitExpanded,
-                            onExpandedChange = { monthlyLimitExpanded = it },
-                        ) {
-                            CompactOutlinedField(
-                                value = limitCountLabel(editor.monthlyLimitCount),
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text(stringResource(R.string.monthly_limit)) },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthlyLimitExpanded) },
-                                modifier = compactFieldModifier().menuAnchor(),
-                                textStyle = compactFieldTextStyle(),
-                                singleLine = true,
+                    }
+                }
+                ExposedDropdownMenuBox(
+                    expanded = monthlyLimitExpanded,
+                    onExpandedChange = { monthlyLimitExpanded = it },
+                ) {
+                    CompactOutlinedField(
+                        value = limitCountLabel(editor.monthlyLimitCount),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.monthly_limit)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthlyLimitExpanded) },
+                        modifier = compactFieldModifier().menuAnchor(),
+                        textStyle = compactFieldTextStyle(),
+                        singleLine = true,
+                    )
+                    DropdownMenu(
+                        expanded = monthlyLimitExpanded,
+                        onDismissRequest = { monthlyLimitExpanded = false },
+                    ) {
+                        monthlyLimitOptions.forEach { count ->
+                            DropdownMenuItem(
+                                text = { Text(limitCountLabel(count?.toString().orEmpty())) },
+                                onClick = {
+                                    monthlyLimitExpanded = false
+                                    onUpdateEditor { current ->
+                                        current.copy(monthlyLimitCount = count?.toString().orEmpty())
+                                    }
+                                },
                             )
-                            DropdownMenu(
-                                expanded = monthlyLimitExpanded,
-                                onDismissRequest = { monthlyLimitExpanded = false },
-                            ) {
-                                monthlyLimitOptions.forEach { count ->
-                                    DropdownMenuItem(
-                                        text = { Text(limitCountLabel(count?.toString().orEmpty())) },
-                                        onClick = {
-                                            monthlyLimitExpanded = false
-                                            onUpdateEditor { current ->
-                                                current.copy(monthlyLimitCount = count?.toString().orEmpty())
-                                            }
-                                        },
-                                    )
-                                }
-                            }
                         }
                     }
                 }

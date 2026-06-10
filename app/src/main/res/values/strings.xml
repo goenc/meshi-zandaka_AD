@@ -56,7 +56,7 @@
     <string name="meal_type_dinner">夕食</string>
     <string name="meal_type_snack">間食</string>
     <string name="meal_type_eating_out">外食</string>
-    <string name="base_calories">基本カロリー</string>
+    <string name="base_calories">カロリー</string>
     <string name="total_calories">合計カロリー</string>
     <string name="protein">たんぱく質</string>
     <string name="fat">脂質</string>
