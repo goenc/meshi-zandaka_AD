@@ -15,7 +15,6 @@ import androidx.camera.core.UseCaseGroup
 import androidx.camera.core.ViewPort
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -141,6 +140,7 @@ fun InAppCameraCapture(
                             color = Color.White.copy(alpha = 0.75f),
                         )
                     }
+                    Spacer(modifier = Modifier.height(20.dp))
                     Box(
                         modifier = Modifier
                             .weight(1f, fill = false)
@@ -162,19 +162,6 @@ fun InAppCameraCapture(
                             modifier = Modifier.fillMaxSize(),
                             update = { previewView = it },
                         )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Transparent),
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.Center)
-                                    .fillMaxWidth(0.9f)
-                                    .aspectRatio(16f / 9f)
-                                    .border(1.dp, Color.White.copy(alpha = 0.55f), RoundedCornerShape(14.dp)),
-                            )
-                        }
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     Button(
