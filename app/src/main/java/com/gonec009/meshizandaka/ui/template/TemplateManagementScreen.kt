@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -155,16 +156,16 @@ private fun TemplateEditorDialog(
                     expanded = mealTypeExpanded,
                     onExpandedChange = { if (!isLockedTemplate) mealTypeExpanded = it },
                 ) {
-                    CompactOutlinedField(
-                        value = mealTypeLabel(editor.mealType),
-                        onValueChange = {},
-                        readOnly = true,
+                    LabeledMealSettingField(
+                        mealTypeLabel = stringResource(R.string.meal_type),
+                        selectedMealType = mealTypeLabel(editor.mealType),
+                        isSpecial = editor.isSpecial,
                         enabled = !isLockedTemplate,
-                        label = { Text(stringResource(R.string.meal_type)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = mealTypeExpanded) },
-                        modifier = compactFieldModifier().menuAnchor(),
-                        textStyle = compactFieldTextStyle(),
-                        singleLine = true,
+                        expanded = mealTypeExpanded,
+                        onSpecialCheckedChange = { checked ->
+                            onUpdateEditor { current -> current.copy(isSpecial = checked) }
+                        },
+                        modifier = Modifier.menuAnchor(),
                     )
                     DropdownMenu(
                         expanded = mealTypeExpanded,
@@ -251,6 +252,75 @@ private fun compactFieldModifier(): Modifier {
 
 private fun compactFieldTextStyle(): TextStyle {
     return TextStyle(fontSize = 14.sp)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LabeledMealSettingField(
+    mealTypeLabel: String,
+    selectedMealType: String,
+    isSpecial: Boolean,
+    enabled: Boolean,
+    expanded: Boolean,
+    onSpecialCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(modifier = Modifier.width(84.dp)) {
+            Text(mealTypeLabel)
+        }
+        Row(
+            modifier = modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = selectedMealType,
+                        modifier = Modifier.weight(1f),
+                        style = compactFieldTextStyle().copy(color = MaterialTheme.colorScheme.onSurface),
+                    )
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                }
+            }
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
+            ) {
+                Row(
+                    modifier = Modifier.padding(start = 6.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.special_short),
+                        style = compactFieldTextStyle(),
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Checkbox(
+                        checked = isSpecial,
+                        onCheckedChange = onSpecialCheckedChange,
+                        enabled = enabled,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable

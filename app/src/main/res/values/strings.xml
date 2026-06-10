@@ -38,6 +38,7 @@
     <string name="count_format">%1$d回</string>
     <string name="standard_meal">いつものメシ</string>
     <string name="special_meal">特別メシ</string>
+    <string name="special_short">特</string>
     <string name="quick_record_templates">テンプレート</string>
     <string name="record_preview">記録内容</string>
     <string name="estimated_calories_label">見込み</string>
@@ -50,7 +51,7 @@
     <string name="template_editor_title">テンプレート編集</string>
     <string name="template_name">名前</string>
     <string name="template_shortcut_role">ホーム連携先</string>
-    <string name="meal_type">食事区分</string>
+    <string name="meal_type">食事</string>
     <string name="meal_type_breakfast">朝食</string>
     <string name="meal_type_lunch">昼食</string>
     <string name="meal_type_dinner">夕食</string>
