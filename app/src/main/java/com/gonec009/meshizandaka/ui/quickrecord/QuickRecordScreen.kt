@@ -78,6 +78,7 @@ fun QuickRecordRoute(
         innerPadding = innerPadding,
         state = state,
         onTemplateSelect = viewModel::selectTemplate,
+        onTemplateNameChange = viewModel::setTemplateName,
         onMealTypeSelect = viewModel::selectMealType,
         onSpecialChange = viewModel::setSpecial,
         onTotalCaloriesChange = viewModel::setTotalCalories,
@@ -96,6 +97,7 @@ private fun QuickRecordScreen(
     innerPadding: PaddingValues,
     state: QuickRecordUiState,
     onTemplateSelect: (MealTemplate) -> Unit,
+    onTemplateNameChange: (String) -> Unit,
     onMealTypeSelect: (MealType) -> Unit,
     onSpecialChange: (Boolean) -> Unit,
     onTotalCaloriesChange: (String) -> Unit,
@@ -135,6 +137,14 @@ private fun QuickRecordScreen(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
+                        CompactOutlinedField(
+                            value = state.templateName,
+                            onValueChange = onTemplateNameChange,
+                            label = { Text(stringResource(R.string.template_name)) },
+                            modifier = compactFieldModifier(),
+                            textStyle = compactFieldTextStyle(),
+                            singleLine = true,
+                        )
                         ExposedDropdownMenuBox(
                             expanded = mealTypeExpanded,
                             onExpandedChange = { mealTypeExpanded = it },

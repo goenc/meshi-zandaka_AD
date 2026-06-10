@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 data class QuickRecordUiState(
     val availableTemplates: List<MealTemplate> = emptyList(),
     val selectedTemplate: MealTemplate? = null,
+    val templateName: String = "",
     val selectedMealType: MealType = MealType.LUNCH,
     val isSpecial: Boolean = false,
     val totalCalories: String = "",
@@ -76,6 +77,10 @@ class QuickRecordViewModel(
         _uiState.update { it.copy(selectedMealType = mealType) }
     }
 
+    fun setTemplateName(value: String) {
+        _uiState.update { it.copy(templateName = value) }
+    }
+
     fun setSpecial(isSpecial: Boolean) {
         _uiState.update { it.copy(isSpecial = isSpecial) }
     }
@@ -116,7 +121,7 @@ class QuickRecordViewModel(
             try {
                 container.createQuickRecordUseCase(
                     templateId = template.id,
-                    templateNameSnapshot = template.name,
+                    templateNameSnapshot = _uiState.value.templateName.ifBlank { template.name },
                     totalCaloriesOverride = _uiState.value.totalCalories.toIntOrNull() ?: 0,
                     proteinOverride = _uiState.value.proteinG.toIntOrNull() ?: 0,
                     fatOverride = _uiState.value.fatG.toIntOrNull() ?: 0,
@@ -156,6 +161,7 @@ class QuickRecordViewModel(
     private fun applyTemplate(state: QuickRecordUiState, template: MealTemplate): QuickRecordUiState {
         return state.copy(
             selectedTemplate = template,
+            templateName = template.name,
             selectedMealType = template.mealType,
             isSpecial = template.isSpecial,
             totalCalories = template.baseCalories.toString(),
