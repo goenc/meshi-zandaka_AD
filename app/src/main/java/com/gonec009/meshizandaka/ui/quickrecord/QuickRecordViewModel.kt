@@ -114,6 +114,15 @@ class QuickRecordViewModel(
         }
     }
 
+    fun clearPhoto() {
+        _uiState.update {
+            it.copy(
+                photoUri = null,
+                message = "写真を削除しました",
+            )
+        }
+    }
+
     fun saveRecord() {
         val template = _uiState.value.selectedTemplate ?: return
         viewModelScope.launch {

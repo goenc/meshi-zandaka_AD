@@ -16,6 +16,7 @@ data class RecordEditUiState(
     val calories: String = "",
     val isSpecial: Boolean = false,
     val memo: String = "",
+    val photoUri: String? = null,
     val message: String? = null,
 )
 
@@ -35,6 +36,7 @@ class RecordEditViewModel(
                         calories = record?.totalCalories?.toString().orEmpty(),
                         isSpecial = record?.isSpecial ?: false,
                         memo = record?.memo.orEmpty(),
+                        photoUri = record?.photoUri,
                     )
                 }
             }
@@ -53,6 +55,15 @@ class RecordEditViewModel(
         _uiState.update { it.copy(memo = value) }
     }
 
+    fun clearPhoto() {
+        _uiState.update {
+            it.copy(
+                photoUri = null,
+                message = "写真を削除しました",
+            )
+        }
+    }
+
     fun save() {
         val record = _uiState.value.record ?: return
         viewModelScope.launch {
@@ -62,6 +73,7 @@ class RecordEditViewModel(
                     isSpecial = _uiState.value.isSpecial,
                     specialDeltaCalories = if (_uiState.value.isSpecial) record.specialDeltaCalories else 0,
                     memo = _uiState.value.memo,
+                    photoUri = _uiState.value.photoUri,
                     sourceType = SourceType.MANUAL_EDIT,
                 ),
             )

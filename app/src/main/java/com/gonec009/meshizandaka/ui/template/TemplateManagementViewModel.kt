@@ -28,6 +28,7 @@ data class TemplateEditorState(
     val monthlyLimitCount: String = "",
     val memo: String = "",
     val photoUri: String? = null,
+    val originalPhotoUri: String? = null,
 )
 
 data class TemplateManagementUiState(
@@ -79,6 +80,7 @@ class TemplateManagementViewModel(
                     monthlyLimitCount = template.monthlyLimitCount?.toString().orEmpty(),
                     memo = template.memo,
                     photoUri = template.photoUri,
+                    originalPhotoUri = template.photoUri,
                 ),
             )
         }

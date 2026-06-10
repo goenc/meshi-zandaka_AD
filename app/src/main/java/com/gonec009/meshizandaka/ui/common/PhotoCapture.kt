@@ -46,6 +46,17 @@ suspend fun discardCapturedPhoto(context: Context, photoUri: Uri?) {
     }
 }
 
+suspend fun discardCapturedPhoto(context: Context, photoUriString: String?) {
+    val uri = photoUriString?.takeIf { it.isNotBlank() }?.let { runCatching { Uri.parse(it) }.getOrNull() }
+    discardCapturedPhoto(context, uri)
+}
+
+fun isManagedPhotoInFolder(photoUriString: String?, folderName: String): Boolean {
+    if (photoUriString.isNullOrBlank()) return false
+    val normalizedFolder = "/$folderName/"
+    return runCatching { Uri.parse(photoUriString) }.getOrNull()?.path?.contains(normalizedFolder) == true
+}
+
 fun createManagedPhotoUri(
     context: Context,
     folderName: String,

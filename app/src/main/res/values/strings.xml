@@ -83,6 +83,7 @@
     <string name="no">いいえ</string>
     <string name="delete_record_confirm_message">この記録を削除しますか</string>
     <string name="delete_template_confirm_message">このテンプレートを削除しますか</string>
+    <string name="delete_photo_confirm_message">この写真を削除しますか</string>
     <string name="target_calories">目標摂取カロリー</string>
     <string name="maintenance_calories">維持カロリー</string>
     <string name="week_start_day">週の開始曜日</string>

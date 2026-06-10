@@ -5,14 +5,26 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -36,6 +48,42 @@ fun MealPhoto(
             modifier = modifier,
             contentScale = ContentScale.Crop,
         )
+    }
+}
+
+@Composable
+fun MealPhotoWithDeleteAction(
+    uriString: String?,
+    contentDescription: String?,
+    onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    maxSizePx: Int = 720,
+) {
+    Box(modifier = modifier) {
+        MealPhoto(
+            uriString = uriString,
+            contentDescription = contentDescription,
+            modifier = Modifier.matchParentSize(),
+            maxSizePx = maxSizePx,
+        )
+        if (!uriString.isNullOrBlank()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .shadow(4.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.72f))
+                    .clickable(onClick = onDeleteClick)
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            ) {
+                Text(
+                    text = "×",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
     }
 }
 

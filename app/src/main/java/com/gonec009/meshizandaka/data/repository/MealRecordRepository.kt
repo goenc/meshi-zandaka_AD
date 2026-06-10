@@ -78,8 +78,12 @@ class MealRecordRepository(
                 specialDeltaCalories = record.specialDeltaCalories,
                 memo = record.memo,
                 sourceType = record.sourceType.name,
+                photoUri = record.photoUri,
             ),
         )
+        if (current.photoUri != record.photoUri) {
+            deletePhoto(current.photoUri)
+        }
     }
 
     suspend fun deleteRecord(recordId: Long) {

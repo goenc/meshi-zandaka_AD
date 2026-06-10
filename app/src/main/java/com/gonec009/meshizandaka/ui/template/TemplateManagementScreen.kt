@@ -40,9 +40,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -57,8 +59,11 @@ import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import com.gonec009.meshizandaka.ui.common.InAppCameraCapture
-import com.gonec009.meshizandaka.ui.common.MealPhoto
+import com.gonec009.meshizandaka.ui.common.MealPhotoWithDeleteAction
+import com.gonec009.meshizandaka.ui.common.discardCapturedPhoto
+import com.gonec009.meshizandaka.ui.common.isManagedPhotoInFolder
 import com.gonec009.meshizandaka.ui.mealTypeLabel
+import kotlinx.coroutines.launch
 
 @Composable
 fun TemplateManagementRoute(
@@ -92,6 +97,8 @@ private fun TemplateManagementScreen(
 ) {
     var showCamera by remember { mutableStateOf(false) }
     var templatePendingDelete by remember { mutableStateOf<MealTemplate?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -135,6 +142,16 @@ private fun TemplateManagementScreen(
                 onUpdateEditor = onUpdateEditor,
                 onSave = onSave,
                 onTakePhotoClick = { showCamera = true },
+                onDeletePhoto = { photoUri ->
+                    if (photoUri != state.editorState.originalPhotoUri &&
+                        isManagedPhotoInFolder(photoUri, "template_photos")
+                    ) {
+                        scope.launch {
+                            discardCapturedPhoto(context, photoUri)
+                        }
+                    }
+                    onUpdateEditor { current -> current.copy(photoUri = null) }
+                },
             )
         }
         if (templatePendingDelete != null) {
@@ -179,9 +196,11 @@ private fun TemplateEditorDialog(
     onUpdateEditor: ((TemplateEditorState) -> TemplateEditorState) -> Unit,
     onSave: () -> Unit,
     onTakePhotoClick: () -> Unit,
+    onDeletePhoto: (String?) -> Unit,
 ) {
     val editor = state.editorState
     var mealTypeExpanded by remember { mutableStateOf(false) }
+    var showDeletePhotoDialog by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onCloseDialog,
         title = { Text(stringResource(R.string.template_editor_title)) },
@@ -290,9 +309,10 @@ private fun TemplateEditorDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                MealPhoto(
+                MealPhotoWithDeleteAction(
                     uriString = editor.photoUri,
                     contentDescription = stringResource(R.string.meal_photo_added),
+                    onDeleteClick = { showDeletePhotoDialog = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f)
@@ -313,6 +333,27 @@ private fun TemplateEditorDialog(
             }
         },
     )
+    if (showDeletePhotoDialog && !editor.photoUri.isNullOrBlank()) {
+        AlertDialog(
+            onDismissRequest = { showDeletePhotoDialog = false },
+            text = { Text(stringResource(R.string.delete_photo_confirm_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeletePhoto(editor.photoUri)
+                        showDeletePhotoDialog = false
+                    },
+                ) {
+                    Text(stringResource(R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeletePhotoDialog = false }) {
+                    Text(stringResource(R.string.no))
+                }
+            },
+        )
+    }
 }
 
 private fun compactFieldModifier(): Modifier {

@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -32,17 +33,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -55,8 +59,11 @@ import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import com.gonec009.meshizandaka.ui.common.InAppCameraCapture
-import com.gonec009.meshizandaka.ui.common.MealPhoto
+import com.gonec009.meshizandaka.ui.common.MealPhotoWithDeleteAction
+import com.gonec009.meshizandaka.ui.common.discardCapturedPhoto
+import com.gonec009.meshizandaka.ui.common.isManagedPhotoInFolder
 import com.gonec009.meshizandaka.ui.mealTypeLabel
+import kotlinx.coroutines.launch
 
 @Composable
 fun QuickRecordRoute(
@@ -87,6 +94,7 @@ fun QuickRecordRoute(
         onCarbChange = viewModel::setCarb,
         onMemoChange = viewModel::setMemo,
         onPhotoCaptured = viewModel::setPhotoUri,
+        onPhotoRemoved = viewModel::clearPhoto,
         onSaveClick = viewModel::saveRecord,
     )
 }
@@ -106,10 +114,14 @@ private fun QuickRecordScreen(
     onCarbChange: (String) -> Unit,
     onMemoChange: (String) -> Unit,
     onPhotoCaptured: (String?) -> Unit,
+    onPhotoRemoved: () -> Unit,
     onSaveClick: () -> Unit,
 ) {
     var showCamera by remember { mutableStateOf(false) }
     var mealTypeExpanded by remember { mutableStateOf(false) }
+    var showDeletePhotoDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -235,9 +247,10 @@ private fun QuickRecordScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        MealPhoto(
+                        MealPhotoWithDeleteAction(
                             uriString = state.photoUri,
                             contentDescription = stringResource(R.string.meal_photo_added),
+                            onDeleteClick = { showDeletePhotoDialog = true },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(16f / 9f)
@@ -261,6 +274,35 @@ private fun QuickRecordScreen(
                 filePrefix = "quick_record",
                 onCaptured = onPhotoCaptured,
                 onDismiss = { showCamera = false },
+            )
+        }
+        if (showDeletePhotoDialog && !state.photoUri.isNullOrBlank()) {
+            AlertDialog(
+                onDismissRequest = { showDeletePhotoDialog = false },
+                text = { Text(stringResource(R.string.delete_photo_confirm_message)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val currentPhotoUri = state.photoUri
+                            if (currentPhotoUri != state.selectedTemplate?.photoUri &&
+                                isManagedPhotoInFolder(currentPhotoUri, "quick_records")
+                            ) {
+                                scope.launch {
+                                    discardCapturedPhoto(context, currentPhotoUri)
+                                }
+                            }
+                            onPhotoRemoved()
+                            showDeletePhotoDialog = false
+                        },
+                    ) {
+                        Text(stringResource(R.string.yes))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeletePhotoDialog = false }) {
+                        Text(stringResource(R.string.no))
+                    }
+                },
             )
         }
     }
