@@ -122,7 +122,7 @@ private fun TemplateManagementScreen(
             }
         }
 
-        if (state.isDialogOpen) {
+        if (state.isDialogOpen && !showCamera) {
             TemplateEditorDialog(
                 state = state,
                 onCloseDialog = onCloseDialog,

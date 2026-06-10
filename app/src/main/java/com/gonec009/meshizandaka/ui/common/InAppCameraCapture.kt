@@ -122,7 +122,7 @@ fun InAppCameraCapture(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp, vertical = 24.dp),
-                    verticalArrangement = Arrangement.SpaceBetween,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -143,6 +143,7 @@ fun InAppCameraCapture(
                     }
                     Box(
                         modifier = Modifier
+                            .weight(1f, fill = false)
                             .fillMaxWidth()
                             .aspectRatio(16f / 9f)
                             .border(2.dp, Color.White.copy(alpha = 0.85f), RoundedCornerShape(18.dp)),
@@ -175,7 +176,7 @@ fun InAppCameraCapture(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.weight(1f))
                     Button(
                         onClick = {
                             val capture = imageCapture ?: return@Button
