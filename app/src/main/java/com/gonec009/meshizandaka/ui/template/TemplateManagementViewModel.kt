@@ -6,6 +6,7 @@ import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
+import com.gonec009.meshizandaka.util.formatOneDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,9 +72,9 @@ class TemplateManagementViewModel(
                     mealType = template.mealType,
                     shortcutRole = template.shortcutRole,
                     baseCalories = template.baseCalories.toString(),
-                    proteinG = template.proteinG.toString(),
-                    fatG = template.fatG.toString(),
-                    carbG = template.carbG.toString(),
+                    proteinG = formatOneDecimal(template.proteinG),
+                    fatG = formatOneDecimal(template.fatG),
+                    carbG = formatOneDecimal(template.carbG),
                     isSpecial = template.isSpecial,
                     comparisonTemplateId = template.comparisonTemplateId,
                     weeklyLimitCount = template.weeklyLimitCount?.toString().orEmpty(),
@@ -104,9 +105,9 @@ class TemplateManagementViewModel(
                     mealType = editor.mealType,
                     shortcutRole = editor.shortcutRole,
                     baseCalories = editor.baseCalories.toIntOrNull() ?: 0,
-                    proteinG = editor.proteinG.toIntOrNull() ?: 0,
-                    fatG = editor.fatG.toIntOrNull() ?: 0,
-                    carbG = editor.carbG.toIntOrNull() ?: 0,
+                    proteinG = editor.proteinG.toDoubleOrNull() ?: 0.0,
+                    fatG = editor.fatG.toDoubleOrNull() ?: 0.0,
+                    carbG = editor.carbG.toDoubleOrNull() ?: 0.0,
                     isSpecial = editor.isSpecial,
                     comparisonTemplateId = editor.comparisonTemplateId,
                     weeklyLimitCount = editor.weeklyLimitCount.toIntOrNull(),
@@ -129,4 +130,5 @@ class TemplateManagementViewModel(
             _uiState.update { it.copy(isDialogOpen = false, editorState = TemplateEditorState()) }
         }
     }
+
 }

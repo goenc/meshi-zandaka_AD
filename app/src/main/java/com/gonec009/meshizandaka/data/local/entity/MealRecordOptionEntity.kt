@@ -23,7 +23,7 @@ data class MealRecordOptionEntity(
     val optionGroupNameSnapshot: String,
     val optionNameSnapshot: String,
     val calorieDelta: Int,
-    val proteinDeltaG: Int,
-    val fatDeltaG: Int,
-    val carbDeltaG: Int,
+    val proteinDeltaG: Double,
+    val fatDeltaG: Double,
+    val carbDeltaG: Double,
 )

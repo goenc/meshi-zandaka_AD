@@ -68,6 +68,7 @@ import com.gonec009.meshizandaka.domain.model.DailyMealStack
 import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import com.gonec009.meshizandaka.ui.common.MealPhoto
+import com.gonec009.meshizandaka.util.formatOneDecimal
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
 import java.time.Instant
@@ -99,9 +100,9 @@ private data class PendingDeleteRecord(
 )
 
 private data class NutritionTotals(
-    val proteinG: Int,
-    val fatG: Int,
-    val carbG: Int,
+    val proteinG: Double,
+    val fatG: Double,
+    val carbG: Double,
 )
 
 private val ChartBarWidth = 39.dp
@@ -140,7 +141,7 @@ private fun List<MealRecord>.pfcTotals(): NutritionTotals {
 }
 
 private fun formatPfcSummary(totals: NutritionTotals): String {
-    return "P ${totals.proteinG}g / F ${totals.fatG}g / C ${totals.carbG}g"
+    return "P ${formatOneDecimal(totals.proteinG)}g / F ${formatOneDecimal(totals.fatG)}g / C ${formatOneDecimal(totals.carbG)}g"
 }
 
 internal fun formatChartDateLabel(
@@ -652,7 +653,7 @@ private fun MealRecordSection(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
-                            text = "${stringResource(R.string.protein_short)} ${record.proteinG}g / ${stringResource(R.string.fat_short)} ${record.fatG}g / ${stringResource(R.string.carb_short)} ${record.carbG}g",
+                            text = "${stringResource(R.string.protein_short)} ${formatOneDecimal(record.proteinG)}g / ${stringResource(R.string.fat_short)} ${formatOneDecimal(record.fatG)}g / ${stringResource(R.string.carb_short)} ${formatOneDecimal(record.carbG)}g",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

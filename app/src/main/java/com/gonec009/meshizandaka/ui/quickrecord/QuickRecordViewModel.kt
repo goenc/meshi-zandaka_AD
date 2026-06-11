@@ -7,6 +7,8 @@ import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.domain.usecase.DuplicateDailyMealException
+import com.gonec009.meshizandaka.util.sanitizeDecimalInput
+import com.gonec009.meshizandaka.util.formatOneDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -90,15 +92,15 @@ class QuickRecordViewModel(
     }
 
     fun setProtein(value: String) {
-        _uiState.update { it.copy(proteinG = value) }
+        _uiState.update { it.copy(proteinG = sanitizeDecimalInput(value)) }
     }
 
     fun setFat(value: String) {
-        _uiState.update { it.copy(fatG = value) }
+        _uiState.update { it.copy(fatG = sanitizeDecimalInput(value)) }
     }
 
     fun setCarb(value: String) {
-        _uiState.update { it.copy(carbG = value) }
+        _uiState.update { it.copy(carbG = sanitizeDecimalInput(value)) }
     }
 
     fun setMemo(value: String) {
@@ -132,9 +134,9 @@ class QuickRecordViewModel(
                     templateId = template.id,
                     templateNameSnapshot = _uiState.value.templateName.ifBlank { template.name },
                     totalCaloriesOverride = _uiState.value.totalCalories.toIntOrNull() ?: 0,
-                    proteinOverride = _uiState.value.proteinG.toIntOrNull() ?: 0,
-                    fatOverride = _uiState.value.fatG.toIntOrNull() ?: 0,
-                    carbOverride = _uiState.value.carbG.toIntOrNull() ?: 0,
+                    proteinOverride = _uiState.value.proteinG.toDoubleOrNull() ?: 0.0,
+                    fatOverride = _uiState.value.fatG.toDoubleOrNull() ?: 0.0,
+                    carbOverride = _uiState.value.carbG.toDoubleOrNull() ?: 0.0,
                     isSpecialOverride = _uiState.value.isSpecial,
                     memo = _uiState.value.memo,
                     photoUri = _uiState.value.photoUri,
@@ -174,9 +176,9 @@ class QuickRecordViewModel(
             selectedMealType = template.mealType,
             isSpecial = template.isSpecial,
             totalCalories = template.baseCalories.toString(),
-            proteinG = template.proteinG.toString(),
-            fatG = template.fatG.toString(),
-            carbG = template.carbG.toString(),
+            proteinG = formatOneDecimal(template.proteinG),
+            fatG = formatOneDecimal(template.fatG),
+            carbG = formatOneDecimal(template.carbG),
             memo = template.memo,
             photoUri = template.photoUri,
         )

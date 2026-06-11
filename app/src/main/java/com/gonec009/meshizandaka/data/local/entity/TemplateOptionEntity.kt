@@ -22,8 +22,8 @@ data class TemplateOptionEntity(
     val groupId: Long,
     val name: String,
     val calorieDelta: Int,
-    val proteinDeltaG: Int,
-    val fatDeltaG: Int,
-    val carbDeltaG: Int,
+    val proteinDeltaG: Double,
+    val fatDeltaG: Double,
+    val carbDeltaG: Double,
     val sortOrder: Int,
 )

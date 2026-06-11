@@ -63,6 +63,7 @@ import com.gonec009.meshizandaka.ui.common.MealPhotoWithDeleteAction
 import com.gonec009.meshizandaka.ui.common.discardCapturedPhoto
 import com.gonec009.meshizandaka.ui.common.isManagedPhotoInFolder
 import com.gonec009.meshizandaka.ui.mealTypeLabel
+import com.gonec009.meshizandaka.util.sanitizeDecimalInput
 import kotlinx.coroutines.launch
 
 @Composable
@@ -263,19 +264,19 @@ private fun TemplateEditorDialog(
                     CompactMacroField(
                         label = stringResource(R.string.protein_short),
                         value = editor.proteinG,
-                        onValueChange = { onUpdateEditor { current -> current.copy(proteinG = it) } },
+                        onValueChange = { onUpdateEditor { current -> current.copy(proteinG = sanitizeDecimalInput(it)) } },
                         modifier = Modifier.weight(1f),
                     )
                     CompactMacroField(
                         label = stringResource(R.string.fat_short),
                         value = editor.fatG,
-                        onValueChange = { onUpdateEditor { current -> current.copy(fatG = it) } },
+                        onValueChange = { onUpdateEditor { current -> current.copy(fatG = sanitizeDecimalInput(it)) } },
                         modifier = Modifier.weight(1f),
                     )
                     CompactMacroField(
                         label = stringResource(R.string.carb_short),
                         value = editor.carbG,
-                        onValueChange = { onUpdateEditor { current -> current.copy(carbG = it) } },
+                        onValueChange = { onUpdateEditor { current -> current.copy(carbG = sanitizeDecimalInput(it)) } },
                         modifier = Modifier.weight(1f),
                     )
                 }
