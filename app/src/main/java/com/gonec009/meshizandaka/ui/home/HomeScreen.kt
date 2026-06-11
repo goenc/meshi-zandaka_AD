@@ -588,41 +588,10 @@ private fun ChartMealDetailDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 MealRecordSection(
-                    title = stringResource(R.string.chart_breakfast),
-                    records = state.stack.breakfastRecords,
-                    total = state.stack.breakfastRecords.pfcTotals(),
-                    timeFormatter = timeFormatter,
-                    onDeleteClick = onDeleteClick,
-                )
-                MealRecordSection(
-                    title = stringResource(R.string.chart_lunch),
-                    records = state.stack.lunchRecords,
-                    total = state.stack.lunchRecords.pfcTotals(),
-                    timeFormatter = timeFormatter,
-                    onDeleteClick = onDeleteClick,
-                )
-                MealRecordSection(
-                    title = stringResource(R.string.chart_dinner),
-                    records = state.stack.dinnerRecords,
-                    total = state.stack.dinnerRecords.pfcTotals(),
-                    timeFormatter = timeFormatter,
-                    onDeleteClick = onDeleteClick,
-                )
-                MealRecordSection(
-                    title = stringResource(R.string.chart_snack),
-                    records = state.stack.snackRecords,
-                    total = state.stack.snackRecords.pfcTotals(),
-                    timeFormatter = timeFormatter,
-                    onDeleteClick = onDeleteClick,
-                )
-                MealRecordSection(
-                    title = stringResource(R.string.all_items),
                     records = allRecords,
                     total = allRecords.pfcTotals(),
                     timeFormatter = timeFormatter,
                     onDeleteClick = onDeleteClick,
-                    showDividerAbove = true,
-                    emphasizeTotal = true,
                 )
             }
         },
@@ -631,33 +600,22 @@ private fun ChartMealDetailDialog(
 
 @Composable
 private fun MealRecordSection(
-    title: String,
     records: List<MealRecord>,
     total: NutritionTotals,
     timeFormatter: SimpleDateFormat,
     onDeleteClick: (MealRecord) -> Unit,
-    showDividerAbove: Boolean = false,
-    emphasizeTotal: Boolean = false,
 ) {
-    if (showDividerAbove) {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
-    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
                 text = formatPfcSummary(total),
-                style = if (emphasizeTotal) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
-                fontWeight = if (emphasizeTotal) FontWeight.SemiBold else FontWeight.Normal,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
         if (records.isEmpty()) {
