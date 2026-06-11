@@ -91,12 +91,17 @@ private enum class ChartMealSection {
 
 private data class ChartMealDialogState(
     val date: LocalDate,
-    val section: ChartMealSection,
-    val records: List<MealRecord>,
+    val stack: DailyMealStack,
 )
 
 private data class PendingDeleteRecord(
     val record: MealRecord,
+)
+
+private data class NutritionTotals(
+    val proteinG: Int,
+    val fatG: Int,
+    val carbG: Int,
 )
 
 private val ChartBarWidth = 39.dp
@@ -120,6 +125,22 @@ private fun DailyMealStack.recordsForSection(section: ChartMealSection): List<Me
     ChartMealSection.LUNCH -> lunchRecords
     ChartMealSection.DINNER -> dinnerRecords
     ChartMealSection.SNACK -> snackRecords
+}
+
+private fun DailyMealStack.allRecords(): List<MealRecord> {
+    return breakfastRecords + lunchRecords + dinnerRecords + snackRecords
+}
+
+private fun List<MealRecord>.pfcTotals(): NutritionTotals {
+    return NutritionTotals(
+        proteinG = sumOf { it.proteinG },
+        fatG = sumOf { it.fatG },
+        carbG = sumOf { it.carbG },
+    )
+}
+
+private fun formatPfcSummary(totals: NutritionTotals): String {
+    return "P ${totals.proteinG}g / F ${totals.fatG}g / C ${totals.carbG}g"
 }
 
 internal fun formatChartDateLabel(
@@ -390,12 +411,10 @@ private fun WeeklyChartCard(
                         ),
                         isSunday = stack.date.dayOfWeek == DayOfWeek.SUNDAY,
                         onSectionClick = { section ->
-                            val records = stack.recordsForSection(section)
-                            if (records.isNotEmpty()) {
+                            if (stack.recordsForSection(section).isNotEmpty()) {
                                 dialogState = ChartMealDialogState(
                                     date = stack.date,
-                                    section = section,
-                                    records = records,
+                                    stack = stack,
                                 )
                             }
                         },
@@ -552,6 +571,7 @@ private fun ChartMealDetailDialog(
 ) {
     val titleDateFormatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.JAPAN) }
     val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.JAPAN) }
+    val allRecords = remember(state.stack) { state.stack.allRecords().sortedBy(MealRecord::eatenAt) }
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
@@ -560,67 +580,151 @@ private fun ChartMealDetailDialog(
             }
         },
         title = {
-            Text("${titleDateFormatter.format(state.date)} ${stringResource(state.section.labelResId())}")
+            Text(titleDateFormatter.format(state.date))
         },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                state.records.forEach { record ->
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        MealPhoto(
-                            uriString = record.photoUri,
-                            contentDescription = record.templateNameSnapshot,
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            maxSizePx = 160,
-                        )
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                        ) {
-                            Text(
-                                text = record.templateNameSnapshot,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                text = "${timeFormatter.format(Date(record.eatenAt))}  ${stringResource(R.string.kcal_format, record.totalCalories)}",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            if (record.selectedOptions.isNotEmpty()) {
-                                Text(
-                                    text = record.selectedOptions.joinToString(" / ") { option -> option.optionNameSnapshot },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            if (record.memo.isNotBlank()) {
-                                Text(
-                                    text = record.memo,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                        IconButton(onClick = { onDeleteClick(record) }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_delete),
-                                contentDescription = stringResource(R.string.delete),
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
-                }
+                MealRecordSection(
+                    title = stringResource(R.string.chart_breakfast),
+                    records = state.stack.breakfastRecords,
+                    total = state.stack.breakfastRecords.pfcTotals(),
+                    timeFormatter = timeFormatter,
+                    onDeleteClick = onDeleteClick,
+                )
+                MealRecordSection(
+                    title = stringResource(R.string.chart_lunch),
+                    records = state.stack.lunchRecords,
+                    total = state.stack.lunchRecords.pfcTotals(),
+                    timeFormatter = timeFormatter,
+                    onDeleteClick = onDeleteClick,
+                )
+                MealRecordSection(
+                    title = stringResource(R.string.chart_dinner),
+                    records = state.stack.dinnerRecords,
+                    total = state.stack.dinnerRecords.pfcTotals(),
+                    timeFormatter = timeFormatter,
+                    onDeleteClick = onDeleteClick,
+                )
+                MealRecordSection(
+                    title = stringResource(R.string.chart_snack),
+                    records = state.stack.snackRecords,
+                    total = state.stack.snackRecords.pfcTotals(),
+                    timeFormatter = timeFormatter,
+                    onDeleteClick = onDeleteClick,
+                )
+                MealRecordSection(
+                    title = stringResource(R.string.all_items),
+                    records = allRecords,
+                    total = allRecords.pfcTotals(),
+                    timeFormatter = timeFormatter,
+                    onDeleteClick = onDeleteClick,
+                    showDividerAbove = true,
+                    emphasizeTotal = true,
+                )
             }
         },
     )
+}
+
+@Composable
+private fun MealRecordSection(
+    title: String,
+    records: List<MealRecord>,
+    total: NutritionTotals,
+    timeFormatter: SimpleDateFormat,
+    onDeleteClick: (MealRecord) -> Unit,
+    showDividerAbove: Boolean = false,
+    emphasizeTotal: Boolean = false,
+) {
+    if (showDividerAbove) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = formatPfcSummary(total),
+                style = if (emphasizeTotal) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
+                fontWeight = if (emphasizeTotal) FontWeight.SemiBold else FontWeight.Normal,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (records.isEmpty()) {
+            Text(
+                text = stringResource(R.string.no_records),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            records.forEach { record ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    MealPhoto(
+                        uriString = record.photoUri,
+                        contentDescription = record.templateNameSnapshot,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        maxSizePx = 160,
+                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = record.templateNameSnapshot,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = "${timeFormatter.format(Date(record.eatenAt))}  ${stringResource(R.string.kcal_format, record.totalCalories)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            text = "${stringResource(R.string.protein_short)} ${record.proteinG}g / ${stringResource(R.string.fat_short)} ${record.fatG}g / ${stringResource(R.string.carb_short)} ${record.carbG}g",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (record.selectedOptions.isNotEmpty()) {
+                            Text(
+                                text = record.selectedOptions.joinToString(" / ") { option -> option.optionNameSnapshot },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (record.memo.isNotBlank()) {
+                            Text(
+                                text = record.memo,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    IconButton(onClick = { onDeleteClick(record) }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_delete),
+                            contentDescription = stringResource(R.string.delete),
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 private fun DrawScope.drawBarBackground(maxCalories: Int) {

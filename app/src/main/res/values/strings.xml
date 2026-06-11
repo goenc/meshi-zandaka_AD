@@ -29,6 +29,7 @@
     <string name="chart_lunch">昼</string>
     <string name="chart_dinner">夕</string>
     <string name="chart_snack">間食</string>
+    <string name="all_items">すべて</string>
     <string name="recent_records">直近の記録</string>
     <string name="show_recent_records">直近記録を表示</string>
     <string name="hide_recent_records">直近記録を隠す</string>
