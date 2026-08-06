@@ -14,6 +14,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -30,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
+import com.gonec009.meshizandaka.data.drive.DriveConnectionPhase
+import com.gonec009.meshizandaka.data.drive.DriveConnectionState
 import com.gonec009.meshizandaka.domain.model.WeekStartDay
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import com.gonec009.meshizandaka.ui.weekStartDayLabel
@@ -40,9 +43,11 @@ fun SettingsRoute(
     innerPadding: PaddingValues,
     snackbarHostState: SnackbarHostState,
     onTemplateManagementClick: () -> Unit,
+    onDriveConnect: () -> Unit,
 ) {
     val viewModel: SettingsViewModel = viewModel(factory = AppViewModelFactory(container))
     val state by viewModel.uiState.collectAsState()
+    val driveState by container.driveAccessManager.state.collectAsState()
 
     LaunchedEffect(state.message) {
         state.message?.let {
@@ -62,6 +67,8 @@ fun SettingsRoute(
         onDinnerTemplateChange = viewModel::updateDinnerTemplate,
         onTemplateManagementClick = onTemplateManagementClick,
         onSave = viewModel::save,
+        driveState = driveState,
+        onDriveConnect = onDriveConnect,
     )
 }
 
@@ -78,6 +85,8 @@ private fun SettingsScreen(
     onDinnerTemplateChange: (Long?) -> Unit,
     onTemplateManagementClick: () -> Unit,
     onSave: () -> Unit,
+    driveState: DriveConnectionState,
+    onDriveConnect: () -> Unit,
 ) {
     var weekStartExpanded by remember { mutableStateOf(false) }
     var breakfastExpanded by remember { mutableStateOf(false) }
@@ -225,6 +234,56 @@ private fun SettingsScreen(
         }
         Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.save))
+        }
+        Text(
+            text = stringResource(R.string.google_drive_section),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(stringResource(R.string.google_drive_description))
+        Button(
+            onClick = onDriveConnect,
+            enabled = driveState.phase != DriveConnectionPhase.CONNECTING,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                if (driveState.phase == DriveConnectionPhase.CONNECTING) {
+                    stringResource(R.string.google_drive_connecting)
+                } else {
+                    stringResource(R.string.google_drive_connect)
+                },
+            )
+        }
+        when (driveState.phase) {
+            DriveConnectionPhase.IDLE -> Text(stringResource(R.string.google_drive_not_connected))
+            DriveConnectionPhase.CONNECTING -> Text(stringResource(R.string.google_drive_connecting))
+            DriveConnectionPhase.CONNECTED,
+            DriveConnectionPhase.PARTIAL,
+            -> {
+                if (driveState.appDataErrorCode == null) {
+                    Text(
+                        stringResource(
+                            R.string.google_drive_sync_data_status,
+                            driveState.syncBatchCount,
+                            driveState.imageCount,
+                        ),
+                    )
+                } else {
+                    Text(stringResource(R.string.google_drive_app_data_error, driveState.appDataErrorCode))
+                }
+                if (driveState.backupErrorCode == null) {
+                    if (driveState.backupFolderFound) {
+                        Text(stringResource(R.string.google_drive_backup_status, driveState.backupFileCount))
+                    } else {
+                        Text(stringResource(R.string.google_drive_backup_folder_missing))
+                    }
+                } else {
+                    Text(stringResource(R.string.google_drive_backup_error, driveState.backupErrorCode))
+                }
+                if (driveState.phase == DriveConnectionPhase.PARTIAL) {
+                    Text(stringResource(R.string.google_drive_partial_connection))
+                }
+            }
+            DriveConnectionPhase.FAILED -> Text(stringResource(R.string.google_drive_connection_failed))
         }
     }
 }

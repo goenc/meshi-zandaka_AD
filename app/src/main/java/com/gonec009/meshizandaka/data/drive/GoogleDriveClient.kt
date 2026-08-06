@@ -1,0 +1,224 @@
+package com.gonec009.meshizandaka.data.drive
+
+import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
+import java.nio.charset.StandardCharsets
+
+data class DriveFileMetadata(
+    val id: String,
+    val name: String,
+    val mimeType: String?,
+    val appProperties: Map<String, String>,
+)
+
+data class DriveAppDataSummary(
+    val syncBatchCount: Int,
+    val imageCount: Int,
+)
+
+data class DriveBackupSummary(
+    val folderFound: Boolean,
+    val backupFileCount: Int,
+)
+
+class DriveApiException(
+    val statusCode: Int,
+    message: String,
+) : IOException(message)
+
+class GoogleDriveClient {
+    suspend fun inspectAppData(accessToken: String): DriveAppDataSummary = withContext(Dispatchers.IO) {
+        val files = listFiles(
+            accessToken = accessToken,
+            spaces = APP_DATA_SPACE,
+            query = "'appDataFolder' in parents and trashed = false",
+        )
+        val targetFiles = files.filter { file ->
+            file.appProperties[DATASET_PROPERTY] == DATASET_ID
+        }
+        DriveAppDataSummary(
+            syncBatchCount = targetFiles.count { file -> file.name.startsWith(SYNC_FILE_PREFIX) },
+            imageCount = targetFiles.count { file -> file.appProperties[IMAGE_KIND_PROPERTY] == IMAGE_KIND },
+        )
+    }
+
+    suspend fun inspectBackupFolder(accessToken: String): DriveBackupSummary = withContext(Dispatchers.IO) {
+        val rootFolder = findFolder(
+            accessToken = accessToken,
+            name = BACKUP_ROOT_FOLDER_NAME,
+            kind = BACKUP_ROOT_FOLDER_KIND,
+            parentId = null,
+        ) ?: return@withContext DriveBackupSummary(folderFound = false, backupFileCount = 0)
+        val backupFolder = findFolder(
+            accessToken = accessToken,
+            name = BACKUP_FOLDER_NAME,
+            kind = BACKUP_FOLDER_KIND,
+            parentId = rootFolder.id,
+        ) ?: return@withContext DriveBackupSummary(folderFound = false, backupFileCount = 0)
+        val backups = listFiles(
+            accessToken = accessToken,
+            spaces = DRIVE_SPACE,
+            query = "'${escapeQueryLiteral(backupFolder.id)}' in parents and trashed = false and mimeType = '$ZIP_MIME_TYPE'",
+        )
+        DriveBackupSummary(folderFound = true, backupFileCount = backups.size)
+    }
+
+    suspend fun downloadFile(accessToken: String, fileId: String): ByteArray = withContext(Dispatchers.IO) {
+        require(fileId.isNotBlank()) { "DriveファイルIDが空です。" }
+        val url = Uri.parse("$DRIVE_API_BASE/files/${Uri.encode(fileId)}")
+            .buildUpon()
+            .appendQueryParameter("alt", "media")
+            .build()
+            .toString()
+        executeBytes(accessToken, url)
+    }
+
+    private fun findFolder(
+        accessToken: String,
+        name: String,
+        kind: String,
+        parentId: String?,
+    ): DriveFileMetadata? {
+        val conditions = mutableListOf(
+            "name = '${escapeQueryLiteral(name)}'",
+            "mimeType = '$FOLDER_MIME_TYPE'",
+            "trashed = false",
+            "appProperties has { key='$FOLDER_KIND_PROPERTY' and value='${escapeQueryLiteral(kind)}' }",
+        )
+        if (!parentId.isNullOrBlank()) {
+            conditions += "'${escapeQueryLiteral(parentId)}' in parents"
+        }
+        return listFiles(
+            accessToken = accessToken,
+            spaces = DRIVE_SPACE,
+            query = conditions.joinToString(" and "),
+        ).firstOrNull()
+    }
+
+    private fun listFiles(
+        accessToken: String,
+        spaces: String?,
+        query: String,
+    ): List<DriveFileMetadata> {
+        require(accessToken.isNotBlank()) { "Googleアクセストークンが空です。" }
+        val result = mutableListOf<DriveFileMetadata>()
+        var pageToken: String? = null
+        do {
+            val builder = Uri.parse("$DRIVE_API_BASE/files")
+                .buildUpon()
+                .appendQueryParameter("q", query)
+                .appendQueryParameter("pageSize", PAGE_SIZE.toString())
+                .appendQueryParameter("fields", FILE_FIELDS)
+            if (!spaces.isNullOrBlank()) {
+                builder.appendQueryParameter("spaces", spaces)
+            }
+            if (!pageToken.isNullOrBlank()) {
+                builder.appendQueryParameter("pageToken", pageToken)
+            }
+            val root = JSONObject(executeText(accessToken, builder.build().toString()))
+            val files = root.optJSONArray("files") ?: JSONArray()
+            for (index in 0 until files.length()) {
+                result += parseFile(files.getJSONObject(index))
+            }
+            pageToken = root.optString("nextPageToken").takeIf { it.isNotBlank() }
+        } while (!pageToken.isNullOrBlank())
+        return result
+    }
+
+    private fun parseFile(json: JSONObject): DriveFileMetadata {
+        val properties = mutableMapOf<String, String>()
+        val appProperties = json.optJSONObject("appProperties")
+        if (appProperties != null) {
+            val keys = appProperties.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                properties[key] = appProperties.optString(key)
+            }
+        }
+        return DriveFileMetadata(
+            id = json.optString("id"),
+            name = json.optString("name"),
+            mimeType = json.optString("mimeType").takeIf { it.isNotBlank() },
+            appProperties = properties,
+        )
+    }
+
+    private fun executeText(accessToken: String, url: String): String {
+        val connection = openConnection(accessToken, url)
+        return try {
+            val responseCode = connection.responseCode
+            val stream = if (responseCode in HTTP_SUCCESS_MIN..HTTP_SUCCESS_MAX) {
+                connection.inputStream
+            } else {
+                connection.errorStream
+            }
+            val body = stream?.bufferedReader(StandardCharsets.UTF_8)?.use { it.readText() }.orEmpty()
+            if (responseCode !in HTTP_SUCCESS_MIN..HTTP_SUCCESS_MAX) {
+                throw DriveApiException(responseCode, "Google Drive APIへの接続に失敗しました。")
+            }
+            body
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun executeBytes(accessToken: String, url: String): ByteArray {
+        val connection = openConnection(accessToken, url)
+        return try {
+            val responseCode = connection.responseCode
+            if (responseCode !in HTTP_SUCCESS_MIN..HTTP_SUCCESS_MAX) {
+                connection.errorStream?.close()
+                throw DriveApiException(responseCode, "Google Driveファイルの取得に失敗しました。")
+            }
+            connection.inputStream.use { it.readBytes() }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun openConnection(accessToken: String, url: String): HttpURLConnection {
+        return (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            setRequestProperty("Authorization", "Bearer $accessToken")
+            setRequestProperty("Accept", "application/json")
+        }
+    }
+
+    private fun escapeQueryLiteral(value: String): String =
+        value.replace("\\", "\\\\").replace("'", "\\'")
+
+    companion object {
+        const val DATASET_ID = "9b0db1ba-7ee0-4cf3-9b9b-84f674a8d1bb"
+        const val APP_DATA_SCOPE = "https://www.googleapis.com/auth/drive.appdata"
+        const val BACKUP_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
+
+        private const val DRIVE_API_BASE = "https://www.googleapis.com/drive/v3"
+        private const val DRIVE_SPACE = "drive"
+        private const val APP_DATA_SPACE = "appDataFolder"
+        private const val PAGE_SIZE = 1000
+        private const val FILE_FIELDS = "nextPageToken,files(id,name,mimeType,appProperties)"
+        private const val SYNC_FILE_PREFIX = "pfc-sync-"
+        private const val IMAGE_KIND_PROPERTY = "kind"
+        private const val IMAGE_KIND = "image"
+        private const val DATASET_PROPERTY = "datasetId"
+        private const val FOLDER_KIND_PROPERTY = "pfcPlanBoardFolderKind"
+        private const val BACKUP_ROOT_FOLDER_KIND = "backupRoot"
+        private const val BACKUP_FOLDER_KIND = "backup"
+        private const val BACKUP_ROOT_FOLDER_NAME = "食事管理アプリ"
+        private const val BACKUP_FOLDER_NAME = "バックアップ"
+        private const val FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
+        private const val ZIP_MIME_TYPE = "application/zip"
+        private const val CONNECT_TIMEOUT_MS = 15_000
+        private const val READ_TIMEOUT_MS = 30_000
+        private const val HTTP_SUCCESS_MIN = 200
+        private const val HTTP_SUCCESS_MAX = 299
+    }
+}

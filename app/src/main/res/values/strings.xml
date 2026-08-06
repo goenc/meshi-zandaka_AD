@@ -100,4 +100,16 @@
     <string name="template_fixed_menu">ホーム固定メニュー</string>
     <string name="template_fixed_menu_notice">この固定メニューは名前、食事区分、特別メシ設定だけ固定です。カロリーやメモは編集できます。</string>
     <string name="delete">削除する</string>
+    <string name="google_drive_section">Google Drive接続</string>
+    <string name="google_drive_description">Windows版の同期データとバックアップへの接続を確認します</string>
+    <string name="google_drive_connect">Google Driveへ接続して確認</string>
+    <string name="google_drive_connecting">Google Driveへ接続中…</string>
+    <string name="google_drive_not_connected">Google Driveは未接続です</string>
+    <string name="google_drive_sync_data_status">アプリ専用領域: 同期ログ %1$d件 / 画像 %2$d件</string>
+    <string name="google_drive_backup_status">バックアップ領域: ZIP %1$d件</string>
+    <string name="google_drive_backup_folder_missing">バックアップフォルダはまだ作成されていません</string>
+    <string name="google_drive_app_data_error">アプリ専用領域の接続エラー（HTTP %1$d）</string>
+    <string name="google_drive_backup_error">バックアップ領域の接続エラー（HTTP %1$d）</string>
+    <string name="google_drive_partial_connection">一部のDrive領域に接続できません</string>
+    <string name="google_drive_connection_failed">Google Driveへ接続できませんでした</string>
 </resources>

@@ -37,7 +37,10 @@ import com.gonec009.meshizandaka.ui.template.TemplateManagementRoute
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MeshiZandakaAppRoot(container: AppContainer) {
+fun MeshiZandakaAppRoot(
+    container: AppContainer,
+    onDriveConnect: () -> Unit,
+) {
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
     val dashboard by container.observeDashboardUseCase().collectAsState(initial = HomeDashboardData())
@@ -121,6 +124,7 @@ fun MeshiZandakaAppRoot(container: AppContainer) {
                     innerPadding = innerPadding,
                     snackbarHostState = snackbarHostState,
                     onTemplateManagementClick = { navController.navigate(AppDestination.Templates.route) },
+                    onDriveConnect = onDriveConnect,
                 )
             }
             composable(
