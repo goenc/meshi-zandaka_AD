@@ -39,19 +39,19 @@ class DrivePlanSnapshotReader(
     ) {
         val datasetId = batch.stringOrNull("datasetId")
         if (!datasetId.isNullOrBlank() && !datasetId.equals(GoogleDriveClient.DATASET_ID, ignoreCase = true)) return
-        val changes = batch.optJSONArray("changes") ?: JSONArray()
+        val changes = batch.optJSONArrayIgnoreCase("changes") ?: JSONArray()
         for (index in 0 until changes.length()) {
             val change = changes.optJSONObject(index) ?: continue
             val entityType = change.stringOrNull("entityType") ?: continue
             val rowKey = change.stringOrNull("rowKey") ?: continue
-            val revision = parseRevision(change.optJSONObject("revision")) ?: continue
+            val revision = parseRevision(change.optJSONObjectIgnoreCase("revision")) ?: continue
             val key = "$entityType\u0000$rowKey"
             val current = rows[key]
             if (current != null && revision <= current.revision) continue
 
             when (changeKind(change)) {
                 0 -> {
-                    val payload = parsePayload(change.opt("payloadJson")) ?: continue
+                    val payload = parsePayload(change.valueIgnoreCase("payloadJson")) ?: continue
                     rows[key] = SnapshotRow(
                         entityType = entityType,
                         rowKey = rowKey,
@@ -95,19 +95,19 @@ class DrivePlanSnapshotReader(
             .filter { it.isEntity("DailyPlanEntity") }
             .mapNotNull { row ->
                 val payload = row.payload ?: return@mapNotNull null
-                if (payload.optBoolean("isArchived", false)) return@mapNotNull null
+                if (payload.optBooleanIgnoreCase("isArchived", false)) return@mapNotNull null
                 val id = payload.stringOrNull("id") ?: row.rowKey
                 val planMealRows = mealRows
                     .asSequence()
                     .filter { mealRow ->
                         val meal = mealRow.payload ?: return@filter false
-                        !meal.optBoolean("isArchived", false) &&
+                        !meal.optBooleanIgnoreCase("isArchived", false) &&
                             idKey(meal.stringOrNull("dailyPlanId")) == idKey(id)
                     }
                     .toList()
                 val meals = (0..5).map { slot ->
                     val mealRow = planMealRows
-                        .filter { mealRow -> mealRow.payload?.optInt("slot", -1) == slot }
+                        .filter { mealRow -> mealRow.payload?.optIntIgnoreCase("slot", -1) == slot }
                         .maxByOrNull { it.revision }
                     buildMeal(
                         slot = slot,
@@ -123,9 +123,9 @@ class DrivePlanSnapshotReader(
                     name = payload.stringOrNull("name").orEmpty().ifBlank { "名称未設定のプラン" },
                     targetDate = payload.stringOrNull("targetDate"),
                     memo = payload.stringOrNull("memo").orEmpty(),
-                    isFavorite = payload.optBoolean("isFavorite", false),
-                    displayOrder = payload.optInt("displayOrder", 0),
-                    updatedUtcTicks = payload.optLong("updatedUtcTicks", 0L),
+                    isFavorite = payload.optBooleanIgnoreCase("isFavorite", false),
+                    displayOrder = payload.optIntIgnoreCase("displayOrder", 0),
+                    updatedUtcTicks = payload.optLongIgnoreCase("updatedUtcTicks", 0L),
                     meals = meals,
                 )
             }
@@ -161,14 +161,14 @@ class DrivePlanSnapshotReader(
             .asSequence()
             .filter { itemRow ->
                 val item = itemRow.payload ?: return@filter false
-                item.optBoolean("isEnabled", true) &&
+                item.optBooleanIgnoreCase("isEnabled", true) &&
                     idKey(item.stringOrNull("dailyPlanMealSnapshotId")) == idKey(mealId)
             }
-            .sortedWith(compareBy<SnapshotRow> { it.payload?.optInt("displayOrder", 0) ?: 0 }.thenBy { it.rowKey })
+            .sortedWith(compareBy<SnapshotRow> { it.payload?.optIntIgnoreCase("displayOrder", 0) ?: 0 }.thenBy { it.rowKey })
             .mapNotNull { itemRow ->
                 val item = itemRow.payload ?: return@mapNotNull null
                 val itemId = item.stringOrNull("id") ?: itemRow.rowKey
-                val componentType = item.optInt("componentType", 0)
+                val componentType = item.optIntIgnoreCase("componentType", 0)
                 val child = if (componentType == 1) {
                     recipeRows[idKey(itemId)]?.payload
                 } else {
@@ -180,8 +180,8 @@ class DrivePlanSnapshotReader(
                         ?: child?.stringOrNull("foodName")
                         ?: if (componentType == 1) "レシピ" else "食品",
                     amountLabel = formatStoredAmount(
-                        amount = item.optLong("standardAmount", 0L),
-                        unit = item.optInt("standardUnit", -1),
+                        amount = item.optLongIgnoreCase("standardAmount", 0L),
+                        unit = item.optIntIgnoreCase("standardUnit", -1),
                         customUnitName = item.stringOrNull("standardCustomUnitName"),
                     ),
                     isMainDish = idKey(itemId) == idKey(selectedMainDishItemId),
@@ -213,18 +213,18 @@ class DrivePlanSnapshotReader(
         if (value == null) return null
         val operationId = value.stringOrNull("operationId") ?: return null
         return SnapshotRevision(
-            editedUtcTicks = value.optLong("editedUtcTicks", Long.MIN_VALUE),
+            editedUtcTicks = value.optLongIgnoreCase("editedUtcTicks", Long.MIN_VALUE),
             deviceId = value.stringOrNull("deviceId").orEmpty(),
-            deviceSequence = value.optLong("deviceSequence", Long.MIN_VALUE),
+            deviceSequence = value.optLongIgnoreCase("deviceSequence", Long.MIN_VALUE),
             operationId = operationId,
         )
     }
 
     private fun changeKind(change: JSONObject): Int {
-        val value = change.opt("changeKind")
+        val value = change.valueIgnoreCase("changeKind")
         return when (value) {
             is Number -> value.toInt()
-            is String -> value.toIntOrNull() ?: when (value.lowercase()) {
+            is String -> value.toIntOrNull() ?: when (value.lowercase(Locale.ROOT)) {
                 "delete" -> 1
                 "upsert" -> 0
                 else -> -1
@@ -283,11 +283,56 @@ class DrivePlanSnapshotReader(
                 SnapshotRevision::operationId,
             )
     }
+}
 
-    private companion object {
-        fun JSONObject.stringOrNull(key: String): String? {
-            if (!has(key) || isNull(key)) return null
-            return optString(key).takeIf { it.isNotBlank() }
+/**
+ * Windows側の同期ログはエンベロープと行PayloadでJSONの大文字小文字が異なるため、
+ * Android側ではキー名を大小文字非依存で読む。camelCaseもそのまま利用できる。
+ */
+internal fun JSONObject.valueIgnoreCase(key: String): Any? {
+    val iterator = keys()
+    while (iterator.hasNext()) {
+        val actualKey = iterator.next()
+        if (actualKey.equals(key, ignoreCase = true)) {
+            return opt(actualKey).takeUnless { it == JSONObject.NULL }
         }
     }
+    return null
 }
+
+internal fun JSONObject.stringOrNull(key: String): String? =
+    valueIgnoreCase(key)
+        ?.toString()
+        ?.takeIf { it.isNotBlank() }
+
+internal fun JSONObject.optJSONArrayIgnoreCase(key: String): JSONArray? =
+    valueIgnoreCase(key) as? JSONArray
+
+internal fun JSONObject.optJSONObjectIgnoreCase(key: String): JSONObject? =
+    valueIgnoreCase(key) as? JSONObject
+
+internal fun JSONObject.optBooleanIgnoreCase(key: String, default: Boolean): Boolean =
+    when (val value = valueIgnoreCase(key)) {
+        is Boolean -> value
+        is Number -> value.toInt() != 0
+        is String -> when (value.lowercase(Locale.ROOT)) {
+            "true", "1" -> true
+            "false", "0" -> false
+            else -> default
+        }
+        else -> default
+    }
+
+internal fun JSONObject.optIntIgnoreCase(key: String, default: Int): Int =
+    when (val value = valueIgnoreCase(key)) {
+        is Number -> value.toInt()
+        is String -> value.toIntOrNull() ?: default
+        else -> default
+    }
+
+internal fun JSONObject.optLongIgnoreCase(key: String, default: Long): Long =
+    when (val value = valueIgnoreCase(key)) {
+        is Number -> value.toLong()
+        is String -> value.toLongOrNull() ?: default
+        else -> default
+    }

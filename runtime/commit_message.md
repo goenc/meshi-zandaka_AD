@@ -1,18 +1,14 @@
-Google Driveのプラン選択表示を追加
+Windows同期データのAndroid読込互換性を修正
 
 理由:
-Windows版で作成した複数の食事プランをAndroid側のテンプレート管理で選択し、6枠へ反映するため
+Windows側の同期データとAndroid側の項目名の大文字小文字が異なり、プラン名などが未設定表示になっていたため
 
 変更点:
-- Windows版の同期ログをRevision順に復元し、DailyPlanと6枠の食事スナップショットをAndroidモデルへ変換
-- Windows側の選択プランを初期選択として読み込み、Android側のプラン選択で6枠を切り替え
-- 食品・レシピ・主菜指定・数量単位・メモ・画像ハッシュを表示用データへ反映
-- Drive画像を必要分だけAndroid内部へキャッシュ
-- 既存のテンプレート管理画面を読み取り専用のWindowsプラン選択画面へ変更
+- Android側の同期データ読込を項目名の大文字小文字に依存しない処理へ変更
+- Windows形式と既存形式の両方を確認する回帰テストを追加
 
 確認内容:
-- gradlew.bat :app:compileDebugKotlin 成功
-- gradlew.bat :app:assembleDebug 成功
-- git diff --check 成功
-- Windows版プロジェクトの作業ツリーに変更なし
-- 単体テストは既存のFakeMealTemplateDao未実装によりコンパイル停止
+- 開発版アプリのビルド成功
+- 項目名の大文字小文字を吸収する読込テストを追加
+- 単体テスト全体は既存の食事テンプレート用テストモック未実装で実行停止
+- Windows側リポジトリへ変更がないことを確認
