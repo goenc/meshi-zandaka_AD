@@ -125,6 +125,7 @@
     <string name="template_management_read_only_notice">この画面はWindows版の設定を表示します。設定変更はWindows版で行います</string>
     <string name="template_management_image_loading">画像を読み込み中…</string>
     <string name="template_management_meal_memo">メモ: %1$s</string>
+    <string name="template_management_meal_nutrition">%1$d kcal / P %2$sg / F %3$sg / C %4$sg</string>
     <string name="template_management_no_items">食事項目なし</string>
     <string name="template_management_main_dish">主菜</string>
 </resources>

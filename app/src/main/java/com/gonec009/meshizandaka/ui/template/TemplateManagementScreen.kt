@@ -47,6 +47,7 @@ import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
 import com.gonec009.meshizandaka.data.drive.DrivePlanPhase
 import com.gonec009.meshizandaka.data.drive.DrivePlanState
+import com.gonec009.meshizandaka.util.formatOneDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -291,6 +292,18 @@ private fun DrivePlanMealCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(meal.label, style = MaterialTheme.typography.titleMedium)
+            if (meal.nutritionDataAvailable) {
+                Text(
+                    text = stringResource(
+                        R.string.template_management_meal_nutrition,
+                        meal.totalCalories,
+                        formatOneDecimal(meal.proteinG),
+                        formatOneDecimal(meal.fatG),
+                        formatOneDecimal(meal.carbG),
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
             Text(meal.name, fontWeight = FontWeight.Bold)
             meal.imagePath?.let { path ->
                 DriveCachedImage(
