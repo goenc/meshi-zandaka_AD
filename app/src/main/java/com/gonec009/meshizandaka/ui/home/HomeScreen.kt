@@ -98,7 +98,6 @@ private enum class ChartMealSection {
 private data class ChartMealDialogState(
     val date: LocalDate,
     val stack: DailyMealStack,
-    val section: ChartMealSection,
 )
 
 private data class PendingDeleteRecord(
@@ -120,18 +119,15 @@ private fun formatChartCalories(calories: Int): String {
 
 internal fun chartBlockCount(calories: Int): Int = if (calories > 0) 1 else 0
 
-private fun ChartMealSection.labelResId(): Int = when (this) {
-    ChartMealSection.BREAKFAST -> R.string.meal_type_breakfast
-    ChartMealSection.LUNCH -> R.string.meal_type_lunch
-    ChartMealSection.DINNER -> R.string.meal_type_dinner
-    ChartMealSection.SNACK -> R.string.chart_snack
-}
-
 private fun DailyMealStack.recordsForSection(section: ChartMealSection): List<MealRecord> = when (section) {
     ChartMealSection.BREAKFAST -> breakfastRecords
     ChartMealSection.LUNCH -> lunchRecords
     ChartMealSection.DINNER -> dinnerRecords
     ChartMealSection.SNACK -> snackRecords
+}
+
+private fun DailyMealStack.allRecords(): List<MealRecord> {
+    return breakfastRecords + lunchRecords + dinnerRecords + snackRecords
 }
 
 private fun List<MealRecord>.pfcTotals(): NutritionTotals {
@@ -423,7 +419,6 @@ private fun WeeklyChartCard(
                                 dialogState = ChartMealDialogState(
                                     date = stack.date,
                                     stack = stack,
-                                    section = section,
                                 )
                             }
                         },
@@ -582,9 +577,7 @@ private fun ChartMealDetailDialog(
 ) {
     val titleDateFormatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.JAPAN) }
     val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.JAPAN) }
-    val records = remember(state.stack, state.section) {
-        state.stack.recordsForSection(state.section).sortedBy(MealRecord::eatenAt)
-    }
+    val records = remember(state.stack) { state.stack.allRecords().sortedBy(MealRecord::eatenAt) }
     var selectedRecord by remember { mutableStateOf<MealRecord?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -594,7 +587,7 @@ private fun ChartMealDetailDialog(
             }
         },
         title = {
-            Text("${titleDateFormatter.format(state.date)} ${stringResource(state.section.labelResId())}")
+            Text(titleDateFormatter.format(state.date))
         },
         text = {
             Column(
