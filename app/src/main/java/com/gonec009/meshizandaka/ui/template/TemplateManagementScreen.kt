@@ -1,7 +1,5 @@
 package com.gonec009.meshizandaka.ui.template
 
-import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -34,9 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,10 +42,9 @@ import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
 import com.gonec009.meshizandaka.data.drive.DrivePlanPhase
 import com.gonec009.meshizandaka.data.drive.DrivePlanState
+import com.gonec009.meshizandaka.ui.common.DriveCachedImage
 import com.gonec009.meshizandaka.util.formatOneDecimal
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun TemplateManagementRoute(
@@ -359,29 +353,5 @@ private fun DrivePlanItemRow(item: DrivePlanItem) {
                 fontWeight = FontWeight.Bold,
             )
         }
-    }
-}
-
-@Composable
-private fun DriveCachedImage(
-    path: String,
-    contentDescription: String?,
-    modifier: Modifier = Modifier,
-) {
-    val bitmap by androidx.compose.runtime.produceState<ImageBitmap?>(
-        initialValue = null,
-        key1 = path,
-    ) {
-        value = withContext(Dispatchers.IO) {
-            BitmapFactory.decodeFile(path)?.asImageBitmap()
-        }
-    }
-    bitmap?.let { image ->
-        Image(
-            bitmap = image,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            contentScale = ContentScale.Crop,
-        )
     }
 }

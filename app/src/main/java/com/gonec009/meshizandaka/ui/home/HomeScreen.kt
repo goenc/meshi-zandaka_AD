@@ -2,6 +2,7 @@ package com.gonec009.meshizandaka.ui.home
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -64,9 +65,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
+import com.gonec009.meshizandaka.data.drive.DrivePlan
+import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
 import com.gonec009.meshizandaka.domain.model.DailyMealStack
 import com.gonec009.meshizandaka.domain.model.MealRecord
+import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
+import com.gonec009.meshizandaka.ui.common.DriveCachedImage
 import com.gonec009.meshizandaka.ui.common.MealPhoto
 import com.gonec009.meshizandaka.util.formatOneDecimal
 import java.text.SimpleDateFormat
@@ -93,6 +98,7 @@ private enum class ChartMealSection {
 private data class ChartMealDialogState(
     val date: LocalDate,
     val stack: DailyMealStack,
+    val section: ChartMealSection,
 )
 
 private data class PendingDeleteRecord(
@@ -128,10 +134,6 @@ private fun DailyMealStack.recordsForSection(section: ChartMealSection): List<Me
     ChartMealSection.SNACK -> snackRecords
 }
 
-private fun DailyMealStack.allRecords(): List<MealRecord> {
-    return breakfastRecords + lunchRecords + dinnerRecords + snackRecords
-}
-
 private fun List<MealRecord>.pfcTotals(): NutritionTotals {
     return NutritionTotals(
         proteinG = sumOf { it.proteinG },
@@ -164,6 +166,7 @@ fun HomeRoute(
 ) {
     val viewModel: HomeViewModel = viewModel(factory = AppViewModelFactory(container))
     val state by viewModel.uiState.collectAsState()
+    val drivePlanState by container.driveAccessManager.planState.collectAsState()
     LaunchedEffect(state.message) {
         state.message?.let {
             snackbarHostState.showSnackbar(it)
@@ -173,6 +176,7 @@ fun HomeRoute(
     HomeScreen(
         innerPadding = innerPadding,
         state = state,
+        selectedDrivePlan = drivePlanState.selectedPlan,
         onQuickRecordClick = onQuickRecordClick,
         onMoveSelectedDate = viewModel::moveSelectedRecordDate,
         onDateSelected = viewModel::updateSelectedRecordDate,
@@ -187,6 +191,7 @@ fun HomeRoute(
 private fun HomeScreen(
     innerPadding: PaddingValues,
     state: HomeUiState,
+    selectedDrivePlan: DrivePlan?,
     onQuickRecordClick: () -> Unit,
     onMoveSelectedDate: (Long) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
@@ -259,6 +264,7 @@ private fun HomeScreen(
             WeeklyChartCard(
                 stacks = state.weeklyChart.days,
                 maxCalories = state.weeklyChart.maxTotalCalories,
+                selectedDrivePlan = selectedDrivePlan,
                 modifier = Modifier.testTag("weekly_chart_card"),
                 onDeleteRecordRequest = { _, record ->
                     pendingDeleteRecord = PendingDeleteRecord(
@@ -375,6 +381,7 @@ private fun RecordDateSelector(
 private fun WeeklyChartCard(
     stacks: List<DailyMealStack>,
     maxCalories: Int,
+    selectedDrivePlan: DrivePlan?,
     modifier: Modifier = Modifier,
     onDeleteRecordRequest: (ChartMealDialogState, MealRecord) -> Unit,
 ) {
@@ -416,6 +423,7 @@ private fun WeeklyChartCard(
                                 dialogState = ChartMealDialogState(
                                     date = stack.date,
                                     stack = stack,
+                                    section = section,
                                 )
                             }
                         },
@@ -427,6 +435,7 @@ private fun WeeklyChartCard(
     dialogState?.let { detail ->
         ChartMealDetailDialog(
             state = detail,
+            selectedDrivePlan = selectedDrivePlan,
             onDismiss = { dialogState = null },
             onDeleteClick = { record ->
                 onDeleteRecordRequest(detail, record)
@@ -567,12 +576,16 @@ private fun detectTappedMealSection(
 @Composable
 private fun ChartMealDetailDialog(
     state: ChartMealDialogState,
+    selectedDrivePlan: DrivePlan?,
     onDismiss: () -> Unit,
     onDeleteClick: (MealRecord) -> Unit,
 ) {
     val titleDateFormatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.JAPAN) }
     val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.JAPAN) }
-    val allRecords = remember(state.stack) { state.stack.allRecords().sortedBy(MealRecord::eatenAt) }
+    val records = remember(state.stack, state.section) {
+        state.stack.recordsForSection(state.section).sortedBy(MealRecord::eatenAt)
+    }
+    var selectedRecord by remember { mutableStateOf<MealRecord?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
@@ -581,7 +594,7 @@ private fun ChartMealDetailDialog(
             }
         },
         title = {
-            Text(titleDateFormatter.format(state.date))
+            Text("${titleDateFormatter.format(state.date)} ${stringResource(state.section.labelResId())}")
         },
         text = {
             Column(
@@ -589,14 +602,22 @@ private fun ChartMealDetailDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 MealRecordSection(
-                    records = allRecords,
-                    total = allRecords.pfcTotals(),
+                    records = records,
+                    total = records.pfcTotals(),
                     timeFormatter = timeFormatter,
+                    onRecordClick = { selectedRecord = it },
                     onDeleteClick = onDeleteClick,
                 )
             }
         },
     )
+    selectedRecord?.let { record ->
+        MealRecordContentDialog(
+            record = record,
+            selectedDrivePlan = selectedDrivePlan,
+            onDismiss = { selectedRecord = null },
+        )
+    }
 }
 
 @Composable
@@ -604,6 +625,7 @@ private fun MealRecordSection(
     records: List<MealRecord>,
     total: NutritionTotals,
     timeFormatter: SimpleDateFormat,
+    onRecordClick: (MealRecord) -> Unit,
     onDeleteClick: (MealRecord) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -628,6 +650,11 @@ private fun MealRecordSection(
         } else {
             records.forEach { record ->
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onRecordClick(record) }
+                        .padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
@@ -684,6 +711,148 @@ private fun MealRecordSection(
             }
         }
     }
+}
+
+@Composable
+private fun MealRecordContentDialog(
+    record: MealRecord,
+    selectedDrivePlan: DrivePlan?,
+    onDismiss: () -> Unit,
+) {
+    val timeFormatter = remember { SimpleDateFormat("yyyy/M/d HH:mm", Locale.JAPAN) }
+    val planMeal = selectedDrivePlan?.mealForRecord(record)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.close))
+            }
+        },
+        title = {
+            Text(record.templateNameSnapshot)
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = timeFormatter.format(Date(record.eatenAt)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(R.string.kcal_format, record.totalCalories),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "${stringResource(R.string.protein_short)} ${formatOneDecimal(record.proteinG)}g / " +
+                        "${stringResource(R.string.fat_short)} ${formatOneDecimal(record.fatG)}g / " +
+                        "${stringResource(R.string.carb_short)} ${formatOneDecimal(record.carbG)}g",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                record.photoUri?.takeIf { it.isNotBlank() }?.let { uri ->
+                    Text(
+                        text = stringResource(R.string.meal_detail_record_photo),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    MealPhoto(
+                        uriString = uri,
+                        contentDescription = record.templateNameSnapshot,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clip(RoundedCornerShape(10.dp)),
+                        maxSizePx = 720,
+                    )
+                }
+                if (planMeal != null) {
+                    DrivePlanMealContent(meal = planMeal)
+                } else {
+                    Text(
+                        text = stringResource(R.string.meal_detail_drive_content_unavailable),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (record.selectedOptions.isNotEmpty()) {
+                    Text(
+                        text = record.selectedOptions.joinToString(" / ") { option -> option.optionNameSnapshot },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (record.memo.isNotBlank()) {
+                    Text(
+                        text = record.memo,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun DrivePlanMealContent(meal: DrivePlanMeal) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.meal_detail_contents),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        meal.imagePath?.let { path ->
+            DriveCachedImage(
+                path = path,
+                contentDescription = meal.name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(10.dp)),
+            )
+        }
+        meal.items.forEach { item ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                item.imagePath?.let { path ->
+                    DriveCachedImage(
+                        path = path,
+                        contentDescription = item.name,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(item.name, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = item.amountLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun DrivePlan.mealForRecord(record: MealRecord): DrivePlanMeal? {
+    val slot = when (record.mealType) {
+        MealType.BREAKFAST -> 0
+        MealType.LUNCH -> 2
+        MealType.DINNER -> 3
+        MealType.SNACK,
+        MealType.EATING_OUT,
+        -> null
+    }
+    return slot?.let { mealSlot -> meals.firstOrNull { it.slot == mealSlot } }
+        ?: meals.firstOrNull { it.name == record.templateNameSnapshot }
 }
 
 private fun DrawScope.drawBarBackground(maxCalories: Int) {
