@@ -16,6 +16,9 @@
     <string name="breakfast_set">朝S</string>
     <string name="lunch_set">昼S</string>
     <string name="dinner_set">夕S</string>
+    <string name="morning_snack_set">間朝S</string>
+    <string name="daytime_snack_set">間昼S</string>
+    <string name="free_snack_set">間全S</string>
     <string name="go_to_template_management">テンプレート管理</string>
     <string name="go_to_settings">設定</string>
     <string name="today_consumed">今日の摂取カロリー</string>
@@ -100,8 +103,11 @@
     <string name="default_breakfast_template">朝食の標準テンプレート</string>
     <string name="template_role_none">未設定</string>
     <string name="template_role_breakfast">朝セット</string>
+    <string name="template_role_morning_snack">間朝セット</string>
     <string name="template_role_lunch">昼セット</string>
     <string name="template_role_dinner">夕セット</string>
+    <string name="template_role_daytime_snack">間昼セット</string>
+    <string name="template_role_free_snack">間全セット</string>
     <string name="template_fixed_menu">ホーム固定メニュー</string>
     <string name="template_fixed_menu_notice">この固定メニューは名前、食事区分、特別メシ設定だけ固定です。カロリーやメモは編集できます。</string>
     <string name="delete">削除する</string>

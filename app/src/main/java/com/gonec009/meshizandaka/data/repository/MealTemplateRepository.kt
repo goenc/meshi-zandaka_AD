@@ -78,8 +78,11 @@ class MealTemplateRepository(
     suspend fun syncDriveShortcuts(plan: DrivePlan): Map<TemplateShortcutRole, Long> {
         val mappings = listOf(
             TemplateShortcutRole.BREAKFAST to plan.meals.firstOrNull { it.slot == 0 },
+            TemplateShortcutRole.MORNING_SNACK to plan.meals.firstOrNull { it.slot == 1 },
             TemplateShortcutRole.LUNCH to plan.meals.firstOrNull { it.slot == 2 },
             TemplateShortcutRole.DINNER to plan.meals.firstOrNull { it.slot == 3 },
+            TemplateShortcutRole.DAYTIME_SNACK to plan.meals.firstOrNull { it.slot == 4 },
+            TemplateShortcutRole.FREE_SNACK to plan.meals.firstOrNull { it.slot == 5 },
         )
         val syncedIds = linkedMapOf<TemplateShortcutRole, Long>()
         mappings.forEach { (role, meal) ->
@@ -222,22 +225,31 @@ class MealTemplateRepository(
 
     private fun TemplateShortcutRole.mealType(): MealType = when (this) {
         TemplateShortcutRole.BREAKFAST -> MealType.BREAKFAST
+        TemplateShortcutRole.MORNING_SNACK -> MealType.MORNING_SNACK
         TemplateShortcutRole.LUNCH -> MealType.LUNCH
         TemplateShortcutRole.DINNER -> MealType.DINNER
+        TemplateShortcutRole.DAYTIME_SNACK -> MealType.DAYTIME_SNACK
+        TemplateShortcutRole.FREE_SNACK -> MealType.FREE_SNACK
         TemplateShortcutRole.NONE -> MealType.FREE_SNACK
     }
 
     private fun TemplateShortcutRole.defaultTemplateName(): String = when (this) {
         TemplateShortcutRole.BREAKFAST -> "朝セット"
+        TemplateShortcutRole.MORNING_SNACK -> "間朝セット"
         TemplateShortcutRole.LUNCH -> "昼セット"
         TemplateShortcutRole.DINNER -> "夜セット"
+        TemplateShortcutRole.DAYTIME_SNACK -> "間昼セット"
+        TemplateShortcutRole.FREE_SNACK -> "間全セット"
         TemplateShortcutRole.NONE -> "セット"
     }
 
     private fun driveShortcutTemplateId(role: TemplateShortcutRole): Long = when (role) {
         TemplateShortcutRole.BREAKFAST -> -1001L
+        TemplateShortcutRole.MORNING_SNACK -> -1004L
         TemplateShortcutRole.LUNCH -> -1002L
         TemplateShortcutRole.DINNER -> -1003L
+        TemplateShortcutRole.DAYTIME_SNACK -> -1005L
+        TemplateShortcutRole.FREE_SNACK -> -1006L
         TemplateShortcutRole.NONE -> error("NONEはDriveショートカットにできません。")
     }
 

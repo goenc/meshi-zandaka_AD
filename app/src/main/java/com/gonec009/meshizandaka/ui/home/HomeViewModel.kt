@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.domain.model.AppSettings
 import com.gonec009.meshizandaka.domain.model.DashboardSummary
+import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.domain.model.WeeklyMealChart
 import com.gonec009.meshizandaka.domain.usecase.DuplicateDailyMealException
@@ -55,12 +56,24 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         recordTemplate(resolveTemplateId(TemplateShortcutRole.BREAKFAST), "朝セットを記録しました")
     }
 
+    fun recordMorningSnack() {
+        recordTemplate(resolveTemplateId(TemplateShortcutRole.MORNING_SNACK), "間朝セットを記録しました")
+    }
+
     fun recordLunch() {
         recordTemplate(resolveTemplateId(TemplateShortcutRole.LUNCH), "昼セットを記録しました")
     }
 
     fun recordDinner() {
         recordTemplate(resolveTemplateId(TemplateShortcutRole.DINNER), "夕セットを記録しました")
+    }
+
+    fun recordDaytimeSnack() {
+        recordTemplate(resolveTemplateId(TemplateShortcutRole.DAYTIME_SNACK), "間昼セットを記録しました")
+    }
+
+    fun recordFreeSnack() {
+        recordTemplate(resolveTemplateId(TemplateShortcutRole.FREE_SNACK), "間全セットを記録しました")
     }
 
     fun consumeMessage() {
@@ -120,7 +133,16 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 TemplateShortcutRole.BREAKFAST -> _uiState.value.settings.defaultBreakfastTemplateId
                 TemplateShortcutRole.LUNCH -> _uiState.value.settings.defaultLunchTemplateId
                 TemplateShortcutRole.DINNER -> _uiState.value.settings.defaultDinnerTemplateId
+                TemplateShortcutRole.MORNING_SNACK -> resolveNormalTemplateId(MealType.MORNING_SNACK)
+                TemplateShortcutRole.DAYTIME_SNACK -> resolveNormalTemplateId(MealType.DAYTIME_SNACK)
+                TemplateShortcutRole.FREE_SNACK -> resolveNormalTemplateId(MealType.FREE_SNACK, MealType.SNACK)
                 TemplateShortcutRole.NONE -> null
             }
+    }
+
+    private fun resolveNormalTemplateId(vararg mealTypes: MealType): Long? {
+        return _uiState.value.templates.firstOrNull { template ->
+            template.shortcutRole == TemplateShortcutRole.NONE && template.mealType in mealTypes
+        }?.id
     }
 }

@@ -34,7 +34,10 @@ fun templateShortcutRoleLabel(role: TemplateShortcutRole): String = stringResour
     when (role) {
         TemplateShortcutRole.NONE -> R.string.template_role_none
         TemplateShortcutRole.BREAKFAST -> R.string.template_role_breakfast
+        TemplateShortcutRole.MORNING_SNACK -> R.string.template_role_morning_snack
         TemplateShortcutRole.LUNCH -> R.string.template_role_lunch
         TemplateShortcutRole.DINNER -> R.string.template_role_dinner
+        TemplateShortcutRole.DAYTIME_SNACK -> R.string.template_role_daytime_snack
+        TemplateShortcutRole.FREE_SNACK -> R.string.template_role_free_snack
     },
 )

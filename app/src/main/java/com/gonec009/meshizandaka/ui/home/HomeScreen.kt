@@ -190,8 +190,11 @@ fun HomeRoute(
         onMoveSelectedDate = viewModel::moveSelectedRecordDate,
         onDateSelected = viewModel::updateSelectedRecordDate,
         onBreakfastClick = viewModel::recordBreakfast,
+        onMorningSnackClick = viewModel::recordMorningSnack,
         onLunchClick = viewModel::recordLunch,
         onDinnerClick = viewModel::recordDinner,
+        onDaytimeSnackClick = viewModel::recordDaytimeSnack,
+        onFreeSnackClick = viewModel::recordFreeSnack,
         onDeleteRecord = viewModel::deleteRecord,
     )
 }
@@ -205,8 +208,11 @@ private fun HomeScreen(
     onMoveSelectedDate: (Long) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
     onBreakfastClick: () -> Unit,
+    onMorningSnackClick: () -> Unit,
     onLunchClick: () -> Unit,
     onDinnerClick: () -> Unit,
+    onDaytimeSnackClick: () -> Unit,
+    onFreeSnackClick: () -> Unit,
     onDeleteRecord: (Long, () -> Unit) -> Unit,
 ) {
     var isDatePickerVisible by remember { mutableStateOf(false) }
@@ -262,6 +268,17 @@ private fun HomeScreen(
                     }
                     Button(onClick = onDinnerClick, modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.dinner_set))
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onMorningSnackClick, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.morning_snack_set))
+                    }
+                    Button(onClick = onDaytimeSnackClick, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.daytime_snack_set))
+                    }
+                    Button(onClick = onFreeSnackClick, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.free_snack_set))
                     }
                 }
                 Button(onClick = onQuickRecordClick, modifier = Modifier.fillMaxWidth()) {
