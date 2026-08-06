@@ -165,6 +165,8 @@ private class FakeMealTemplateDao(
     override suspend fun insertOptions(options: List<TemplateOptionEntity>) = Unit
 
     override suspend fun updateTemplate(template: MealTemplateEntity) = Unit
+
+    override suspend fun deactivateTemplate(templateId: Long) = Unit
 }
 
 private class FakeMealRecordDao(

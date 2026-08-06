@@ -6,6 +6,7 @@ import com.gonec009.meshizandaka.data.drive.GoogleDriveClient
 import com.gonec009.meshizandaka.data.local.AppDatabase
 import com.gonec009.meshizandaka.data.repository.MealRecordRepository
 import com.gonec009.meshizandaka.data.repository.MealTemplateRepository
+import com.gonec009.meshizandaka.data.repository.DrivePlanCacheRepository
 import com.gonec009.meshizandaka.data.repository.SettingsRepository
 import com.gonec009.meshizandaka.domain.service.BudgetCalculator
 import com.gonec009.meshizandaka.domain.usecase.CreateQuickRecordUseCase
@@ -19,8 +20,15 @@ class AppContainer(context: Context) {
     val settingsRepository by lazy { SettingsRepository(appContext) }
     val mealTemplateRepository by lazy { MealTemplateRepository(database.mealTemplateDao(), appContext) }
     val mealRecordRepository by lazy { MealRecordRepository(database.mealRecordDao(), appContext) }
+    val drivePlanCacheRepository by lazy { DrivePlanCacheRepository(database.drivePlanCacheDao()) }
     val budgetCalculator by lazy { BudgetCalculator() }
-    val driveAccessManager by lazy { DriveAccessManager(GoogleDriveClient(), appContext) }
+    val driveAccessManager by lazy {
+        DriveAccessManager(
+            client = GoogleDriveClient(),
+            context = appContext,
+            cacheRepository = drivePlanCacheRepository,
+        )
+    }
 
     val ensureSeedDataUseCase by lazy {
         EnsureSeedDataUseCase(

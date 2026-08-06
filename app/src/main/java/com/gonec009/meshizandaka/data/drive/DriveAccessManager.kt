@@ -2,6 +2,7 @@ package com.gonec009.meshizandaka.data.drive
 
 import android.content.Context
 import com.google.android.gms.common.api.Scope
+import com.gonec009.meshizandaka.data.repository.DrivePlanCacheRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,7 @@ data class DriveConnectionState(
 class DriveAccessManager(
     private val client: GoogleDriveClient,
     context: Context,
+    private val cacheRepository: DrivePlanCacheRepository,
 ) {
     private val planReader = DrivePlanSnapshotReader(client)
     private val imageCache = DriveImageCache(context)
@@ -43,7 +45,12 @@ class DriveAccessManager(
 
     fun markAuthorizationStarted() {
         _state.update { it.copy(phase = DriveConnectionPhase.CONNECTING) }
-        _planState.value = DrivePlanState(phase = DrivePlanPhase.LOADING)
+        val current = _planState.value
+        _planState.value = if (current.plans.isEmpty()) {
+            DrivePlanState(phase = DrivePlanPhase.LOADING)
+        } else {
+            current.copy(errorMessage = null)
+        }
     }
 
     fun markAuthorizationFailed() {
@@ -51,16 +58,44 @@ class DriveAccessManager(
         imageMetadata = emptyMap()
         imageMetadataLoaded = false
         _state.value = DriveConnectionState(phase = DriveConnectionPhase.FAILED)
+        val current = _planState.value
+        _planState.value = if (current.plans.isEmpty()) {
+            DrivePlanState(
+                phase = DrivePlanPhase.FAILED,
+                errorMessage = "Google Driveの認証に失敗しました。",
+            )
+        } else {
+            current.copy(
+                phase = DrivePlanPhase.READY,
+                errorMessage = "Driveを更新できないため、保存済みデータを表示しています。",
+            )
+        }
+    }
+
+    suspend fun restoreCachedPlans() {
+        val cached = runCatching { cacheRepository.load() }.getOrNull() ?: return
+        val selectedPlanId = cached.selectedPlanId
+            ?.takeIf { selectedId -> cached.catalog.plans.any { it.id == selectedId } }
+            ?: cached.catalog.preferredPlanId
+                ?.takeIf { preferredId -> cached.catalog.plans.any { it.id == preferredId } }
+            ?: cached.catalog.plans.firstOrNull()?.id
         _planState.value = DrivePlanState(
-            phase = DrivePlanPhase.FAILED,
-            errorMessage = "Google Driveの認証に失敗しました。",
+            phase = DrivePlanPhase.READY,
+            plans = cached.catalog.plans,
+            selectedPlanId = selectedPlanId,
         )
+        selectedPlanId?.let { selectPlan(it) }
     }
 
     suspend fun connect(token: String) {
         require(token.isNotBlank()) { "Googleアクセストークンが空です。" }
         _state.value = DriveConnectionState(phase = DriveConnectionPhase.CONNECTING)
-        _planState.value = DrivePlanState(phase = DrivePlanPhase.LOADING)
+        val cachedState = _planState.value
+        _planState.value = if (cachedState.plans.isEmpty()) {
+            DrivePlanState(phase = DrivePlanPhase.LOADING)
+        } else {
+            cachedState.copy(errorMessage = null)
+        }
         accessToken = token
         imageMetadata = emptyMap()
         imageMetadataLoaded = false
@@ -87,26 +122,40 @@ class DriveAccessManager(
 
         val catalog = planResult.getOrNull()
         if (catalog == null) {
-            _planState.value = DrivePlanState(
-                phase = DrivePlanPhase.FAILED,
-                errorMessage = "Driveの食事プランを読み込めません。",
-            )
+            val current = _planState.value
+            _planState.value = if (current.plans.isEmpty()) {
+                DrivePlanState(
+                    phase = DrivePlanPhase.FAILED,
+                    errorMessage = "Driveの食事プランを読み込めません。",
+                )
+            } else {
+                current.copy(
+                    phase = DrivePlanPhase.READY,
+                    errorMessage = "Driveを更新できないため、保存済みデータを表示しています。",
+                )
+            }
             return
         }
 
         val selectedPlanId = catalog.preferredPlanId
             ?: catalog.plans.firstOrNull { it.isFavorite }?.id
             ?: catalog.plans.firstOrNull()?.id
+        val cacheSaveError = runCatching {
+            cacheRepository.save(catalog, selectedPlanId)
+        }.exceptionOrNull()
         _planState.value = DrivePlanState(
             phase = DrivePlanPhase.READY,
             plans = catalog.plans,
             selectedPlanId = selectedPlanId,
+            errorMessage = cacheSaveError?.let { "最新のDriveデータを端末へ保存できません。" },
         )
         selectedPlanId?.let { selectPlan(it) }
+        if (cacheSaveError != null) {
+            _planState.update { it.copy(errorMessage = "最新のDriveデータを端末へ保存できません。") }
+        }
     }
 
     suspend fun selectPlan(planId: String) {
-        val token = accessToken ?: error("Google Driveへ接続していません。")
         val current = _planState.value
         require(current.plans.any { it.id == planId }) { "指定されたDriveプランが見つかりません。" }
         _planState.value = current.copy(
@@ -116,7 +165,7 @@ class DriveAccessManager(
         )
 
         val selectedPlan = current.plans.first { it.id == planId }
-        val imageResult = capture { loadImages(token, selectedPlan) }
+        val imageResult = capture { loadImages(accessToken, selectedPlan) }
         val loaded = imageResult.getOrNull()
         val latest = _planState.value
         val updatedPlans = if (loaded == null) {
@@ -135,6 +184,7 @@ class DriveAccessManager(
                 else -> null
             },
         )
+        runCatching { cacheRepository.saveSelectedPlanId(planId) }
     }
 
     suspend fun downloadFile(fileId: String): ByteArray {
@@ -143,7 +193,7 @@ class DriveAccessManager(
     }
 
     private suspend fun loadImages(
-        token: String,
+        token: String?,
         plan: DrivePlan,
     ): ImageLoadResult {
         val hashes = plan.meals
@@ -156,7 +206,7 @@ class DriveAccessManager(
             .distinctBy { it.lowercase() }
         if (hashes.isEmpty()) return ImageLoadResult(emptyMap(), failedCount = 0)
 
-        if (!imageMetadataLoaded) {
+        if (token != null && !imageMetadataLoaded) {
             imageMetadata = client.listImages(token)
                 .associateBy { metadata -> metadata.contentHash.lowercase() }
             imageMetadataLoaded = true
@@ -170,6 +220,7 @@ class DriveAccessManager(
                 paths[hash.lowercase()] = cachedPath
                 return@forEach
             }
+            if (token == null) return@forEach
             val metadata = imageMetadata[hash.lowercase()] ?: return@forEach
             runCatching {
                 imageCache.store(hash, client.downloadFile(token, metadata.id))

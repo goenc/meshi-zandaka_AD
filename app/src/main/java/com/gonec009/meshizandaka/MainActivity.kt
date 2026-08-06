@@ -11,10 +11,10 @@ import androidx.activity.enableEdgeToEdge
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
-import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.lifecycleScope
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.data.drive.DriveAccessManager
+import com.gonec009.meshizandaka.data.drive.DriveConnectionPhase
 import com.gonec009.meshizandaka.navigation.MeshiZandakaAppRoot
 import com.gonec009.meshizandaka.ui.theme.MeshiZandakaTheme
 import kotlinx.coroutines.launch
@@ -44,24 +44,24 @@ class MainActivity : ComponentActivity() {
                 handleAuthorizationResult(authorizationResult)
             }
         }
-        lifecycleScope.launch {
-            app.container.ensureSeedDataUseCase()
-        }
         enableEdgeToEdge()
         setContent {
             MeshiZandakaTheme {
-                LaunchedEffect(Unit) {
-                    app.container.ensureSeedDataUseCase()
-                }
                 MeshiZandakaAppRoot(
                     container = app.container,
                     onDriveConnect = ::requestDriveAccess,
                 )
             }
         }
+        lifecycleScope.launch {
+            app.container.ensureSeedDataUseCase()
+            app.container.driveAccessManager.restoreCachedPlans()
+            requestDriveAccess()
+        }
     }
 
     private fun requestDriveAccess() {
+        if (appContainer.driveAccessManager.state.value.phase == DriveConnectionPhase.CONNECTING) return
         appContainer.driveAccessManager.markAuthorizationStarted()
         val request = AuthorizationRequest.builder()
             .setRequestedScopes(DriveAccessManager.authorizationScopes)
