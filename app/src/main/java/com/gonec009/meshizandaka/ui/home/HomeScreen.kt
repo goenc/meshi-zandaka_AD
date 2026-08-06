@@ -25,6 +25,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.HorizontalDivider
@@ -54,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -72,7 +74,9 @@ import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import com.gonec009.meshizandaka.ui.common.DriveCachedImage
+import com.gonec009.meshizandaka.ui.common.DriveImageMemoryCache
 import com.gonec009.meshizandaka.ui.common.MealPhoto
+import com.gonec009.meshizandaka.ui.common.MealPhotoMemoryCache
 import com.gonec009.meshizandaka.util.formatOneDecimal
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
@@ -575,9 +579,33 @@ private fun ChartMealDetailDialog(
     onDismiss: () -> Unit,
     onDeleteClick: (MealRecord) -> Unit,
 ) {
+    val context = LocalContext.current
     val titleDateFormatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.JAPAN) }
     val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.JAPAN) }
     val records = remember(state.stack) { state.stack.allRecords().sortedBy(MealRecord::eatenAt) }
+    val detailPhotoUris = remember(records) {
+        records.mapNotNull { record ->
+            record.photoUri?.takeIf { it.isNotBlank() }
+        }.distinct()
+    }
+    val detailImagePaths = remember(records, selectedDrivePlan) {
+        records.flatMap { record ->
+            selectedDrivePlan?.mealForRecord(record)?.imagePaths().orEmpty()
+        }.distinct()
+    }
+    var detailsReady by remember(detailImagePaths, detailPhotoUris) {
+        mutableStateOf(detailImagePaths.isEmpty() && detailPhotoUris.isEmpty())
+    }
+    LaunchedEffect(detailImagePaths, detailPhotoUris) {
+        detailsReady = false
+        MealPhotoMemoryCache.preload(
+            context = context,
+            uriStrings = detailPhotoUris,
+            maxSizePx = 720,
+        )
+        DriveImageMemoryCache.preload(detailImagePaths)
+        detailsReady = true
+    }
     var selectedRecord by remember { mutableStateOf<MealRecord?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -598,9 +626,26 @@ private fun ChartMealDetailDialog(
                     records = records,
                     total = records.pfcTotals(),
                     timeFormatter = timeFormatter,
+                    detailsReady = detailsReady,
                     onRecordClick = { selectedRecord = it },
                     onDeleteClick = onDeleteClick,
                 )
+                if (!detailsReady) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Text(
+                            text = stringResource(R.string.meal_detail_preloading),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         },
     )
@@ -618,6 +663,7 @@ private fun MealRecordSection(
     records: List<MealRecord>,
     total: NutritionTotals,
     timeFormatter: SimpleDateFormat,
+    detailsReady: Boolean,
     onRecordClick: (MealRecord) -> Unit,
     onDeleteClick: (MealRecord) -> Unit,
 ) {
@@ -646,7 +692,7 @@ private fun MealRecordSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { onRecordClick(record) }
+                        .clickable(enabled = detailsReady) { onRecordClick(record) }
                         .padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.Top,
@@ -846,6 +892,11 @@ private fun DrivePlan.mealForRecord(record: MealRecord): DrivePlanMeal? {
     }
     return slot?.let { mealSlot -> meals.firstOrNull { it.slot == mealSlot } }
         ?: meals.firstOrNull { it.name == record.templateNameSnapshot }
+}
+
+private fun DrivePlanMeal.imagePaths(): List<String> = buildList {
+    imagePath?.let(::add)
+    items.mapNotNull { it.imagePath }.forEach(::add)
 }
 
 private fun DrawScope.drawBarBackground(maxCalories: Int) {

@@ -131,4 +131,5 @@
     <string name="meal_detail_contents">食事内容</string>
     <string name="meal_detail_record_photo">記録写真</string>
     <string name="meal_detail_drive_content_unavailable">同期済みの食事内容がありません</string>
+    <string name="meal_detail_preloading">写真を先読み中…</string>
 </resources>

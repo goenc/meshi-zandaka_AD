@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.LruCache
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,7 +27,45 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+
+internal object MealPhotoMemoryCache {
+    private val cache = object : LruCache<String, Bitmap>(16 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = (value.byteCount / 1024).coerceAtLeast(1)
+    }
+
+    fun get(uriString: String?, maxSizePx: Int): Bitmap? =
+        uriString?.takeIf { it.isNotBlank() }?.let { cache.get(cacheKey(it, maxSizePx)) }
+
+    suspend fun preload(
+        context: Context,
+        uriStrings: Collection<String?>,
+        maxSizePx: Int,
+    ) {
+        val uniqueUris = uriStrings.mapNotNull { it?.takeIf(String::isNotBlank) }.distinct()
+        coroutineScope {
+            uniqueUris.map { uriString ->
+                async(Dispatchers.IO) {
+                    load(context, uriString, maxSizePx)
+                }
+            }.awaitAll()
+        }
+    }
+
+    suspend fun load(context: Context, uriString: String?, maxSizePx: Int): Bitmap? =
+        withContext(Dispatchers.IO) {
+            val normalizedUri = uriString?.takeIf { it.isNotBlank() } ?: return@withContext null
+            cache.get(cacheKey(normalizedUri, maxSizePx))
+                ?: runCatching { decodeSampledBitmap(context, normalizedUri, maxSizePx) }
+                    .getOrNull()
+                    ?.also { bitmap -> cache.put(cacheKey(normalizedUri, maxSizePx), bitmap) }
+        }
+
+    private fun cacheKey(uriString: String, maxSizePx: Int): String = "$uriString#$maxSizePx"
+}
 
 @Composable
 fun MealPhoto(
@@ -36,10 +75,12 @@ fun MealPhoto(
     maxSizePx: Int = 720,
 ) {
     val context = LocalContext.current
-    val imageBitmap by produceState<ImageBitmap?>(initialValue = null, uriString, maxSizePx) {
-        value = withContext(Dispatchers.IO) {
-            decodeSampledBitmap(context, uriString, maxSizePx)?.asImageBitmap()
-        }
+    val imageBitmap by produceState(
+        initialValue = MealPhotoMemoryCache.get(uriString, maxSizePx)?.asImageBitmap(),
+        uriString,
+        maxSizePx,
+    ) {
+        value = MealPhotoMemoryCache.load(context, uriString, maxSizePx)?.asImageBitmap()
     }
     imageBitmap?.let { bitmap ->
         Image(
