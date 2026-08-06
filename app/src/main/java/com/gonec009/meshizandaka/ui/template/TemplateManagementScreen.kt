@@ -1,40 +1,29 @@
 package com.gonec009.meshizandaka.ui.template
 
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.BorderStroke
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.ui.draw.clip
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,491 +32,343 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
-import com.gonec009.meshizandaka.domain.model.MealTemplate
-import com.gonec009.meshizandaka.domain.model.MealType
-import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
-import com.gonec009.meshizandaka.ui.AppViewModelFactory
-import com.gonec009.meshizandaka.ui.common.InAppCameraCapture
-import com.gonec009.meshizandaka.ui.common.MealPhotoWithDeleteAction
-import com.gonec009.meshizandaka.ui.common.discardCapturedPhoto
-import com.gonec009.meshizandaka.ui.common.isManagedPhotoInFolder
-import com.gonec009.meshizandaka.ui.mealTypeLabel
-import com.gonec009.meshizandaka.util.sanitizeDecimalInput
+import com.gonec009.meshizandaka.data.drive.DrivePlan
+import com.gonec009.meshizandaka.data.drive.DrivePlanItem
+import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
+import com.gonec009.meshizandaka.data.drive.DrivePlanPhase
+import com.gonec009.meshizandaka.data.drive.DrivePlanState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun TemplateManagementRoute(
     container: AppContainer,
     innerPadding: PaddingValues,
+    onDriveConnect: () -> Unit,
 ) {
-    val viewModel: TemplateManagementViewModel = viewModel(factory = AppViewModelFactory(container))
-    val state by viewModel.uiState.collectAsState()
+    val state by container.driveAccessManager.planState.collectAsState()
+    val scope = rememberCoroutineScope()
     TemplateManagementScreen(
         innerPadding = innerPadding,
         state = state,
-        onAddClick = viewModel::openNewDialog,
-        onEditClick = viewModel::openEditDialog,
-        onCloseDialog = viewModel::closeDialog,
-        onUpdateEditor = viewModel::updateEditor,
-        onSave = viewModel::saveTemplate,
-        onDelete = viewModel::deleteTemplate,
+        onDriveConnect = onDriveConnect,
+        onSelectPlan = { planId ->
+            scope.launch { container.driveAccessManager.selectPlan(planId) }
+        },
     )
 }
 
 @Composable
 private fun TemplateManagementScreen(
     innerPadding: PaddingValues,
-    state: TemplateManagementUiState,
-    onAddClick: () -> Unit,
-    onEditClick: (MealTemplate) -> Unit,
-    onCloseDialog: () -> Unit,
-    onUpdateEditor: ((TemplateEditorState) -> TemplateEditorState) -> Unit,
-    onSave: () -> Unit,
-    onDelete: (Long) -> Unit,
+    state: DrivePlanState,
+    onDriveConnect: () -> Unit,
+    onSelectPlan: (String) -> Unit,
 ) {
-    var showCamera by remember { mutableStateOf(false) }
-    var templatePendingDelete by remember { mutableStateOf<MealTemplate?>(null) }
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                Button(onClick = onAddClick, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.add_template))
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Text(
+                text = stringResource(R.string.template_management_drive_description),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        when (state.phase) {
+            DrivePlanPhase.IDLE -> {
+                item {
+                    DriveConnectionPrompt(onDriveConnect = onDriveConnect)
                 }
             }
-            items(state.templates, key = { it.id }) { template ->
-                val isLockedTemplate = template.shortcutRole != TemplateShortcutRole.NONE
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .combinedClickable(
-                            onClick = { onEditClick(template) },
-                            onLongClick = { templatePendingDelete = template },
-                        ),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = template.name, style = MaterialTheme.typography.titleMedium)
-                        Text(text = stringResource(R.string.kcal_format, template.baseCalories))
-                        if (isLockedTemplate) {
-                            Text(text = stringResource(R.string.template_fixed_menu))
-                        }
-                        Text(text = if (template.isSpecial) stringResource(R.string.special_meal) else stringResource(R.string.standard_meal))
-                    }
+            DrivePlanPhase.LOADING -> {
+                item {
+                    DriveLoadingState()
                 }
             }
-        }
-
-        if (state.isDialogOpen && !showCamera) {
-            TemplateEditorDialog(
-                state = state,
-                onCloseDialog = onCloseDialog,
-                onUpdateEditor = onUpdateEditor,
-                onSave = onSave,
-                onTakePhotoClick = { showCamera = true },
-                onDeletePhoto = { photoUri ->
-                    if (photoUri != state.editorState.originalPhotoUri &&
-                        isManagedPhotoInFolder(photoUri, "template_photos")
-                    ) {
-                        scope.launch {
-                            discardCapturedPhoto(context, photoUri)
-                        }
-                    }
-                    onUpdateEditor { current -> current.copy(photoUri = null) }
-                },
-            )
-        }
-        if (templatePendingDelete != null) {
-            AlertDialog(
-                onDismissRequest = { templatePendingDelete = null },
-                text = { Text(stringResource(R.string.delete_template_confirm_message)) },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            onDelete(templatePendingDelete!!.id)
-                            templatePendingDelete = null
-                        },
-                    ) {
-                        Text(stringResource(R.string.yes))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { templatePendingDelete = null }) {
-                        Text(stringResource(R.string.no))
-                    }
-                },
-            )
-        }
-        if (showCamera) {
-            InAppCameraCapture(
-                folderName = "template_photos",
-                filePrefix = "template",
-                onCaptured = { photoUri ->
-                    onUpdateEditor { current -> current.copy(photoUri = photoUri) }
-                },
-                onDismiss = { showCamera = false },
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TemplateEditorDialog(
-    state: TemplateManagementUiState,
-    onCloseDialog: () -> Unit,
-    onUpdateEditor: ((TemplateEditorState) -> TemplateEditorState) -> Unit,
-    onSave: () -> Unit,
-    onTakePhotoClick: () -> Unit,
-    onDeletePhoto: (String?) -> Unit,
-) {
-    val editor = state.editorState
-    var mealTypeExpanded by remember { mutableStateOf(false) }
-    var showDeletePhotoDialog by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onCloseDialog,
-        title = { Text(stringResource(R.string.template_editor_title)) },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                CompactOutlinedField(
-                    value = editor.name,
-                    onValueChange = { onUpdateEditor { current -> current.copy(name = it) } },
-                    label = { Text(stringResource(R.string.template_name)) },
-                    modifier = compactFieldModifier(),
-                    textStyle = compactFieldTextStyle(),
-                    singleLine = true,
-                )
-                ExposedDropdownMenuBox(
-                    expanded = mealTypeExpanded,
-                    onExpandedChange = { mealTypeExpanded = it },
-                ) {
-                    LabeledMealSettingField(
-                        mealTypeLabel = stringResource(R.string.meal_type),
-                        selectedMealType = mealTypeLabel(editor.mealType),
-                        isSpecial = editor.isSpecial,
-                        expanded = mealTypeExpanded,
-                        onSpecialCheckedChange = { checked ->
-                            onUpdateEditor { current -> current.copy(isSpecial = checked) }
-                        },
-                        mealFieldModifier = Modifier.menuAnchor(),
+            DrivePlanPhase.FAILED -> {
+                item {
+                    DriveErrorState(
+                        message = state.errorMessage,
+                        onDriveConnect = onDriveConnect,
                     )
-                    DropdownMenu(
-                        expanded = mealTypeExpanded,
-                        onDismissRequest = { mealTypeExpanded = false },
-                    ) {
-                        MealType.entries
-                            .filterNot { it == MealType.EATING_OUT }
-                            .forEach { mealType ->
-                            DropdownMenuItem(
-                                text = { Text(mealTypeLabel(mealType)) },
-                                onClick = {
-                                    mealTypeExpanded = false
-                                    onUpdateEditor { current -> current.copy(mealType = mealType) }
-                                },
+                }
+            }
+            DrivePlanPhase.READY -> {
+                if (state.plans.isEmpty()) {
+                    item {
+                        Text(stringResource(R.string.template_management_no_plans))
+                        Button(onClick = onDriveConnect, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.template_management_reload))
+                        }
+                    }
+                } else {
+                    item {
+                        DrivePlanSelector(
+                            plans = state.plans,
+                            selectedPlanId = state.selectedPlanId,
+                            onSelectPlan = onSelectPlan,
+                        )
+                    }
+                    state.errorMessage?.let { message ->
+                        item {
+                            Text(
+                                text = message,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                    state.selectedPlan?.let { plan ->
+                        item {
+                            DrivePlanHeader(plan = plan)
+                        }
+                        items(plan.meals, key = { meal -> meal.slot }) { meal ->
+                            DrivePlanMealCard(
+                                meal = meal,
+                                imageLoading = state.imageLoading,
                             )
                         }
                     }
                 }
-                CompactOutlinedField(
-                    value = editor.baseCalories,
-                    onValueChange = { onUpdateEditor { current -> current.copy(baseCalories = it) } },
-                    label = { Text(stringResource(R.string.base_calories)) },
-                    modifier = compactFieldModifier(),
-                    textStyle = compactFieldTextStyle(),
-                    singleLine = true,
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    CompactMacroField(
-                        label = stringResource(R.string.protein_short),
-                        value = editor.proteinG,
-                        onValueChange = { onUpdateEditor { current -> current.copy(proteinG = sanitizeDecimalInput(it)) } },
-                        modifier = Modifier.weight(1f),
-                    )
-                    CompactMacroField(
-                        label = stringResource(R.string.fat_short),
-                        value = editor.fatG,
-                        onValueChange = { onUpdateEditor { current -> current.copy(fatG = sanitizeDecimalInput(it)) } },
-                        modifier = Modifier.weight(1f),
-                    )
-                    CompactMacroField(
-                        label = stringResource(R.string.carb_short),
-                        value = editor.carbG,
-                        onValueChange = { onUpdateEditor { current -> current.copy(carbG = sanitizeDecimalInput(it)) } },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                CompactOutlinedField(
-                    value = editor.memo,
-                    onValueChange = { onUpdateEditor { current -> current.copy(memo = it) } },
-                    label = { Text(stringResource(R.string.memo)) },
-                    modifier = compactFieldModifier(),
-                    textStyle = compactFieldTextStyle(),
-                    minLines = 4,
-                    maxLines = 6,
-                )
-                Button(
-                    onClick = onTakePhotoClick,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.take_template_photo))
-                }
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                ) {
-                    Text(
-                        text = if (editor.photoUri == null) {
-                            stringResource(R.string.meal_photo_not_added)
-                        } else {
-                            stringResource(R.string.meal_photo_added)
-                        },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                MealPhotoWithDeleteAction(
-                    uriString = editor.photoUri,
-                    contentDescription = stringResource(R.string.meal_photo_added),
-                    onDeleteClick = { showDeletePhotoDialog = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(8.dp)),
-                )
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onSave) {
-                Text(stringResource(R.string.save))
-            }
-        },
-        dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onCloseDialog) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        },
-    )
-    if (showDeletePhotoDialog && !editor.photoUri.isNullOrBlank()) {
-        AlertDialog(
-            onDismissRequest = { showDeletePhotoDialog = false },
-            text = { Text(stringResource(R.string.delete_photo_confirm_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDeletePhoto(editor.photoUri)
-                        showDeletePhotoDialog = false
-                    },
-                ) {
-                    Text(stringResource(R.string.yes))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeletePhotoDialog = false }) {
-                    Text(stringResource(R.string.no))
-                }
-            },
-        )
+        }
     }
 }
 
-private fun compactFieldModifier(): Modifier {
-    return Modifier
-        .fillMaxWidth()
-        .heightIn(min = 38.dp)
-}
-
-private fun compactFieldTextStyle(): TextStyle {
-    return TextStyle(fontSize = 14.sp)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LabeledMealSettingField(
-    mealTypeLabel: String,
-    selectedMealType: String,
-    isSpecial: Boolean,
-    expanded: Boolean,
-    onSpecialCheckedChange: (Boolean) -> Unit,
-    mealFieldModifier: Modifier = Modifier,
-) {
+private fun DriveConnectionPrompt(onDriveConnect: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(stringResource(R.string.template_management_drive_connect_required))
+            Button(onClick = onDriveConnect, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.google_drive_connect))
+            }
+        }
+    }
+}
+
+@Composable
+private fun DriveLoadingState() {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(modifier = Modifier.width(84.dp)) {
-            Text(mealTypeLabel)
-        }
-        Row(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                modifier = mealFieldModifier.weight(1f),
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = selectedMealType,
-                        modifier = Modifier.weight(1f),
-                        style = compactFieldTextStyle().copy(color = MaterialTheme.colorScheme.onSurface),
-                    )
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                }
-            }
-            Row(
-                modifier = Modifier.padding(end = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.special_short),
-                    style = compactFieldTextStyle(),
-                    fontWeight = FontWeight.Medium,
-                )
-                Checkbox(
-                    checked = isSpecial,
-                    onCheckedChange = onSpecialCheckedChange,
-                )
-            }
-        }
+        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+        Text(stringResource(R.string.template_management_drive_loading))
     }
 }
 
 @Composable
-private fun CompactMacroField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
+private fun DriveErrorState(
+    message: String?,
+    onDriveConnect: () -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Surface(
-        modifier = modifier.heightIn(min = 38.dp),
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                text = label,
-                style = compactFieldTextStyle(),
-                fontWeight = FontWeight.Medium,
+                text = message ?: stringResource(R.string.template_management_drive_error),
+                color = MaterialTheme.colorScheme.error,
             )
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
+            Button(onClick = onDriveConnect, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.template_management_reload))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DrivePlanSelector(
+    plans: List<DrivePlan>,
+    selectedPlanId: String?,
+    onSelectPlan: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedPlan = plans.firstOrNull { it.id == selectedPlanId }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = selectedPlan?.name.orEmpty(),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.template_management_plan_selector)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            plans.forEach { plan ->
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(plan.name)
+                            if (plan.targetDate != null) {
+                                Text(
+                                    text = plan.targetDate,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelectPlan(plan.id)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DrivePlanHeader(plan: DrivePlan) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                textStyle = compactFieldTextStyle().copy(color = MaterialTheme.colorScheme.onSurface),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                interactionSource = interactionSource,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(plan.name, style = MaterialTheme.typography.titleMedium)
+                if (plan.isFavorite) {
+                    Text(
+                        text = stringResource(R.string.template_management_favorite),
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+            plan.targetDate?.takeIf { it.isNotBlank() }?.let { date ->
+                Text(stringResource(R.string.template_management_plan_date, date))
+            }
+            plan.memo.takeIf { it.isNotBlank() }?.let { memo ->
+                Text(stringResource(R.string.template_management_plan_memo, memo))
+            }
+            Text(
+                text = stringResource(R.string.template_management_read_only_notice),
+                style = MaterialTheme.typography.bodySmall,
             )
         }
     }
 }
 
 @Composable
-private fun CompactOutlinedField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: @Composable (() -> Unit)?,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    readOnly: Boolean = false,
-    singleLine: Boolean = false,
-    minLines: Int = 1,
-    maxLines: Int = Int.MAX_VALUE,
-    textStyle: TextStyle = compactFieldTextStyle(),
-    trailingIcon: @Composable (() -> Unit)? = null,
+private fun DrivePlanMealCard(
+    meal: DrivePlanMeal,
+    imageLoading: Boolean,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(meal.label, style = MaterialTheme.typography.titleMedium)
+            Text(meal.name, fontWeight = FontWeight.Bold)
+            meal.imagePath?.let { path ->
+                DriveCachedImage(
+                    path = path,
+                    contentDescription = meal.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(10.dp)),
+                )
+            }
+            if (imageLoading && meal.imageContentHash != null && meal.imagePath == null) {
+                Text(stringResource(R.string.template_management_image_loading))
+            }
+            meal.memo.takeIf { it.isNotBlank() }?.let { memo ->
+                Text(stringResource(R.string.template_management_meal_memo, memo))
+            }
+            if (meal.items.isEmpty()) {
+                Text(stringResource(R.string.template_management_no_items))
+            } else {
+                meal.items.forEach { item ->
+                    DrivePlanItemRow(item = item)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DrivePlanItemRow(item: DrivePlanItem) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.Top,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .width(84.dp)
-                .padding(top = 8.dp),
-        ) {
-            label?.invoke()
+        item.imagePath?.let { path ->
+            DriveCachedImage(
+                path = path,
+                contentDescription = item.name,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+            )
         }
-        Surface(
-            modifier = modifier.weight(1f),
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    if (readOnly) {
-                        Text(
-                            text = value,
-                            style = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
-                            fontWeight = FontWeight.Normal,
-                        )
-                    } else {
-                        BasicTextField(
-                            value = value,
-                            onValueChange = onValueChange,
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = enabled,
-                            readOnly = false,
-                            singleLine = singleLine,
-                            minLines = minLines,
-                            maxLines = maxLines,
-                            textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            interactionSource = interactionSource,
-                        )
-                    }
-                }
-                trailingIcon?.invoke()
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(item.name)
+            Text(item.amountLabel, style = MaterialTheme.typography.bodySmall)
         }
+        if (item.isMainDish) {
+            Text(
+                text = stringResource(R.string.template_management_main_dish),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DriveCachedImage(
+    path: String,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+) {
+    val bitmap by androidx.compose.runtime.produceState<ImageBitmap?>(
+        initialValue = null,
+        key1 = path,
+    ) {
+        value = withContext(Dispatchers.IO) {
+            BitmapFactory.decodeFile(path)?.asImageBitmap()
+        }
+    }
+    bitmap?.let { image ->
+        Image(
+            bitmap = image,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = ContentScale.Crop,
+        )
     }
 }

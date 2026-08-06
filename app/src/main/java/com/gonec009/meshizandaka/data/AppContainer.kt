@@ -20,7 +20,7 @@ class AppContainer(context: Context) {
     val mealTemplateRepository by lazy { MealTemplateRepository(database.mealTemplateDao(), appContext) }
     val mealRecordRepository by lazy { MealRecordRepository(database.mealRecordDao(), appContext) }
     val budgetCalculator by lazy { BudgetCalculator() }
-    val driveAccessManager by lazy { DriveAccessManager(GoogleDriveClient()) }
+    val driveAccessManager by lazy { DriveAccessManager(GoogleDriveClient(), appContext) }
 
     val ensureSeedDataUseCase by lazy {
         EnsureSeedDataUseCase(

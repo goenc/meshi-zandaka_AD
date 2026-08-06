@@ -27,12 +27,63 @@ data class DriveBackupSummary(
     val backupFileCount: Int,
 )
 
+data class DriveSyncBatchMetadata(
+    val id: String,
+    val name: String,
+    val deviceId: String,
+    val deviceSequence: Long,
+)
+
+data class DriveImageMetadata(
+    val id: String,
+    val name: String,
+    val contentHash: String,
+    val mimeType: String?,
+)
+
 class DriveApiException(
     val statusCode: Int,
     message: String,
 ) : IOException(message)
 
 class GoogleDriveClient {
+    suspend fun listSyncBatches(accessToken: String): List<DriveSyncBatchMetadata> = withContext(Dispatchers.IO) {
+        listFiles(
+            accessToken = accessToken,
+            spaces = APP_DATA_SPACE,
+            query = "'appDataFolder' in parents and trashed = false and name contains '$SYNC_FILE_PREFIX'",
+        ).mapNotNull { file ->
+            if (file.appProperties[DATASET_PROPERTY] != DATASET_ID) return@mapNotNull null
+            val deviceId = file.appProperties[DEVICE_ID_PROPERTY].orEmpty()
+            val deviceSequence = file.appProperties[DEVICE_SEQUENCE_PROPERTY]?.toLongOrNull() ?: return@mapNotNull null
+            if (deviceId.isBlank()) return@mapNotNull null
+            DriveSyncBatchMetadata(
+                id = file.id,
+                name = file.name,
+                deviceId = deviceId,
+                deviceSequence = deviceSequence,
+            )
+        }
+    }
+
+    suspend fun listImages(accessToken: String): List<DriveImageMetadata> = withContext(Dispatchers.IO) {
+        listFiles(
+            accessToken = accessToken,
+            spaces = APP_DATA_SPACE,
+            query = "'appDataFolder' in parents and trashed = false and appProperties has { key='$IMAGE_KIND_PROPERTY' and value='$IMAGE_KIND' }",
+        ).mapNotNull { file ->
+            if (file.appProperties[DATASET_PROPERTY] != DATASET_ID) return@mapNotNull null
+            val contentHash = file.appProperties[CONTENT_HASH_PROPERTY].orEmpty()
+            if (contentHash.isBlank()) return@mapNotNull null
+            DriveImageMetadata(
+                id = file.id,
+                name = file.name,
+                contentHash = contentHash,
+                mimeType = file.appProperties[MIME_TYPE_PROPERTY] ?: file.mimeType,
+            )
+        }
+    }
+
     suspend fun inspectAppData(accessToken: String): DriveAppDataSummary = withContext(Dispatchers.IO) {
         val files = listFiles(
             accessToken = accessToken,
@@ -206,9 +257,13 @@ class GoogleDriveClient {
         private const val PAGE_SIZE = 1000
         private const val FILE_FIELDS = "nextPageToken,files(id,name,mimeType,appProperties)"
         private const val SYNC_FILE_PREFIX = "pfc-sync-"
+        private const val DEVICE_ID_PROPERTY = "deviceId"
+        private const val DEVICE_SEQUENCE_PROPERTY = "deviceSequence"
         private const val IMAGE_KIND_PROPERTY = "kind"
         private const val IMAGE_KIND = "image"
         private const val DATASET_PROPERTY = "datasetId"
+        private const val CONTENT_HASH_PROPERTY = "contentHash"
+        private const val MIME_TYPE_PROPERTY = "mimeType"
         private const val FOLDER_KIND_PROPERTY = "pfcPlanBoardFolderKind"
         private const val BACKUP_ROOT_FOLDER_KIND = "backupRoot"
         private const val BACKUP_FOLDER_KIND = "backup"

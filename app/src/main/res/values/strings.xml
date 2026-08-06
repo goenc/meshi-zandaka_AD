@@ -112,4 +112,19 @@
     <string name="google_drive_backup_error">バックアップ領域の接続エラー（HTTP %1$d）</string>
     <string name="google_drive_partial_connection">一部のDrive領域に接続できません</string>
     <string name="google_drive_connection_failed">Google Driveへ接続できませんでした</string>
+    <string name="template_management_drive_description">Windows版で作成したプランを選択し、朝食・昼食・夕食・3つの間食へ反映します</string>
+    <string name="template_management_drive_connect_required">先にGoogle Driveへ接続してください</string>
+    <string name="template_management_drive_loading">Windows版の食事プランを読み込み中…</string>
+    <string name="template_management_drive_error">食事プランを読み込めません</string>
+    <string name="template_management_reload">再読み込み</string>
+    <string name="template_management_no_plans">Driveに利用できるプランがありません</string>
+    <string name="template_management_plan_selector">Windows版のプランを選択</string>
+    <string name="template_management_favorite">お気に入り</string>
+    <string name="template_management_plan_date">対象日: %1$s</string>
+    <string name="template_management_plan_memo">プランメモ: %1$s</string>
+    <string name="template_management_read_only_notice">この画面はWindows版の設定を表示します。設定変更はWindows版で行います</string>
+    <string name="template_management_image_loading">画像を読み込み中…</string>
+    <string name="template_management_meal_memo">メモ: %1$s</string>
+    <string name="template_management_no_items">食事項目なし</string>
+    <string name="template_management_main_dish">主菜</string>
 </resources>

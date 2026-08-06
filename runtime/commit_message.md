@@ -1,16 +1,18 @@
-Google Drive接続確認機能を追加
+Google Driveのプラン選択表示を追加
 
 理由:
-Windows版の食事設定とバックアップをAndroid側から取得できる接続経路を用意するため
+Windows版で作成した複数の食事プランをAndroid側のテンプレート管理で選択し、6枠へ反映するため
 
 変更点:
-- Google認証でアプリ専用領域と表示バックアップ領域への権限を要求
-- 同期ログ、画像、バックアップZIPの一覧を取得して接続状態を表示
-- アクセストークンは端末へ保存せずメモリだけで保持
-- Windows版の同期ファイル名、データ属性、フォルダ構成に合わせたDrive通信を追加
+- Windows版の同期ログをRevision順に復元し、DailyPlanと6枠の食事スナップショットをAndroidモデルへ変換
+- Windows側の選択プランを初期選択として読み込み、Android側のプラン選択で6枠を切り替え
+- 食品・レシピ・主菜指定・数量単位・メモ・画像ハッシュを表示用データへ反映
+- Drive画像を必要分だけAndroid内部へキャッシュ
+- 既存のテンプレート管理画面を読み取り専用のWindowsプラン選択画面へ変更
 
 確認内容:
 - gradlew.bat :app:compileDebugKotlin 成功
 - gradlew.bat :app:assembleDebug 成功
+- git diff --check 成功
 - Windows版プロジェクトの作業ツリーに変更なし
 - 単体テストは既存のFakeMealTemplateDao未実装によりコンパイル停止

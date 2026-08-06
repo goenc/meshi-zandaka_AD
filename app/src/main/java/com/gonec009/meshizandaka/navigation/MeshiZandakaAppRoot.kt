@@ -116,6 +116,7 @@ fun MeshiZandakaAppRoot(
                 TemplateManagementRoute(
                     container = container,
                     innerPadding = innerPadding,
+                    onDriveConnect = onDriveConnect,
                 )
             }
             composable(AppDestination.Settings.route) {
