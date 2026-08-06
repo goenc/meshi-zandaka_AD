@@ -3,6 +3,7 @@ package com.gonec009.meshizandaka.data
 import android.content.Context
 import com.gonec009.meshizandaka.data.drive.DriveAccessManager
 import com.gonec009.meshizandaka.data.drive.GoogleDriveClient
+import com.gonec009.meshizandaka.data.drive.DrivePlanShortcutSynchronizer
 import com.gonec009.meshizandaka.data.local.AppDatabase
 import com.gonec009.meshizandaka.data.repository.MealRecordRepository
 import com.gonec009.meshizandaka.data.repository.MealTemplateRepository
@@ -21,12 +22,19 @@ class AppContainer(context: Context) {
     val mealTemplateRepository by lazy { MealTemplateRepository(database.mealTemplateDao(), appContext) }
     val mealRecordRepository by lazy { MealRecordRepository(database.mealRecordDao(), appContext) }
     val drivePlanCacheRepository by lazy { DrivePlanCacheRepository(database.drivePlanCacheDao()) }
+    val drivePlanShortcutSynchronizer by lazy {
+        DrivePlanShortcutSynchronizer(
+            mealTemplateRepository = mealTemplateRepository,
+            settingsRepository = settingsRepository,
+        )
+    }
     val budgetCalculator by lazy { BudgetCalculator() }
     val driveAccessManager by lazy {
         DriveAccessManager(
             client = GoogleDriveClient(),
             context = appContext,
             cacheRepository = drivePlanCacheRepository,
+            shortcutSynchronizer = drivePlanShortcutSynchronizer,
         )
     }
 

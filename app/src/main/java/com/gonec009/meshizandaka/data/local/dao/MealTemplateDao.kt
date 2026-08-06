@@ -45,4 +45,7 @@ interface MealTemplateDao {
 
     @Query("UPDATE meal_templates SET isActive = 0 WHERE id = :templateId")
     suspend fun deactivateTemplate(templateId: Long)
+
+    @Query("UPDATE meal_templates SET isActive = 0 WHERE shortcutRole = :shortcutRole AND isActive = 1")
+    suspend fun deactivateActiveTemplatesByShortcutRole(shortcutRole: String)
 }

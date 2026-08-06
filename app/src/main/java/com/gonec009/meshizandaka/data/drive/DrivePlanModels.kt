@@ -13,6 +13,10 @@ data class DrivePlanItem(
     val isMainDish: Boolean,
     val imageContentHash: String? = null,
     val imagePath: String? = null,
+    val calories: Int = 0,
+    val proteinG: Double = 0.0,
+    val fatG: Double = 0.0,
+    val carbG: Double = 0.0,
 )
 
 data class DrivePlanMeal(
@@ -23,6 +27,11 @@ data class DrivePlanMeal(
     val imageContentHash: String? = null,
     val imagePath: String? = null,
     val items: List<DrivePlanItem> = emptyList(),
+    val totalCalories: Int = 0,
+    val proteinG: Double = 0.0,
+    val fatG: Double = 0.0,
+    val carbG: Double = 0.0,
+    val nutritionDataAvailable: Boolean = false,
 )
 
 data class DrivePlan(

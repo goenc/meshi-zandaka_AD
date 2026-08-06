@@ -3,6 +3,7 @@ package com.gonec009.meshizandaka.data.drive
 import java.math.BigDecimal
 import java.nio.charset.StandardCharsets
 import java.util.Locale
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -89,6 +90,18 @@ class DrivePlanSnapshotReader(
             .associateBy { idKey(it.rowKey) }
         val recipeRows = rows.filter { it.isEntity("DailyPlanRecipeSnapshotEntity") }
             .associateBy { idKey(it.rowKey) }
+        val foodPortionRows = groupRowsByField(
+            rows.filter { it.isEntity("DailyPlanFoodPortionSnapshotEntity") },
+            "dailyPlanMealItemSnapshotId",
+        )
+        val recipeIngredientRows = groupRowsByField(
+            rows.filter { it.isEntity("DailyPlanRecipeIngredientSnapshotEntity") },
+            "dailyPlanRecipeSnapshotId",
+        )
+        val recipePortionRows = groupRowsByField(
+            rows.filter { it.isEntity("DailyPlanRecipePortionSnapshotEntity") },
+            "dailyPlanRecipeIngredientSnapshotId",
+        )
 
         val plans = rows
             .asSequence()
@@ -115,6 +128,9 @@ class DrivePlanSnapshotReader(
                         itemRows = itemRows,
                         foodRows = foodRows,
                         recipeRows = recipeRows,
+                        foodPortionRows = foodPortionRows,
+                        recipeIngredientRows = recipeIngredientRows,
+                        recipePortionRows = recipePortionRows,
                         imageHashes = imageHashes,
                     )
                 }
@@ -152,12 +168,15 @@ class DrivePlanSnapshotReader(
         itemRows: List<SnapshotRow>,
         foodRows: Map<String, SnapshotRow>,
         recipeRows: Map<String, SnapshotRow>,
+        foodPortionRows: Map<String, List<SnapshotRow>>,
+        recipeIngredientRows: Map<String, List<SnapshotRow>>,
+        recipePortionRows: Map<String, List<SnapshotRow>>,
         imageHashes: Map<String, String>,
     ): DrivePlanMeal {
         val meal = mealRow?.payload
         val mealId = meal?.stringOrNull("id") ?: mealRow?.rowKey
         val selectedMainDishItemId = meal?.stringOrNull("selectedMainDishItemId")
-        val items = itemRows
+        val builtItems = itemRows
             .asSequence()
             .filter { itemRow ->
                 val item = itemRow.payload ?: return@filter false
@@ -174,21 +193,44 @@ class DrivePlanSnapshotReader(
                 } else {
                     foodRows[idKey(itemId)]?.payload
                 }
+                val nutrition = if (componentType == 1) {
+                    nutritionForRecipe(
+                        recipe = child,
+                        item = item,
+                        ingredients = recipeIngredientRows[idKey(itemId)].orEmpty(),
+                        recipePortionRows = recipePortionRows,
+                    )
+                } else {
+                    nutritionForFood(
+                        food = child,
+                        item = item,
+                        portionRows = foodPortionRows[idKey(itemId)].orEmpty(),
+                    )
+                }
                 val imageAssetId = child?.stringOrNull("imageAssetId")
-                DrivePlanItem(
-                    name = child?.stringOrNull("name")
-                        ?: child?.stringOrNull("foodName")
-                        ?: if (componentType == 1) "レシピ" else "食品",
-                    amountLabel = formatStoredAmount(
-                        amount = item.optLongIgnoreCase("standardAmount", 0L),
-                        unit = item.optIntIgnoreCase("standardUnit", -1),
-                        customUnitName = item.stringOrNull("standardCustomUnitName"),
+                BuiltItem(
+                    item = DrivePlanItem(
+                        name = child?.stringOrNull("name")
+                            ?: child?.stringOrNull("foodName")
+                            ?: if (componentType == 1) "レシピ" else "食品",
+                        amountLabel = formatStoredAmount(
+                            amount = item.optLongIgnoreCase("standardAmount", 0L),
+                            unit = item.optIntIgnoreCase("standardUnit", -1),
+                            customUnitName = item.stringOrNull("standardCustomUnitName"),
+                        ),
+                        isMainDish = idKey(itemId) == idKey(selectedMainDishItemId),
+                        imageContentHash = imageAssetId?.let { imageHashes[idKey(it)] },
+                        calories = nutrition.calories.roundToInt(),
+                        proteinG = nutrition.proteinG,
+                        fatG = nutrition.fatG,
+                        carbG = nutrition.carbG,
                     ),
-                    isMainDish = idKey(itemId) == idKey(selectedMainDishItemId),
-                    imageContentHash = imageAssetId?.let { imageHashes[idKey(it)] },
+                    nutrition = nutrition,
                 )
             }
             .toList()
+        val items = builtItems.map(BuiltItem::item)
+        val nutrition = builtItems.fold(NutritionTotals()) { total, built -> total + built.nutrition }
 
         return DrivePlanMeal(
             slot = slot,
@@ -197,8 +239,163 @@ class DrivePlanSnapshotReader(
             memo = meal?.stringOrNull("memo").orEmpty(),
             imageContentHash = meal?.stringOrNull("imageAssetId")?.let { imageHashes[idKey(it)] },
             items = items,
+            totalCalories = nutrition.calories.roundToInt(),
+            proteinG = nutrition.proteinG,
+            fatG = nutrition.fatG,
+            carbG = nutrition.carbG,
+            nutritionDataAvailable = true,
         )
     }
+
+    private fun nutritionForFood(
+        food: JSONObject?,
+        item: JSONObject,
+        portionRows: List<SnapshotRow>,
+    ): NutritionTotals {
+        if (food == null) return NutritionTotals()
+        val factor = quantityFactor(
+            item = item,
+            reference = food,
+            portionRows = portionRows,
+        )
+        return NutritionTotals(
+            calories = food.optLongIgnoreCase("energyTenthsKcal", 0L) / 10.0 * factor,
+            proteinG = food.optLongIgnoreCase("proteinMilligrams", 0L) / 1_000.0 * factor,
+            fatG = food.optLongIgnoreCase("fatMilligrams", 0L) / 1_000.0 * factor,
+            carbG = food.optLongIgnoreCase("carbohydrateMilligrams", 0L) / 1_000.0 * factor,
+        )
+    }
+
+    private fun nutritionForRecipe(
+        recipe: JSONObject?,
+        item: JSONObject,
+        ingredients: List<SnapshotRow>,
+        recipePortionRows: Map<String, List<SnapshotRow>>,
+    ): NutritionTotals {
+        if (recipe == null) return NutritionTotals()
+
+        val externalEnergy = recipe.longOrNullIgnoreCase("externalEnergyTenthsKcal")
+        val externalProtein = recipe.longOrNullIgnoreCase("externalProteinMilligrams")
+        val externalFat = recipe.longOrNullIgnoreCase("externalFatMilligrams")
+        val externalCarbohydrate = recipe.longOrNullIgnoreCase("externalCarbohydrateMilligrams")
+        val factor = recipeQuantityFactor(item, recipe)
+        if (externalEnergy != null &&
+            externalProtein != null &&
+            externalFat != null &&
+            externalCarbohydrate != null
+        ) {
+            return NutritionTotals(
+                calories = externalEnergy / 10.0 * factor,
+                proteinG = externalProtein / 1_000.0 * factor,
+                fatG = externalFat / 1_000.0 * factor,
+                carbG = externalCarbohydrate / 1_000.0 * factor,
+            )
+        }
+
+        val wholeNutrition = ingredients
+            .asSequence()
+            .mapNotNull { ingredientRow ->
+                val ingredient = ingredientRow.payload ?: return@mapNotNull null
+                if (!ingredient.optBooleanIgnoreCase("isEnabled", true)) return@mapNotNull null
+                val ingredientId = ingredient.stringOrNull("id") ?: ingredientRow.rowKey
+                nutritionForFood(
+                    food = ingredient,
+                    item = ingredient,
+                    portionRows = recipePortionRows[idKey(ingredientId)].orEmpty(),
+                )
+            }
+            .fold(NutritionTotals()) { total, ingredient -> total + ingredient }
+        return wholeNutrition.scaled(factor)
+    }
+
+    private fun quantityFactor(
+        item: JSONObject,
+        reference: JSONObject,
+        portionRows: List<SnapshotRow>,
+    ): Double {
+        val amount = item.optLongIgnoreCase("standardAmount", 0L)
+        val referenceAmount = reference.optLongIgnoreCase("referenceAmount", 0L)
+        if (amount <= 0L || referenceAmount <= 0L) return 0.0
+
+        val itemUnit = item.optIntIgnoreCase("standardUnit", -1)
+        val referenceUnit = reference.optIntIgnoreCase("referenceUnit", -1)
+        val itemCustomUnitName = item.stringOrNull("standardCustomUnitName")
+        val referenceCustomUnitName = reference.stringOrNull("referenceCustomUnitName")
+        if (sameUnit(itemUnit, itemCustomUnitName, referenceUnit, referenceCustomUnitName)) {
+            return amount.toDouble() / referenceAmount
+        }
+
+        val payloads = portionRows.mapNotNull(SnapshotRow::payload)
+        val portion = payloads.firstOrNull { portion ->
+            portion.optIntIgnoreCase("sourceUnit", -1) == itemUnit &&
+                customUnitMatches(
+                    itemUnit,
+                    itemCustomUnitName,
+                    portion.stringOrNull("sourceCustomUnitName"),
+                )
+        } ?: payloads.firstOrNull { portion ->
+            portion.optIntIgnoreCase("sourceUnit", -1) == itemUnit
+        } ?: return 0.0
+
+        val sourceAmount = portion.optLongIgnoreCase("sourceAmount", 0L)
+        val equivalentAmount = portion.optLongIgnoreCase("standardEquivalentAmount", 0L)
+        val equivalentUnit = portion.optIntIgnoreCase("standardEquivalentUnit", -1)
+        if (sourceAmount <= 0L || equivalentAmount <= 0L) return 0.0
+        if (!sameUnit(
+                equivalentUnit,
+                portion.stringOrNull("standardEquivalentCustomUnitName"),
+                referenceUnit,
+                referenceCustomUnitName,
+            )
+        ) {
+            return 0.0
+        }
+        return amount.toDouble() / sourceAmount * equivalentAmount / referenceAmount
+    }
+
+    private fun recipeQuantityFactor(item: JSONObject, recipe: JSONObject): Double {
+        val amount = item.optLongIgnoreCase("standardAmount", 0L)
+        val unit = item.optIntIgnoreCase("standardUnit", -1)
+        val finishedWeightMg = recipe.optLongIgnoreCase("finishedWeightMg", 0L)
+        if (amount <= 0L || finishedWeightMg <= 0L) return 0.0
+
+        return when (unit) {
+            0 -> amount.toDouble() / finishedWeightMg
+            2 -> {
+                val servingWeightMg = recipe.optLongIgnoreCase("standardServingWeightMg", 0L)
+                if (servingWeightMg <= 0L) 0.0
+                else amount.toDouble() / 1_000_000.0 * servingWeightMg / finishedWeightMg
+            }
+            else -> 0.0
+        }
+    }
+
+    private fun sameUnit(
+        leftUnit: Int,
+        leftCustomUnitName: String?,
+        rightUnit: Int,
+        rightCustomUnitName: String?,
+    ): Boolean = leftUnit == rightUnit && customUnitMatches(
+        leftUnit,
+        leftCustomUnitName,
+        rightCustomUnitName,
+    )
+
+    private fun customUnitMatches(unit: Int, left: String?, right: String?): Boolean {
+        if (unit != 8) return true
+        if (left.isNullOrBlank() || right.isNullOrBlank()) return true
+        return left.equals(right, ignoreCase = true)
+    }
+
+    private fun groupRowsByField(
+        rows: Collection<SnapshotRow>,
+        field: String,
+    ): Map<String, List<SnapshotRow>> = rows
+        .mapNotNull { row ->
+            val id = row.payload?.stringOrNull(field) ?: return@mapNotNull null
+            idKey(id) to row
+        }
+        .groupBy({ it.first }, { it.second })
 
     private fun parsePayload(value: Any?): JSONObject? {
         if (value == null || value == JSONObject.NULL) return null
@@ -283,6 +480,32 @@ class DrivePlanSnapshotReader(
                 SnapshotRevision::operationId,
             )
     }
+
+    private data class BuiltItem(
+        val item: DrivePlanItem,
+        val nutrition: NutritionTotals,
+    )
+
+    private data class NutritionTotals(
+        val calories: Double = 0.0,
+        val proteinG: Double = 0.0,
+        val fatG: Double = 0.0,
+        val carbG: Double = 0.0,
+    ) {
+        operator fun plus(other: NutritionTotals): NutritionTotals = NutritionTotals(
+            calories = calories + other.calories,
+            proteinG = proteinG + other.proteinG,
+            fatG = fatG + other.fatG,
+            carbG = carbG + other.carbG,
+        )
+
+        fun scaled(factor: Double): NutritionTotals = NutritionTotals(
+            calories = calories * factor,
+            proteinG = proteinG * factor,
+            fatG = fatG * factor,
+            carbG = carbG * factor,
+        )
+    }
 }
 
 /**
@@ -335,4 +558,11 @@ internal fun JSONObject.optLongIgnoreCase(key: String, default: Long): Long =
         is Number -> value.toLong()
         is String -> value.toLongOrNull() ?: default
         else -> default
+    }
+
+internal fun JSONObject.longOrNullIgnoreCase(key: String): Long? =
+    when (val value = valueIgnoreCase(key)) {
+        is Number -> value.toLong()
+        is String -> value.toLongOrNull()
+        else -> null
     }

@@ -2,6 +2,8 @@ package com.gonec009.meshizandaka.data.repository
 
 import android.content.Context
 import android.net.Uri
+import com.gonec009.meshizandaka.data.drive.DrivePlan
+import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
 import com.gonec009.meshizandaka.data.local.dao.MealTemplateDao
 import com.gonec009.meshizandaka.data.local.entity.MealTemplateEntity
 import com.gonec009.meshizandaka.data.local.entity.MealTemplateWithRelations
@@ -71,6 +73,41 @@ class MealTemplateRepository(
             }
         }
         return insertedIds
+    }
+
+    suspend fun syncDriveShortcuts(plan: DrivePlan): Map<TemplateShortcutRole, Long> {
+        val mappings = listOf(
+            TemplateShortcutRole.BREAKFAST to plan.meals.firstOrNull { it.slot == 0 },
+            TemplateShortcutRole.LUNCH to plan.meals.firstOrNull { it.slot == 2 },
+            TemplateShortcutRole.DINNER to plan.meals.firstOrNull { it.slot == 3 },
+        )
+        val syncedIds = linkedMapOf<TemplateShortcutRole, Long>()
+        mappings.forEach { (role, meal) ->
+            if (meal == null) return@forEach
+            if (!meal.nutritionDataAvailable) return@forEach
+            val templateId = driveShortcutTemplateId(role)
+            dao.deactivateActiveTemplatesByShortcutRole(role.name)
+            dao.insertTemplate(
+                MealTemplateEntity(
+                    id = templateId,
+                    name = meal.name.ifBlank { role.defaultTemplateName() },
+                    mealType = role.mealType().name,
+                    shortcutRole = role.name,
+                    baseCalories = meal.totalCalories,
+                    proteinG = meal.proteinG,
+                    fatG = meal.fatG,
+                    carbG = meal.carbG,
+                    isSpecial = false,
+                    comparisonTemplateId = null,
+                    weeklyLimitCount = null,
+                    monthlyLimitCount = null,
+                    memo = buildDriveShortcutMemo(plan, meal),
+                    isActive = true,
+                ),
+            )
+            syncedIds[role] = templateId
+        }
+        return syncedIds
     }
 
     suspend fun saveTemplate(template: MealTemplate) {
@@ -177,6 +214,32 @@ class MealTemplateRepository(
     }
 
     private fun templatePhotoKey(templateId: Long): String = "template_photo_$templateId"
+
+    private fun buildDriveShortcutMemo(plan: DrivePlan, meal: DrivePlanMeal): String =
+        listOf("Windowsから同期", "プラン: ${plan.name}", meal.memo)
+            .filter { it.isNotBlank() }
+            .joinToString(" / ")
+
+    private fun TemplateShortcutRole.mealType(): MealType = when (this) {
+        TemplateShortcutRole.BREAKFAST -> MealType.BREAKFAST
+        TemplateShortcutRole.LUNCH -> MealType.LUNCH
+        TemplateShortcutRole.DINNER -> MealType.DINNER
+        TemplateShortcutRole.NONE -> MealType.SNACK
+    }
+
+    private fun TemplateShortcutRole.defaultTemplateName(): String = when (this) {
+        TemplateShortcutRole.BREAKFAST -> "朝セット"
+        TemplateShortcutRole.LUNCH -> "昼セット"
+        TemplateShortcutRole.DINNER -> "夜セット"
+        TemplateShortcutRole.NONE -> "セット"
+    }
+
+    private fun driveShortcutTemplateId(role: TemplateShortcutRole): Long = when (role) {
+        TemplateShortcutRole.BREAKFAST -> -1001L
+        TemplateShortcutRole.LUNCH -> -1002L
+        TemplateShortcutRole.DINNER -> -1003L
+        TemplateShortcutRole.NONE -> error("NONEはDriveショートカットにできません。")
+    }
 
     companion object {
         private const val TEMPLATE_PHOTO_PREFS = "template_photo_prefs"

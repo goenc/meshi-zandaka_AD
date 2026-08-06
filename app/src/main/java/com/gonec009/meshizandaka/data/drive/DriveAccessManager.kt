@@ -31,6 +31,7 @@ class DriveAccessManager(
     private val client: GoogleDriveClient,
     context: Context,
     private val cacheRepository: DrivePlanCacheRepository,
+    private val shortcutSynchronizer: DrivePlanShortcutSynchronizer,
 ) {
     private val planReader = DrivePlanSnapshotReader(client)
     private val imageCache = DriveImageCache(context)
@@ -165,6 +166,7 @@ class DriveAccessManager(
         )
 
         val selectedPlan = current.plans.first { it.id == planId }
+        runCatching { shortcutSynchronizer.sync(selectedPlan) }
         val imageResult = capture { loadImages(accessToken, selectedPlan) }
         val loaded = imageResult.getOrNull()
         val latest = _planState.value

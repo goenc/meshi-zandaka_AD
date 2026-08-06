@@ -167,6 +167,8 @@ private class FakeMealTemplateDao(
     override suspend fun updateTemplate(template: MealTemplateEntity) = Unit
 
     override suspend fun deactivateTemplate(templateId: Long) = Unit
+
+    override suspend fun deactivateActiveTemplatesByShortcutRole(shortcutRole: String) = Unit
 }
 
 private class FakeMealRecordDao(
