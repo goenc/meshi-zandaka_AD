@@ -174,7 +174,9 @@ private fun QuickRecordScreen(
                                 onDismissRequest = { mealTypeExpanded = false },
                             ) {
                                 MealType.entries
-                                    .filterNot { it == MealType.EATING_OUT }
+                                    .filterNot {
+                                        it == MealType.EATING_OUT || it == MealType.SNACK
+                                    }
                                     .forEach { mealType ->
                                         DropdownMenuItem(
                                             text = { Text(mealTypeLabel(mealType)) },

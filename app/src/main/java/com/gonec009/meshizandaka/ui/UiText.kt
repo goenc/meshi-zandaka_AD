@@ -11,9 +11,12 @@ import com.gonec009.meshizandaka.domain.model.WeekStartDay
 fun mealTypeLabel(mealType: MealType): String = stringResource(
     when (mealType) {
         MealType.BREAKFAST -> R.string.meal_type_breakfast
+        MealType.MORNING_SNACK -> R.string.meal_type_morning_snack
         MealType.LUNCH -> R.string.meal_type_lunch
         MealType.DINNER -> R.string.meal_type_dinner
-        MealType.SNACK -> R.string.meal_type_snack
+        MealType.DAYTIME_SNACK -> R.string.meal_type_daytime_snack
+        MealType.FREE_SNACK -> R.string.meal_type_free_snack
+        MealType.SNACK -> R.string.meal_type_free_snack
         MealType.EATING_OUT -> R.string.meal_type_eating_out
     },
 )

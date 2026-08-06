@@ -6,15 +6,30 @@ data class DailyMealStack(
     val date: LocalDate,
     val breakfastCalories: Int = 0,
     val breakfastRecords: List<MealRecord> = emptyList(),
+    val morningSnackCalories: Int = 0,
+    val morningSnackRecords: List<MealRecord> = emptyList(),
     val lunchCalories: Int = 0,
     val lunchRecords: List<MealRecord> = emptyList(),
     val dinnerCalories: Int = 0,
     val dinnerRecords: List<MealRecord> = emptyList(),
-    val snackCalories: Int = 0,
-    val snackRecords: List<MealRecord> = emptyList(),
+    val daytimeSnackCalories: Int = 0,
+    val daytimeSnackRecords: List<MealRecord> = emptyList(),
+    val freeSnackCalories: Int = 0,
+    val freeSnackRecords: List<MealRecord> = emptyList(),
 ) {
+    val snackCalories: Int
+        get() = morningSnackCalories + daytimeSnackCalories + freeSnackCalories
+
+    val snackRecords: List<MealRecord>
+        get() = morningSnackRecords + daytimeSnackRecords + freeSnackRecords
+
     val totalCalories: Int
-        get() = breakfastCalories + lunchCalories + dinnerCalories + snackCalories
+        get() = breakfastCalories +
+            morningSnackCalories +
+            lunchCalories +
+            dinnerCalories +
+            daytimeSnackCalories +
+            freeSnackCalories
 }
 
 data class WeeklyMealChart(

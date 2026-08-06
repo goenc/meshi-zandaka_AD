@@ -224,7 +224,7 @@ class MealTemplateRepository(
         TemplateShortcutRole.BREAKFAST -> MealType.BREAKFAST
         TemplateShortcutRole.LUNCH -> MealType.LUNCH
         TemplateShortcutRole.DINNER -> MealType.DINNER
-        TemplateShortcutRole.NONE -> MealType.SNACK
+        TemplateShortcutRole.NONE -> MealType.FREE_SNACK
     }
 
     private fun TemplateShortcutRole.defaultTemplateName(): String = when (this) {

@@ -62,16 +62,30 @@ class BudgetCalculator {
         date: LocalDate,
         records: List<MealRecord>,
     ): DailyMealStack {
+        val breakfastRecords = records.filter { it.mealType == MealType.BREAKFAST }
+        val morningSnackRecords = records.filter { it.mealType == MealType.MORNING_SNACK }
+        val lunchRecords = records.filter { it.mealType == MealType.LUNCH }
+        val dinnerRecords = records.filter { it.mealType == MealType.DINNER }
+        val daytimeSnackRecords = records.filter { it.mealType == MealType.DAYTIME_SNACK }
+        val freeSnackRecords = records.filter {
+            it.mealType == MealType.FREE_SNACK ||
+                it.mealType == MealType.SNACK ||
+                it.mealType == MealType.EATING_OUT
+        }
         return DailyMealStack(
             date = date,
-            breakfastRecords = records.filter { it.mealType == MealType.BREAKFAST },
-            breakfastCalories = records.filter { it.mealType == MealType.BREAKFAST }.sumOf(MealRecord::totalCalories),
-            lunchRecords = records.filter { it.mealType == MealType.LUNCH },
-            lunchCalories = records.filter { it.mealType == MealType.LUNCH }.sumOf(MealRecord::totalCalories),
-            dinnerRecords = records.filter { it.mealType == MealType.DINNER },
-            dinnerCalories = records.filter { it.mealType == MealType.DINNER }.sumOf(MealRecord::totalCalories),
-            snackRecords = records.filter { it.mealType == MealType.SNACK || it.mealType == MealType.EATING_OUT },
-            snackCalories = records.filter { it.mealType == MealType.SNACK || it.mealType == MealType.EATING_OUT }.sumOf(MealRecord::totalCalories),
+            breakfastRecords = breakfastRecords,
+            breakfastCalories = breakfastRecords.sumOf(MealRecord::totalCalories),
+            morningSnackRecords = morningSnackRecords,
+            morningSnackCalories = morningSnackRecords.sumOf(MealRecord::totalCalories),
+            lunchRecords = lunchRecords,
+            lunchCalories = lunchRecords.sumOf(MealRecord::totalCalories),
+            dinnerRecords = dinnerRecords,
+            dinnerCalories = dinnerRecords.sumOf(MealRecord::totalCalories),
+            daytimeSnackRecords = daytimeSnackRecords,
+            daytimeSnackCalories = daytimeSnackRecords.sumOf(MealRecord::totalCalories),
+            freeSnackRecords = freeSnackRecords,
+            freeSnackCalories = freeSnackRecords.sumOf(MealRecord::totalCalories),
         )
     }
 }

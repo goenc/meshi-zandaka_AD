@@ -28,7 +28,9 @@
     <string name="chart_breakfast">朝</string>
     <string name="chart_lunch">昼</string>
     <string name="chart_dinner">夕</string>
-    <string name="chart_snack">間食</string>
+    <string name="chart_morning_snack">間朝</string>
+    <string name="chart_daytime_snack">間昼</string>
+    <string name="chart_free_snack">間全</string>
     <string name="all_items">すべて</string>
     <string name="recent_records">直近の記録</string>
     <string name="show_recent_records">直近記録を表示</string>
@@ -62,7 +64,10 @@
     <string name="meal_type_breakfast">朝食</string>
     <string name="meal_type_lunch">昼食</string>
     <string name="meal_type_dinner">夕食</string>
-    <string name="meal_type_snack">間食</string>
+    <string name="meal_type_morning_snack">間朝</string>
+    <string name="meal_type_daytime_snack">間昼</string>
+    <string name="meal_type_free_snack">間全</string>
+    <string name="meal_type_snack">間全</string>
     <string name="meal_type_eating_out">外食</string>
     <string name="base_calories">カロリー</string>
     <string name="total_calories">合計カロリー</string>
@@ -112,7 +117,7 @@
     <string name="google_drive_backup_error">バックアップ領域の接続エラー（HTTP %1$d）</string>
     <string name="google_drive_partial_connection">一部のDrive領域に接続できません</string>
     <string name="google_drive_connection_failed">Google Driveへ接続できませんでした</string>
-    <string name="template_management_drive_description">Windows版で作成したプランを選択し、朝食・昼食・夕食・3つの間食へ反映します</string>
+    <string name="template_management_drive_description">Windows版で作成したプランを選択し、朝・間朝・昼・夕・間昼・間全へ反映します</string>
     <string name="template_management_drive_connect_required">先にGoogle Driveへ接続してください</string>
     <string name="template_management_drive_loading">Windows版の食事プランを読み込み中…</string>
     <string name="template_management_drive_error">食事プランを読み込めません</string>

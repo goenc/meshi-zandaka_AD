@@ -90,7 +90,7 @@ internal object DrivePlanCacheCodec {
                         add(
                             DrivePlanMeal(
                                 slot = slot,
-                                label = mealJson.stringOrNull("label") ?: drivePlanMealLabel(slot),
+                                label = drivePlanMealLabel(slot),
                                 name = mealJson.stringOrNull("name").orEmpty().ifBlank { "未設定" },
                                 memo = mealJson.stringOrNull("memo").orEmpty(),
                                 imageContentHash = mealJson.stringOrNull("imageContentHash"),

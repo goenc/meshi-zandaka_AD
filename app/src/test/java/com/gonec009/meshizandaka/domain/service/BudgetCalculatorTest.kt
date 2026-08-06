@@ -81,13 +81,13 @@ class BudgetCalculatorTest {
             nowMillis = nowMillis,
         )
 
-        assertEquals(7, chart.days.size)
+        assertEquals(92, chart.days.size)
         assertEquals(300, chart.days.last().breakfastCalories)
         assertEquals(650, chart.days.last().lunchCalories)
         assertEquals(700, chart.days.last().dinnerCalories)
         assertEquals(200, chart.days.last().snackCalories)
         assertEquals(1850, chart.days.last().totalCalories)
-        assertEquals(900, chart.days[5].snackCalories)
+        assertEquals(900, chart.days[chart.days.lastIndex - 1].snackCalories)
     }
 
     @Test
@@ -98,7 +98,7 @@ class BudgetCalculatorTest {
             nowMillis = nowMillis,
         )
 
-        assertEquals(7, chart.days.size)
+        assertEquals(92, chart.days.size)
         assertEquals(0, chart.days.first().totalCalories)
         assertEquals(650, chart.days.last().totalCalories)
     }
@@ -123,6 +123,26 @@ class BudgetCalculatorTest {
         assertEquals(1, chart.days.last().snackRecords.size)
         assertEquals(MealType.SNACK, chart.days.last().snackRecords.single().mealType)
         assertEquals(MealType.EATING_OUT, chart.days[chart.days.lastIndex - 1].snackRecords.single().mealType)
+    }
+
+    @Test
+    fun 間食を間朝間昼間全の三枠で集計する() {
+        val chart = calculator.buildWeeklyChart(
+            records = listOf(
+                recordAt(2026, 6, 8, 10, 0, 100, mealType = MealType.MORNING_SNACK),
+                recordAt(2026, 6, 8, 15, 0, 200, mealType = MealType.DAYTIME_SNACK),
+                recordAt(2026, 6, 8, 22, 0, 300, mealType = MealType.FREE_SNACK),
+            ),
+            zoneId = zoneId,
+            nowMillis = nowMillis,
+        )
+
+        val today = chart.days.last()
+        assertEquals(100, today.morningSnackCalories)
+        assertEquals(200, today.daytimeSnackCalories)
+        assertEquals(300, today.freeSnackCalories)
+        assertEquals(600, today.snackCalories)
+        assertEquals(600, today.totalCalories)
     }
 
     private fun recordAt(

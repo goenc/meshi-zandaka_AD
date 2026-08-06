@@ -94,9 +94,11 @@ private data class SummaryItem(
 
 private enum class ChartMealSection {
     BREAKFAST,
+    MORNING_SNACK,
     LUNCH,
     DINNER,
-    SNACK,
+    DAYTIME_SNACK,
+    FREE_SNACK,
 }
 
 private data class ChartMealDialogState(
@@ -115,7 +117,7 @@ private data class NutritionTotals(
 )
 
 private val ChartBarWidth = 39.dp
-private const val ChartSectionCount = 4
+private const val ChartSectionCount = 6
 
 private fun formatChartCalories(calories: Int): String {
     return "${calories}K"
@@ -125,13 +127,20 @@ internal fun chartBlockCount(calories: Int): Int = if (calories > 0) 1 else 0
 
 private fun DailyMealStack.recordsForSection(section: ChartMealSection): List<MealRecord> = when (section) {
     ChartMealSection.BREAKFAST -> breakfastRecords
+    ChartMealSection.MORNING_SNACK -> morningSnackRecords
     ChartMealSection.LUNCH -> lunchRecords
     ChartMealSection.DINNER -> dinnerRecords
-    ChartMealSection.SNACK -> snackRecords
+    ChartMealSection.DAYTIME_SNACK -> daytimeSnackRecords
+    ChartMealSection.FREE_SNACK -> freeSnackRecords
 }
 
 private fun DailyMealStack.allRecords(): List<MealRecord> {
-    return breakfastRecords + lunchRecords + dinnerRecords + snackRecords
+    return breakfastRecords +
+        morningSnackRecords +
+        lunchRecords +
+        dinnerRecords +
+        daytimeSnackRecords +
+        freeSnackRecords
 }
 
 private fun List<MealRecord>.pfcTotals(): NutritionTotals {
@@ -446,14 +455,17 @@ private fun WeeklyChartCard(
 
 @Composable
 private fun LegendRow() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        LegendItem(label = stringResource(R.string.chart_breakfast), color = BreakfastChartColor)
-        LegendItem(label = stringResource(R.string.chart_lunch), color = LunchChartColor)
-        LegendItem(label = stringResource(R.string.chart_dinner), color = DinnerChartColor)
-        LegendItem(label = stringResource(R.string.chart_snack), color = SnackChartColor)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LegendItem(label = stringResource(R.string.chart_breakfast), color = BreakfastChartColor)
+            LegendItem(label = stringResource(R.string.chart_morning_snack), color = MorningSnackChartColor)
+            LegendItem(label = stringResource(R.string.chart_lunch), color = LunchChartColor)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LegendItem(label = stringResource(R.string.chart_dinner), color = DinnerChartColor)
+            LegendItem(label = stringResource(R.string.chart_daytime_snack), color = DaytimeSnackChartColor)
+            LegendItem(label = stringResource(R.string.chart_free_snack), color = FreeSnackChartColor)
+        }
     }
 }
 
@@ -512,24 +524,43 @@ private fun DayStackBar(
             drawBarBackground(maxCalories)
             drawStackSegment(stack.breakfastCalories, maxCalories, BreakfastChartColor)
             drawStackSegment(
+                stack.morningSnackCalories,
+                maxCalories,
+                MorningSnackChartColor,
+                chartBlockCount(stack.breakfastCalories),
+            )
+            drawStackSegment(
                 stack.lunchCalories,
                 maxCalories,
                 LunchChartColor,
-                chartBlockCount(stack.breakfastCalories),
+                chartBlockCount(stack.breakfastCalories) + chartBlockCount(stack.morningSnackCalories),
             )
             drawStackSegment(
                 stack.dinnerCalories,
                 maxCalories,
                 DinnerChartColor,
-                chartBlockCount(stack.breakfastCalories) + chartBlockCount(stack.lunchCalories),
+                chartBlockCount(stack.breakfastCalories) +
+                    chartBlockCount(stack.morningSnackCalories) +
+                    chartBlockCount(stack.lunchCalories),
             )
             drawStackSegment(
-                stack.snackCalories,
+                stack.daytimeSnackCalories,
                 maxCalories,
-                SnackChartColor,
+                DaytimeSnackChartColor,
                 chartBlockCount(stack.breakfastCalories) +
+                    chartBlockCount(stack.morningSnackCalories) +
                     chartBlockCount(stack.lunchCalories) +
                     chartBlockCount(stack.dinnerCalories),
+            )
+            drawStackSegment(
+                stack.freeSnackCalories,
+                maxCalories,
+                FreeSnackChartColor,
+                chartBlockCount(stack.breakfastCalories) +
+                    chartBlockCount(stack.morningSnackCalories) +
+                    chartBlockCount(stack.lunchCalories) +
+                    chartBlockCount(stack.dinnerCalories) +
+                    chartBlockCount(stack.daytimeSnackCalories),
             )
         }
         Text(
@@ -559,15 +590,19 @@ private fun detectTappedMealSection(
     if (blockIndexFromBottom < 0 || blockIndexFromBottom >= maxBlocks) return null
 
     val breakfastBlocks = chartBlockCount(stack.breakfastCalories)
+    val morningSnackBlocks = chartBlockCount(stack.morningSnackCalories)
     val lunchBlocks = chartBlockCount(stack.lunchCalories)
     val dinnerBlocks = chartBlockCount(stack.dinnerCalories)
-    val snackBlocks = chartBlockCount(stack.snackCalories)
+    val daytimeSnackBlocks = chartBlockCount(stack.daytimeSnackCalories)
+    val freeSnackBlocks = chartBlockCount(stack.freeSnackCalories)
 
     return when {
         blockIndexFromBottom < breakfastBlocks -> ChartMealSection.BREAKFAST
-        blockIndexFromBottom < breakfastBlocks + lunchBlocks -> ChartMealSection.LUNCH
-        blockIndexFromBottom < breakfastBlocks + lunchBlocks + dinnerBlocks -> ChartMealSection.DINNER
-        blockIndexFromBottom < breakfastBlocks + lunchBlocks + dinnerBlocks + snackBlocks -> ChartMealSection.SNACK
+        blockIndexFromBottom < breakfastBlocks + morningSnackBlocks -> ChartMealSection.MORNING_SNACK
+        blockIndexFromBottom < breakfastBlocks + morningSnackBlocks + lunchBlocks -> ChartMealSection.LUNCH
+        blockIndexFromBottom < breakfastBlocks + morningSnackBlocks + lunchBlocks + dinnerBlocks -> ChartMealSection.DINNER
+        blockIndexFromBottom < breakfastBlocks + morningSnackBlocks + lunchBlocks + dinnerBlocks + daytimeSnackBlocks -> ChartMealSection.DAYTIME_SNACK
+        blockIndexFromBottom < breakfastBlocks + morningSnackBlocks + lunchBlocks + dinnerBlocks + daytimeSnackBlocks + freeSnackBlocks -> ChartMealSection.FREE_SNACK
         else -> null
     }
 }
@@ -884,11 +919,14 @@ private fun DrivePlanMealContent(meal: DrivePlanMeal) {
 private fun DrivePlan.mealForRecord(record: MealRecord): DrivePlanMeal? {
     val slot = when (record.mealType) {
         MealType.BREAKFAST -> 0
+        MealType.MORNING_SNACK -> 1
         MealType.LUNCH -> 2
         MealType.DINNER -> 3
+        MealType.DAYTIME_SNACK -> 4
+        MealType.FREE_SNACK,
         MealType.SNACK,
-        MealType.EATING_OUT,
-        -> null
+        -> 5
+        MealType.EATING_OUT -> null
     }
     return slot?.let { mealSlot -> meals.firstOrNull { it.slot == mealSlot } }
         ?: meals.firstOrNull { it.name == record.templateNameSnapshot }
