@@ -27,6 +27,9 @@
     <string name="month_balance">今月の残高</string>
     <string name="month_special_count">今月の特別食回数</string>
     <string name="month_special_delta">特別メシ差分合計</string>
+    <string name="today_burned_calories">今日の消費カロリー</string>
+    <string name="average_burned_calories">平均消費カロリー</string>
+    <string name="kcal_unavailable">未取得</string>
     <string name="recent_seven_days">直近7日</string>
     <string name="chart_breakfast">朝</string>
     <string name="chart_lunch">昼</string>

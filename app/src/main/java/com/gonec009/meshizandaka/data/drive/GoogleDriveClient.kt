@@ -9,6 +9,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
+import java.time.LocalDate
 
 data class DriveFileMetadata(
     val id: String,
@@ -130,6 +131,29 @@ class GoogleDriveClient {
         executeBytes(accessToken, url)
     }
 
+    suspend fun readEstimatedCalorieSummary(
+        accessToken: String,
+        today: LocalDate = LocalDate.now(),
+    ): DriveCalorieSummary = withContext(Dispatchers.IO) {
+        val url = Uri.parse(
+            "$SHEETS_API_BASE/spreadsheets/${Uri.encode(BODY_DATA_SPREADSHEET_ID)}/values/" +
+                Uri.encode(BODY_DATA_RANGE),
+        ).buildUpon()
+            .appendQueryParameter("majorDimension", "ROWS")
+            .appendQueryParameter("valueRenderOption", "UNFORMATTED_VALUE")
+            .build()
+            .toString()
+        val root = JSONObject(executeText(accessToken, url, "Google Sheets API"))
+        val values = root.optJSONArray("values") ?: JSONArray()
+        val rows = (0 until values.length()).map { rowIndex ->
+            val row = values.optJSONArray(rowIndex) ?: JSONArray()
+            (0 until row.length()).map { columnIndex ->
+                row.opt(columnIndex).takeUnless { it == JSONObject.NULL }
+            }
+        }
+        buildDriveCalorieSummary(rows, today)
+    }
+
     private fun findFolder(
         accessToken: String,
         name: String,
@@ -200,7 +224,11 @@ class GoogleDriveClient {
         )
     }
 
-    private fun executeText(accessToken: String, url: String): String {
+    private fun executeText(
+        accessToken: String,
+        url: String,
+        apiName: String = "Google Drive API",
+    ): String {
         val connection = openConnection(accessToken, url)
         return try {
             val responseCode = connection.responseCode
@@ -211,7 +239,7 @@ class GoogleDriveClient {
             }
             val body = stream?.bufferedReader(StandardCharsets.UTF_8)?.use { it.readText() }.orEmpty()
             if (responseCode !in HTTP_SUCCESS_MIN..HTTP_SUCCESS_MAX) {
-                throw DriveApiException(responseCode, "Google Drive APIへの接続に失敗しました。")
+                throw DriveApiException(responseCode, "${apiName}への接続に失敗しました。")
             }
             body
         } finally {
@@ -252,6 +280,9 @@ class GoogleDriveClient {
         const val BACKUP_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
 
         private const val DRIVE_API_BASE = "https://www.googleapis.com/drive/v3"
+        private const val SHEETS_API_BASE = "https://sheets.googleapis.com/v4"
+        private const val BODY_DATA_SPREADSHEET_ID = "1NOmnGrc_bV6ieNpcQNDgh4TYCSxf7gIBI-eB9kjs3HY"
+        private const val BODY_DATA_RANGE = "stepDailyRecords!A1:F2000"
         private const val DRIVE_SPACE = "drive"
         private const val APP_DATA_SPACE = "appDataFolder"
         private const val PAGE_SIZE = 1000

@@ -67,6 +67,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
+import com.gonec009.meshizandaka.data.drive.DriveCalorieSummary
 import com.gonec009.meshizandaka.data.drive.DrivePlan
 import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
 import com.gonec009.meshizandaka.domain.model.DailyMealStack
@@ -176,6 +177,7 @@ fun HomeRoute(
     val viewModel: HomeViewModel = viewModel(factory = AppViewModelFactory(container))
     val state by viewModel.uiState.collectAsState()
     val drivePlanState by container.driveAccessManager.planState.collectAsState()
+    val calorieSummary by container.driveAccessManager.calorieSummary.collectAsState()
     LaunchedEffect(state.message) {
         state.message?.let {
             snackbarHostState.showSnackbar(it)
@@ -186,6 +188,7 @@ fun HomeRoute(
         innerPadding = innerPadding,
         state = state,
         selectedDrivePlan = drivePlanState.selectedPlan,
+        calorieSummary = calorieSummary,
         onQuickRecordClick = onQuickRecordClick,
         onMoveSelectedDate = viewModel::moveSelectedRecordDate,
         onDateSelected = viewModel::updateSelectedRecordDate,
@@ -204,6 +207,7 @@ private fun HomeScreen(
     innerPadding: PaddingValues,
     state: HomeUiState,
     selectedDrivePlan: DrivePlan?,
+    calorieSummary: DriveCalorieSummary?,
     onQuickRecordClick: () -> Unit,
     onMoveSelectedDate: (Long) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
@@ -241,6 +245,18 @@ private fun HomeScreen(
         SummaryItem(
             title = stringResource(R.string.month_special_delta),
             value = stringResource(R.string.kcal_format_signed, state.summary.monthSpecialDeltaCalories),
+        ),
+        SummaryItem(
+            title = stringResource(R.string.today_burned_calories),
+            value = calorieSummary?.todayKcal?.let { kcal ->
+                stringResource(R.string.kcal_format, kcal)
+            } ?: stringResource(R.string.kcal_unavailable),
+        ),
+        SummaryItem(
+            title = stringResource(R.string.average_burned_calories),
+            value = calorieSummary?.averageKcal?.let { kcal ->
+                stringResource(R.string.kcal_format, kcal)
+            } ?: stringResource(R.string.kcal_unavailable),
         ),
     )
 

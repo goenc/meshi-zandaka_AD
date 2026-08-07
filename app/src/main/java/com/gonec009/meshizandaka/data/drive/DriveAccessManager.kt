@@ -37,14 +37,17 @@ class DriveAccessManager(
     private val imageCache = DriveImageCache(context)
     private val _state = MutableStateFlow(DriveConnectionState())
     private val _planState = MutableStateFlow(DrivePlanState())
+    private val _calorieSummary = MutableStateFlow<DriveCalorieSummary?>(null)
     private var accessToken: String? = null
     private var imageMetadata: Map<String, DriveImageMetadata> = emptyMap()
     private var imageMetadataLoaded = false
 
     val state: StateFlow<DriveConnectionState> = _state.asStateFlow()
     val planState: StateFlow<DrivePlanState> = _planState.asStateFlow()
+    val calorieSummary: StateFlow<DriveCalorieSummary?> = _calorieSummary.asStateFlow()
 
     fun markAuthorizationStarted() {
+        _calorieSummary.value = null
         _state.update { it.copy(phase = DriveConnectionPhase.CONNECTING) }
         val current = _planState.value
         _planState.value = if (current.plans.isEmpty()) {
@@ -56,6 +59,7 @@ class DriveAccessManager(
 
     fun markAuthorizationFailed() {
         accessToken = null
+        _calorieSummary.value = null
         imageMetadata = emptyMap()
         imageMetadataLoaded = false
         _state.value = DriveConnectionState(phase = DriveConnectionPhase.FAILED)
@@ -98,6 +102,7 @@ class DriveAccessManager(
             cachedState.copy(errorMessage = null)
         }
         accessToken = token
+        _calorieSummary.value = capture { client.readEstimatedCalorieSummary(token) }.getOrNull()
         imageMetadata = emptyMap()
         imageMetadataLoaded = false
 
