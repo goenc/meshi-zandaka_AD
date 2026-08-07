@@ -19,10 +19,11 @@ class DriveCalorieModelsTest {
 
         assertEquals(2_000, summary.todayKcal)
         assertEquals(2_200, summary.averageKcal)
+        assertEquals(LocalDate.of(2026, 8, 8), summary.calorieDate)
     }
 
     @Test
-    fun 今日の値が空なら未取得として扱う() {
+    fun 今日の値が空なら最新の推定値を使う() {
         val summary = buildDriveCalorieSummary(
             rows = listOf(
                 listOf("targetDate", "estimatedTotalKcal"),
@@ -32,7 +33,8 @@ class DriveCalorieModelsTest {
             today = LocalDate.of(2026, 8, 8),
         )
 
-        assertEquals(null, summary.todayKcal)
+        assertEquals(2_200, summary.todayKcal)
         assertEquals(2_200, summary.averageKcal)
+        assertEquals(LocalDate.of(2026, 8, 7), summary.calorieDate)
     }
 }

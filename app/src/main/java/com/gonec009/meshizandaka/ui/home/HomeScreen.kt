@@ -221,6 +221,11 @@ private fun HomeScreen(
 ) {
     var isDatePickerVisible by remember { mutableStateOf(false) }
     var pendingDeleteRecord by remember { mutableStateOf<PendingDeleteRecord?>(null) }
+    val burnedCaloriesTitle = when {
+        calorieSummary?.todayKcal == null -> stringResource(R.string.today_burned_calories)
+        calorieSummary.calorieDate == LocalDate.now() -> stringResource(R.string.today_burned_calories)
+        else -> stringResource(R.string.latest_burned_calories)
+    }
     val summaryItems = listOf(
         SummaryItem(
             title = stringResource(R.string.today_consumed),
@@ -247,7 +252,7 @@ private fun HomeScreen(
             value = stringResource(R.string.kcal_format_signed, state.summary.monthSpecialDeltaCalories),
         ),
         SummaryItem(
-            title = stringResource(R.string.today_burned_calories),
+            title = burnedCaloriesTitle,
             value = calorieSummary?.todayKcal?.let { kcal ->
                 stringResource(R.string.kcal_format, kcal)
             } ?: stringResource(R.string.kcal_unavailable),

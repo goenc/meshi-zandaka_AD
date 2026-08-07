@@ -6,6 +6,7 @@ import kotlin.math.roundToInt
 data class DriveCalorieSummary(
     val todayKcal: Int? = null,
     val averageKcal: Int? = null,
+    val calorieDate: LocalDate? = null,
 )
 
 internal fun buildDriveCalorieSummary(
@@ -29,12 +30,16 @@ internal fun buildDriveCalorieSummary(
         if (calories >= 0) dailyCalories[targetDate] = calories
     }
 
+    val latestEntry = dailyCalories.maxByOrNull { it.key }
+    val selectedEntry = dailyCalories[today]?.let { today to it }
+        ?: latestEntry?.let { it.key to it.value }
     val values = dailyCalories.values.toList()
     return DriveCalorieSummary(
-        todayKcal = dailyCalories[today],
+        todayKcal = selectedEntry?.second,
         averageKcal = values.takeIf { it.isNotEmpty() }
             ?.average()
             ?.roundToInt(),
+        calorieDate = selectedEntry?.first,
     )
 }
 
