@@ -22,6 +22,10 @@ interface MealRecordDao {
     fun observeRecordsBetween(startInclusive: Long, endInclusive: Long): Flow<List<MealRecordWithRelations>>
 
     @Transaction
+    @Query("SELECT * FROM meal_records WHERE eatenAt BETWEEN :startInclusive AND :endInclusive ORDER BY eatenAt DESC")
+    suspend fun getRecordsBetween(startInclusive: Long, endInclusive: Long): List<MealRecordWithRelations>
+
+    @Transaction
     @Query("SELECT * FROM meal_records WHERE id = :recordId")
     fun observeRecord(recordId: Long): Flow<MealRecordWithRelations?>
 

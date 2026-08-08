@@ -38,10 +38,7 @@ class CreateQuickRecordUseCase(
             recordRepository.getRecord(recordId)?.also { target ->
                 validateAppendTarget(target, recordMealType, nowMillis, zoneId)
             } ?: throw RecordAppendTargetException()
-        }
-        if (appendTarget == null) {
-            ensureDailyMealSlotAvailable(recordMealType, nowMillis, zoneId)
-        }
+        } ?: findAutomaticAppendTarget(recordMealType, nowMillis, zoneId)
         val selectedOptions = template?.optionGroups.orEmpty().flatMap { group ->
             group.options.filter { it.id in selectedOptionIds }.map { option ->
                 MealRecordOption(
@@ -101,16 +98,22 @@ class CreateQuickRecordUseCase(
         }
     }
 
-    private suspend fun ensureDailyMealSlotAvailable(
+    private suspend fun findAutomaticAppendTarget(
         mealType: MealType,
         nowMillis: Long,
         zoneId: ZoneId,
-    ) {
-        if (!mealType.requiresSingleRecordPerDay()) return
+    ): MealRecord? {
         val (startInclusive, endInclusive) = TimeRangeUtils.todayRange(nowMillis, zoneId)
-        if (recordRepository.existsRecordForMealTypeBetween(mealType, startInclusive, endInclusive)) {
-            throw DuplicateDailyMealException(mealType)
+        val records = recordRepository.getRecordsBetween(startInclusive, endInclusive)
+        records.firstOrNull { record -> record.mealType.isSameQuickRecordMealType(mealType) }?.let { record ->
+            return record
         }
+        if (mealType == MealType.EATING_OUT) {
+            return records
+                .filter { record -> record.mealType == MealType.LUNCH || record.mealType == MealType.DINNER }
+                .singleOrNull()
+        }
+        return null
     }
 
     private fun validateAppendTarget(
@@ -119,9 +122,9 @@ class CreateQuickRecordUseCase(
         nowMillis: Long,
         zoneId: ZoneId,
     ) {
-        if (recordMealType != MealType.EATING_OUT ||
-            (target.mealType != MealType.LUNCH && target.mealType != MealType.DINNER)
-        ) {
+        val isEatingOutAppend = recordMealType == MealType.EATING_OUT &&
+            (target.mealType == MealType.LUNCH || target.mealType == MealType.DINNER)
+        if (!target.mealType.isSameQuickRecordMealType(recordMealType) && !isEatingOutAppend) {
             throw RecordAppendTargetException()
         }
         val (startInclusive, endInclusive) = TimeRangeUtils.todayRange(nowMillis, zoneId)
@@ -130,7 +133,12 @@ class CreateQuickRecordUseCase(
         }
     }
 
-    private fun MealType.requiresSingleRecordPerDay(): Boolean {
-        return this == MealType.BREAKFAST || this == MealType.LUNCH || this == MealType.DINNER
+    private fun MealType.isSameQuickRecordMealType(other: MealType): Boolean {
+        if (this == other) return true
+        return this.isSnackType() && other.isSnackType()
+    }
+
+    private fun MealType.isSnackType(): Boolean {
+        return this == MealType.FREE_SNACK || this == MealType.SNACK
     }
 }

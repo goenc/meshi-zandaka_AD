@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
-import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
@@ -100,7 +99,6 @@ fun QuickRecordRoute(
         onMemoChange = viewModel::setMemo,
         onPhotoCaptured = viewModel::setPhotoUri,
         onPhotoRemoved = viewModel::clearPhoto,
-        onAppendTargetSelect = viewModel::selectAppendTarget,
         onSaveClick = viewModel::saveRecord,
     )
 }
@@ -122,7 +120,6 @@ private fun QuickRecordScreen(
     onMemoChange: (String) -> Unit,
     onPhotoCaptured: (String?) -> Unit,
     onPhotoRemoved: () -> Unit,
-    onAppendTargetSelect: (Long?) -> Unit,
     onSaveClick: () -> Unit,
 ) {
     var showCamera by remember { mutableStateOf(false) }
@@ -140,9 +137,6 @@ private fun QuickRecordScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             val normalTemplates = state.availableTemplates.filter { it.mealType != MealType.EATING_OUT }
-            val appendableRecords = state.todayMealRecords.filter { record ->
-                record.mealType == MealType.LUNCH || record.mealType == MealType.DINNER
-            }
             if (normalTemplates.isNotEmpty()) item {
                 TemplateSection(
                     title = stringResource(R.string.quick_record_templates),
@@ -157,13 +151,6 @@ private fun QuickRecordScreen(
                     cards = state.driveEatingOutCards,
                     selectedCardId = state.selectedDriveEatingOutCard?.id,
                     onCardSelect = onDriveEatingOutCardSelect,
-                )
-            }
-            if (state.selectedMealType == MealType.EATING_OUT && appendableRecords.isNotEmpty()) item {
-                AppendTargetSection(
-                    records = appendableRecords,
-                    selectedRecordId = state.appendToRecordId,
-                    onTargetSelect = onAppendTargetSelect,
                 )
             }
             item {
@@ -419,50 +406,6 @@ private fun DriveEatingOutCardSection(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AppendTargetSection(
-    records: List<MealRecord>,
-    selectedRecordId: Long?,
-    onTargetSelect: (Long?) -> Unit,
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.quick_record_append_target),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(R.string.quick_record_append_target_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item {
-                    FilterChip(
-                        selected = selectedRecordId == null,
-                        onClick = { onTargetSelect(null) },
-                        label = { Text(stringResource(R.string.quick_record_new_eating_out)) },
-                    )
-                }
-                items(records, key = { it.id }) { record ->
-                    FilterChip(
-                        selected = selectedRecordId == record.id,
-                        onClick = { onTargetSelect(record.id) },
-                        label = {
-                            Text(stringResource(R.string.quick_record_append_meal, mealTypeLabel(record.mealType)))
-                        },
-                    )
                 }
             }
         }

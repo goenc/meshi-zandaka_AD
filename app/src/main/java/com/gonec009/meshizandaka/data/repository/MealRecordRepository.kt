@@ -26,6 +26,9 @@ class MealRecordRepository(
     fun observeRecordsBetween(startInclusive: Long, endInclusive: Long): Flow<List<MealRecord>> =
         dao.observeRecordsBetween(startInclusive, endInclusive).map { items -> items.map(::toModel) }
 
+    suspend fun getRecordsBetween(startInclusive: Long, endInclusive: Long): List<MealRecord> =
+        dao.getRecordsBetween(startInclusive, endInclusive).map(::toModel)
+
     fun observeRecord(recordId: Long): Flow<MealRecord?> = dao.observeRecord(recordId).map { it?.let(::toModel) }
 
     suspend fun getRecord(recordId: Long): MealRecord? = dao.getRecordWithRelations(recordId)?.let(::toModel)

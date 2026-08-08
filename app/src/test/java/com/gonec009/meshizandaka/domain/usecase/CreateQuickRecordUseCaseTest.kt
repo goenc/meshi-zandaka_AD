@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.fail
 import org.junit.Test
 import java.time.ZoneId
 
@@ -26,7 +25,7 @@ class CreateQuickRecordUseCaseTest {
     private val zoneId = ZoneId.of("Asia/Tokyo")
 
     @Test
-    fun 朝昼夕は同日に2件登録できない() = runTest {
+    fun 朝昼夕は同日に登録すると既存記録へ追加される() = runTest {
         val templateDao = FakeMealTemplateDao(
             template = MealTemplateWithRelations(
                 template = MealTemplateEntity(
@@ -74,20 +73,24 @@ class CreateQuickRecordUseCaseTest {
             recordRepository = MealRecordRepository(recordDao),
         )
 
-        try {
-            useCase(
-                templateId = 1,
-                selectedOptionIds = emptyList(),
-                nowMillis = 1780916400000,
-                zoneId = zoneId,
-            )
-            fail("DuplicateDailyMealException was expected")
-        } catch (_: DuplicateDailyMealException) {
-        }
+        val recordId = useCase(
+            templateId = 1,
+            selectedOptionIds = emptyList(),
+            nowMillis = 1780916400000,
+            zoneId = zoneId,
+        )
+
+        val merged = recordDao.records.single().record
+        assertEquals(1L, recordId)
+        assertEquals(1, recordDao.records.size)
+        assertEquals(800, merged.totalCalories)
+        assertEquals(40.0, merged.proteinG, 0.0)
+        assertEquals(20.0, merged.fatG, 0.0)
+        assertEquals(60.0, merged.carbG, 0.0)
     }
 
     @Test
-    fun 間食は同日に複数登録できる() = runTest {
+    fun 間食も同日に登録すると既存記録へ追加される() = runTest {
         val templateDao = FakeMealTemplateDao(
             template = MealTemplateWithRelations(
                 template = MealTemplateEntity(
@@ -142,8 +145,13 @@ class CreateQuickRecordUseCaseTest {
             zoneId = zoneId,
         )
 
-        assertEquals(2L, insertedId)
-        assertEquals(2, recordDao.records.size)
+        val merged = recordDao.records.single().record
+        assertEquals(1L, insertedId)
+        assertEquals(1, recordDao.records.size)
+        assertEquals(300, merged.totalCalories)
+        assertEquals(10.0, merged.proteinG, 0.0)
+        assertEquals(10.0, merged.fatG, 0.0)
+        assertEquals(40.0, merged.carbG, 0.0)
     }
 
     @Test
@@ -196,7 +204,6 @@ class CreateQuickRecordUseCaseTest {
 
         val recordId = useCase(
             templateId = 3,
-            appendToRecordId = 1L,
             nowMillis = 1780880400000,
             zoneId = zoneId,
         )
@@ -299,6 +306,13 @@ private class FakeMealRecordDao(
     override fun observeRecentRecords(limit: Int): Flow<List<MealRecordWithRelations>> = emptyFlow()
 
     override fun observeRecordsBetween(startInclusive: Long, endInclusive: Long): Flow<List<MealRecordWithRelations>> = emptyFlow()
+
+    override suspend fun getRecordsBetween(
+        startInclusive: Long,
+        endInclusive: Long,
+    ): List<MealRecordWithRelations> = records
+        .filter { it.record.eatenAt in startInclusive..endInclusive }
+        .sortedByDescending { it.record.eatenAt }
 
     override fun observeRecord(recordId: Long): Flow<MealRecordWithRelations?> = emptyFlow()
 
