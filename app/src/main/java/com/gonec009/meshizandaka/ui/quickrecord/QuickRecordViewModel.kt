@@ -33,7 +33,6 @@ data class QuickRecordUiState(
     val selectedDriveEatingOutCard: QuickRecordDriveCard? = null,
     val templateName: String = "",
     val selectedMealType: MealType = MealType.LUNCH,
-    val isSpecial: Boolean = false,
     val totalCalories: String = "",
     val proteinG: String = "",
     val fatG: String = "",
@@ -127,8 +126,8 @@ class QuickRecordViewModel(
                 selectedTemplate = null,
                 selectedDriveEatingOutCard = card,
                 templateName = card.name,
-                selectedMealType = MealType.EATING_OUT,
-                isSpecial = true,
+                selectedMealType = state.selectedMealType.takeUnless { it == MealType.EATING_OUT }
+                    ?: MealType.LUNCH,
                 totalCalories = card.calories.toString(),
                 proteinG = formatOneDecimal(card.proteinG),
                 fatG = formatOneDecimal(card.fatG),
@@ -145,10 +144,6 @@ class QuickRecordViewModel(
 
     fun setTemplateName(value: String) {
         _uiState.update { it.copy(templateName = value) }
-    }
-
-    fun setSpecial(isSpecial: Boolean) {
-        _uiState.update { it.copy(isSpecial = isSpecial) }
     }
 
     fun setTotalCalories(value: String) {
@@ -205,7 +200,7 @@ class QuickRecordViewModel(
                 proteinOverride = state.proteinG.toDoubleOrNull() ?: 0.0,
                 fatOverride = state.fatG.toDoubleOrNull() ?: 0.0,
                 carbOverride = state.carbG.toDoubleOrNull() ?: 0.0,
-                isSpecialOverride = state.isSpecial,
+                isSpecialOverride = false,
                 memo = state.memo,
                 photoUri = state.photoUri,
                 mealType = state.selectedMealType,
@@ -234,7 +229,6 @@ class QuickRecordViewModel(
             selectedTemplate = template,
             templateName = template.name,
             selectedMealType = template.mealType,
-            isSpecial = template.isSpecial,
             totalCalories = template.baseCalories.toString(),
             proteinG = formatOneDecimal(template.proteinG),
             fatG = formatOneDecimal(template.fatG),

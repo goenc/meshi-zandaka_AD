@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -91,7 +90,6 @@ fun QuickRecordRoute(
         onDriveEatingOutCardSelect = viewModel::selectDriveEatingOutCard,
         onTemplateNameChange = viewModel::setTemplateName,
         onMealTypeSelect = viewModel::selectMealType,
-        onSpecialChange = viewModel::setSpecial,
         onTotalCaloriesChange = viewModel::setTotalCalories,
         onProteinChange = viewModel::setProtein,
         onFatChange = viewModel::setFat,
@@ -112,7 +110,6 @@ private fun QuickRecordScreen(
     onDriveEatingOutCardSelect: (QuickRecordDriveCard) -> Unit,
     onTemplateNameChange: (String) -> Unit,
     onMealTypeSelect: (MealType) -> Unit,
-    onSpecialChange: (Boolean) -> Unit,
     onTotalCaloriesChange: (String) -> Unit,
     onProteinChange: (String) -> Unit,
     onFatChange: (String) -> Unit,
@@ -178,9 +175,7 @@ private fun QuickRecordScreen(
                             LabeledMealSettingField(
                                 mealTypeLabel = stringResource(R.string.meal_type),
                                 selectedMealType = mealTypeLabel(state.selectedMealType),
-                                isSpecial = state.isSpecial,
                                 expanded = mealTypeExpanded,
-                                onSpecialCheckedChange = onSpecialChange,
                                 mealFieldModifier = Modifier.menuAnchor(),
                             )
                             DropdownMenu(
@@ -427,9 +422,7 @@ private fun compactFieldTextStyle(): TextStyle {
 private fun LabeledMealSettingField(
     mealTypeLabel: String,
     selectedMealType: String,
-    isSpecial: Boolean,
     expanded: Boolean,
-    onSpecialCheckedChange: (Boolean) -> Unit,
     mealFieldModifier: Modifier = Modifier,
 ) {
     Row(
@@ -463,21 +456,6 @@ private fun LabeledMealSettingField(
                     )
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 }
-            }
-            Row(
-                modifier = Modifier.padding(end = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.special_short),
-                    style = compactFieldTextStyle(),
-                    fontWeight = FontWeight.Medium,
-                )
-                Checkbox(
-                    checked = isSpecial,
-                    onCheckedChange = onSpecialCheckedChange,
-                )
             }
         }
     }
