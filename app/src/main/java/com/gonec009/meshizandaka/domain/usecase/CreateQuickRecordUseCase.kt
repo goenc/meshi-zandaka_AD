@@ -14,7 +14,7 @@ class CreateQuickRecordUseCase(
     private val recordRepository: MealRecordRepository,
 ) {
     suspend operator fun invoke(
-        templateId: Long,
+        templateId: Long?,
         selectedOptionIds: Collection<Long> = emptyList(),
         templateNameSnapshot: String? = null,
         totalCaloriesOverride: Int? = null,
@@ -29,8 +29,11 @@ class CreateQuickRecordUseCase(
         nowMillis: Long = System.currentTimeMillis(),
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): Long {
-        val template = templateRepository.getTemplate(templateId) ?: error("Template not found: $templateId")
-        val recordMealType = mealType ?: template.mealType
+        val template = templateId?.let { id ->
+            templateRepository.getTemplate(id) ?: error("Template not found: $id")
+        }
+        val recordMealType = mealType ?: template?.mealType
+            ?: error("Meal type is required when templateId is null")
         val appendTarget = appendToRecordId?.let { recordId ->
             recordRepository.getRecord(recordId)?.also { target ->
                 validateAppendTarget(target, recordMealType, nowMillis, zoneId)
@@ -39,7 +42,7 @@ class CreateQuickRecordUseCase(
         if (appendTarget == null) {
             ensureDailyMealSlotAvailable(recordMealType, nowMillis, zoneId)
         }
-        val selectedOptions = template.optionGroups.flatMap { group ->
+        val selectedOptions = template?.optionGroups.orEmpty().flatMap { group ->
             group.options.filter { it.id in selectedOptionIds }.map { option ->
                 MealRecordOption(
                     optionGroupNameSnapshot = group.name,
@@ -52,7 +55,7 @@ class CreateQuickRecordUseCase(
             }
         }
 
-        val comparisonCalories = template.comparisonTemplateId
+        val comparisonCalories = template?.comparisonTemplateId
             ?.let { comparisonTemplateId ->
                 templateRepository.getTemplate(comparisonTemplateId)?.let { comparisonTemplate ->
                     comparisonTemplate.baseCalories + comparisonTemplate.optionGroups.sumOf { group ->
@@ -61,17 +64,22 @@ class CreateQuickRecordUseCase(
                 }
             }
             ?: 0
-        val totalCalories = totalCaloriesOverride ?: template.baseCalories + selectedOptions.sumOf { it.calorieDelta }
-        val protein = proteinOverride ?: template.proteinG + selectedOptions.sumOf { it.proteinDeltaG }
-        val fat = fatOverride ?: template.fatG + selectedOptions.sumOf { it.fatDeltaG }
-        val carb = carbOverride ?: template.carbG + selectedOptions.sumOf { it.carbDeltaG }
-        val isSpecial = isSpecialOverride ?: template.isSpecial
+        val totalCalories = totalCaloriesOverride
+            ?: (template?.baseCalories ?: 0) + selectedOptions.sumOf { it.calorieDelta }
+        val protein = proteinOverride
+            ?: (template?.proteinG ?: 0.0) + selectedOptions.sumOf { it.proteinDeltaG }
+        val fat = fatOverride
+            ?: (template?.fatG ?: 0.0) + selectedOptions.sumOf { it.fatDeltaG }
+        val carb = carbOverride
+            ?: (template?.carbG ?: 0.0) + selectedOptions.sumOf { it.carbDeltaG }
+        val isSpecial = isSpecialOverride ?: template?.isSpecial ?: false
 
         val record = MealRecord(
             eatenAt = nowMillis,
             mealType = recordMealType,
-            templateId = template.id,
-            templateNameSnapshot = templateNameSnapshot ?: template.name,
+            templateId = template?.id,
+            templateNameSnapshot = templateNameSnapshot ?: template?.name
+                ?: error("Template name is required when templateId is null"),
             totalCalories = totalCalories,
             proteinG = protein,
             fatG = fat,

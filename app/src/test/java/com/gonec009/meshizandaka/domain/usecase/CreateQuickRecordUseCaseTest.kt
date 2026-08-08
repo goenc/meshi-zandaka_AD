@@ -12,10 +12,12 @@ import com.gonec009.meshizandaka.data.local.entity.TemplateOptionGroupEntity
 import com.gonec009.meshizandaka.data.local.entity.TemplateOptionGroupWithOptions
 import com.gonec009.meshizandaka.data.repository.MealRecordRepository
 import com.gonec009.meshizandaka.data.repository.MealTemplateRepository
+import com.gonec009.meshizandaka.domain.model.MealType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Test
 import java.time.ZoneId
@@ -210,6 +212,56 @@ class CreateQuickRecordUseCaseTest {
         assertEquals("昼のメモ", merged.memo)
         assertEquals("LUNCH", merged.mealType)
         assertEquals(600, merged.specialDeltaCalories)
+    }
+
+    @Test
+    fun Drive外食カードはテンプレートなしで新規記録できる() = runTest {
+        val templateDao = FakeMealTemplateDao(
+            template = MealTemplateWithRelations(
+                template = MealTemplateEntity(
+                    id = 3,
+                    name = "未使用テンプレート",
+                    mealType = "EATING_OUT",
+                    baseCalories = 0,
+                    proteinG = 0.0,
+                    fatG = 0.0,
+                    carbG = 0.0,
+                    isSpecial = false,
+                    comparisonTemplateId = null,
+                    weeklyLimitCount = null,
+                    monthlyLimitCount = null,
+                    memo = "",
+                ),
+                optionGroups = emptyList(),
+            ),
+        )
+        val recordDao = FakeMealRecordDao(existingRecords = mutableListOf())
+        val useCase = CreateQuickRecordUseCase(
+            templateRepository = MealTemplateRepository(templateDao),
+            recordRepository = MealRecordRepository(recordDao),
+        )
+
+        val recordId = useCase(
+            templateId = null,
+            templateNameSnapshot = "新規外食",
+            totalCaloriesOverride = 511,
+            proteinOverride = 17.0,
+            fatOverride = 30.2,
+            carbOverride = 43.0,
+            isSpecialOverride = true,
+            memo = "1 個",
+            mealType = MealType.EATING_OUT,
+            nowMillis = 1780880400000,
+            zoneId = zoneId,
+        )
+
+        val record = recordDao.records.single().record
+        assertEquals(1L, recordId)
+        assertNull(record.templateId)
+        assertEquals("新規外食", record.templateNameSnapshot)
+        assertEquals(511, record.totalCalories)
+        assertEquals("EATING_OUT", record.mealType)
+        assertEquals(511, record.specialDeltaCalories)
     }
 }
 

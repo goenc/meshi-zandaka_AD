@@ -48,7 +48,7 @@
     <string name="special_meal">特別メシ</string>
     <string name="special_short">特</string>
     <string name="quick_record_templates">テンプレート</string>
-    <string name="quick_record_eating_out_templates">外食カードを選んでクイック記録</string>
+    <string name="quick_record_eating_out_templates">Google Driveの外食カードを選んでクイック記録</string>
     <string name="quick_record_append_target">既存の食事へ追加</string>
     <string name="quick_record_append_target_description">昼食・夕食が登録済みなら、外食をそこへ追加できます</string>
     <string name="quick_record_new_eating_out">新しい外食として記録</string>

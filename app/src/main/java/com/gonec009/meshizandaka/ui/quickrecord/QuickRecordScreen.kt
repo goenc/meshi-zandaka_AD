@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -59,11 +60,13 @@ import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
+import com.gonec009.meshizandaka.ui.common.DriveCachedImage
 import com.gonec009.meshizandaka.ui.common.InAppCameraCapture
 import com.gonec009.meshizandaka.ui.common.MealPhotoWithDeleteAction
 import com.gonec009.meshizandaka.ui.common.discardCapturedPhoto
 import com.gonec009.meshizandaka.ui.common.isManagedPhotoInFolder
 import com.gonec009.meshizandaka.ui.mealTypeLabel
+import com.gonec009.meshizandaka.util.formatOneDecimal
 import kotlinx.coroutines.launch
 
 @Composable
@@ -86,6 +89,7 @@ fun QuickRecordRoute(
         innerPadding = innerPadding,
         state = state,
         onTemplateSelect = viewModel::selectTemplate,
+        onDriveEatingOutCardSelect = viewModel::selectDriveEatingOutCard,
         onTemplateNameChange = viewModel::setTemplateName,
         onMealTypeSelect = viewModel::selectMealType,
         onSpecialChange = viewModel::setSpecial,
@@ -107,6 +111,7 @@ private fun QuickRecordScreen(
     innerPadding: PaddingValues,
     state: QuickRecordUiState,
     onTemplateSelect: (MealTemplate) -> Unit,
+    onDriveEatingOutCardSelect: (QuickRecordDriveCard) -> Unit,
     onTemplateNameChange: (String) -> Unit,
     onMealTypeSelect: (MealType) -> Unit,
     onSpecialChange: (Boolean) -> Unit,
@@ -135,7 +140,6 @@ private fun QuickRecordScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             val normalTemplates = state.availableTemplates.filter { it.mealType != MealType.EATING_OUT }
-            val eatingOutTemplates = state.availableTemplates.filter { it.mealType == MealType.EATING_OUT }
             val appendableRecords = state.todayMealRecords.filter { record ->
                 record.mealType == MealType.LUNCH || record.mealType == MealType.DINNER
             }
@@ -147,12 +151,12 @@ private fun QuickRecordScreen(
                     onTemplateSelect = onTemplateSelect,
                 )
             }
-            if (eatingOutTemplates.isNotEmpty()) item {
-                EatingOutTemplateSection(
+            if (state.driveEatingOutCards.isNotEmpty()) item {
+                DriveEatingOutCardSection(
                     title = stringResource(R.string.quick_record_eating_out_templates),
-                    templates = eatingOutTemplates,
-                    selectedTemplateId = state.selectedTemplate?.id,
-                    onTemplateSelect = onTemplateSelect,
+                    cards = state.driveEatingOutCards,
+                    selectedCardId = state.selectedDriveEatingOutCard?.id,
+                    onCardSelect = onDriveEatingOutCardSelect,
                 )
             }
             if (state.selectedMealType == MealType.EATING_OUT && appendableRecords.isNotEmpty()) item {
@@ -283,7 +287,8 @@ private fun QuickRecordScreen(
                         )
                         Button(
                             onClick = onSaveClick,
-                            enabled = state.selectedTemplate != null && !state.isSaving,
+                            enabled = (state.selectedTemplate != null ||
+                                state.selectedDriveEatingOutCard != null) && !state.isSaving,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(stringResource(R.string.record_now))
@@ -355,21 +360,21 @@ private fun TemplateSection(
 }
 
 @Composable
-private fun EatingOutTemplateSection(
+private fun DriveEatingOutCardSection(
     title: String,
-    templates: List<MealTemplate>,
-    selectedTemplateId: Long?,
-    onTemplateSelect: (MealTemplate) -> Unit,
+    cards: List<QuickRecordDriveCard>,
+    selectedCardId: String?,
+    onCardSelect: (QuickRecordDriveCard) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = title, style = MaterialTheme.typography.titleMedium)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(templates, key = { it.id }) { template ->
+            items(cards, key = { it.id }) { card ->
                 Card(
                     modifier = Modifier
                         .width(180.dp)
-                        .clickable { onTemplateSelect(template) },
-                    border = if (selectedTemplateId == template.id) {
+                        .clickable { onCardSelect(card) },
+                    border = if (selectedCardId == card.id) {
                         BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
                     } else {
                         null
@@ -379,23 +384,40 @@ private fun EatingOutTemplateSection(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
+                        card.item.imagePath?.let { imagePath ->
+                            DriveCachedImage(
+                                path = imagePath,
+                                contentDescription = card.item.name,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(96.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                            )
+                        }
                         Text(
-                            text = template.name,
+                            text = card.item.name,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            text = stringResource(R.string.kcal_format, template.baseCalories),
+                            text = card.mealLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = card.item.amountLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.template_management_meal_nutrition,
+                                card.item.calories,
+                                formatOneDecimal(card.item.proteinG),
+                                formatOneDecimal(card.item.fatG),
+                                formatOneDecimal(card.item.carbG),
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        if (template.memo.isNotBlank()) {
-                            Text(
-                                text = template.memo,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                            )
-                        }
                     }
                 }
             }
