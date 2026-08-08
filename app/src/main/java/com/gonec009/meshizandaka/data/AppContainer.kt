@@ -13,6 +13,7 @@ import com.gonec009.meshizandaka.domain.service.BudgetCalculator
 import com.gonec009.meshizandaka.domain.usecase.CreateQuickRecordUseCase
 import com.gonec009.meshizandaka.domain.usecase.EnsureSeedDataUseCase
 import com.gonec009.meshizandaka.domain.usecase.ObserveDashboardUseCase
+import kotlinx.coroutines.flow.map
 
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
@@ -55,6 +56,8 @@ class AppContainer(context: Context) {
             settingsRepository = settingsRepository,
             recordRepository = mealRecordRepository,
             budgetCalculator = budgetCalculator,
+            caloriesByDateFlow = driveAccessManager.calorieSummary.map { it?.caloriesByDate.orEmpty() },
+            averageBurnedCaloriesFlow = driveAccessManager.calorieSummary.map { it?.averageKcal },
         )
     }
 }

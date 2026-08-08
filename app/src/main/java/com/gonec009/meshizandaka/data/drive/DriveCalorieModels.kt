@@ -7,6 +7,7 @@ data class DriveCalorieSummary(
     val todayKcal: Int? = null,
     val averageKcal: Int? = null,
     val calorieDate: LocalDate? = null,
+    val caloriesByDate: Map<LocalDate, Int> = emptyMap(),
 )
 
 internal fun buildDriveCalorieSummary(
@@ -40,6 +41,7 @@ internal fun buildDriveCalorieSummary(
             ?.average()
             ?.roundToInt(),
         calorieDate = selectedEntry?.first,
+        caloriesByDate = dailyCalories.toMap(),
     )
 }
 

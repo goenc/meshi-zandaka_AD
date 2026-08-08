@@ -6,13 +6,17 @@ import com.gonec009.meshizandaka.domain.model.HomeDashboardData
 import com.gonec009.meshizandaka.domain.service.BudgetCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 class ObserveDashboardUseCase(
     private val settingsRepository: SettingsRepository,
     private val recordRepository: MealRecordRepository,
     private val budgetCalculator: BudgetCalculator,
+    private val caloriesByDateFlow: Flow<Map<LocalDate, Int>> = flowOf(emptyMap()),
+    private val averageBurnedCaloriesFlow: Flow<Int?> = flowOf(null),
 ) {
     operator fun invoke(zoneId: ZoneId = ZoneId.systemDefault()): Flow<HomeDashboardData> {
         val now = System.currentTimeMillis()
@@ -21,9 +25,17 @@ class ObserveDashboardUseCase(
         return combine(
             settingsRepository.settingsFlow,
             recordRepository.observeRecordsBetween(observeStart, observeEnd),
-        ) { settings, monthRecords ->
+            caloriesByDateFlow,
+            averageBurnedCaloriesFlow,
+        ) { settings, monthRecords, caloriesByDate, averageBurnedCalories ->
             HomeDashboardData(
-                summary = budgetCalculator.buildSummary(monthRecords, settings, zoneId),
+                summary = budgetCalculator.buildSummary(
+                    records = monthRecords,
+                    settings = settings,
+                    caloriesByDate = caloriesByDate,
+                    averageBurnedCalories = averageBurnedCalories,
+                    zoneId = zoneId,
+                ),
                 weeklyChart = budgetCalculator.buildWeeklyChart(monthRecords, zoneId),
             )
         }

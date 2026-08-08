@@ -66,6 +66,36 @@ class BudgetCalculatorTest {
     }
 
     @Test
+    fun 既知日の消費カロリーと未知日の平均値で残高を計算する() {
+        val records = listOf(
+            recordAt(2026, 6, 8, 12, 0, 1400),
+            recordAt(2026, 6, 7, 19, 0, 900),
+            recordAt(2026, 6, 1, 12, 0, 700),
+        )
+
+        val summary = calculator.buildSummary(
+            records = records,
+            settings = AppSettings(
+                targetCaloriesPerDay = 1800,
+                maintenanceCaloriesPerDay = 2000,
+                weekStartsOn = WeekStartDay.MONDAY,
+            ),
+            caloriesByDate = mapOf(
+                java.time.LocalDate.of(2026, 6, 1) to 1900,
+                java.time.LocalDate.of(2026, 6, 8) to 2100,
+                java.time.LocalDate.of(2026, 6, 9) to 2200,
+            ),
+            averageBurnedCalories = 2000,
+            zoneId = zoneId,
+            nowMillis = nowMillis,
+        )
+
+        assertEquals(700, summary.todayBalanceCalories)
+        assertEquals(12900, summary.weekBalanceCalories)
+        assertEquals(57200, summary.monthBalanceCalories)
+    }
+
+    @Test
     fun 直近7日グラフで食事区分ごとに集計できる() {
         val records = listOf(
             recordAt(2026, 6, 8, 7, 30, 300, mealType = MealType.BREAKFAST),

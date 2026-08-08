@@ -15,6 +15,8 @@ class BudgetCalculator {
     fun buildSummary(
         records: List<MealRecord>,
         settings: AppSettings,
+        caloriesByDate: Map<LocalDate, Int> = emptyMap(),
+        averageBurnedCalories: Int? = null,
         zoneId: ZoneId = ZoneId.systemDefault(),
         nowMillis: Long = System.currentTimeMillis(),
     ): DashboardSummary {
@@ -29,15 +31,51 @@ class BudgetCalculator {
         val todayConsumed = todayRecords.sumOf(MealRecord::totalCalories)
         val weekConsumed = weekRecords.sumOf(MealRecord::totalCalories)
         val monthConsumed = monthRecords.sumOf(MealRecord::totalCalories)
+        val today = Instant.ofEpochMilli(nowMillis).atZone(zoneId).toLocalDate()
+        val weekStart = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(settings.weekStartsOn.dayOfWeek))
+        val weekEnd = weekStart.plusDays(6)
+        val monthStart = today.withDayOfMonth(1)
+        val monthEnd = today.withDayOfMonth(today.lengthOfMonth())
+        val fallbackBurnedCalories = averageBurnedCalories ?: settings.targetCaloriesPerDay
 
         return DashboardSummary(
             todayConsumedCalories = todayConsumed,
-            todayBalanceCalories = settings.targetCaloriesPerDay - todayConsumed,
-            weekBalanceCalories = (settings.targetCaloriesPerDay * 7) - weekConsumed,
-            monthBalanceCalories = (settings.targetCaloriesPerDay * TimeRangeUtils.daysInCurrentMonth(nowMillis, zoneId)) - monthConsumed,
+            todayBalanceCalories = burnedCaloriesBetween(
+                startDate = today,
+                endDate = today,
+                caloriesByDate = caloriesByDate,
+                fallbackCalories = fallbackBurnedCalories,
+            ) - todayConsumed,
+            weekBalanceCalories = burnedCaloriesBetween(
+                startDate = weekStart,
+                endDate = weekEnd,
+                caloriesByDate = caloriesByDate,
+                fallbackCalories = fallbackBurnedCalories,
+            ) - weekConsumed,
+            monthBalanceCalories = burnedCaloriesBetween(
+                startDate = monthStart,
+                endDate = monthEnd,
+                caloriesByDate = caloriesByDate,
+                fallbackCalories = fallbackBurnedCalories,
+            ) - monthConsumed,
             monthSpecialCount = monthRecords.count { it.isSpecial },
             monthSpecialDeltaCalories = monthRecords.sumOf(MealRecord::specialDeltaCalories),
         )
+    }
+
+    private fun burnedCaloriesBetween(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        caloriesByDate: Map<LocalDate, Int>,
+        fallbackCalories: Int,
+    ): Int {
+        var date = startDate
+        var total = 0
+        while (!date.isAfter(endDate)) {
+            total += caloriesByDate[date] ?: fallbackCalories
+            date = date.plusDays(1)
+        }
+        return total
     }
 
     fun buildWeeklyChart(
