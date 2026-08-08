@@ -25,8 +25,6 @@
     <string name="today_balance">今日の残高</string>
     <string name="week_balance">今週の残高</string>
     <string name="month_balance">今月の残高</string>
-    <string name="month_special_count">今月の特別食回数</string>
-    <string name="month_special_delta">特別メシ差分合計</string>
     <string name="today_burned_calories">今日の消費カロリー</string>
     <string name="latest_burned_calories">最新日の消費カロリー</string>
     <string name="average_burned_calories">平均消費カロリー</string>

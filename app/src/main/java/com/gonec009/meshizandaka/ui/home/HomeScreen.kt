@@ -244,14 +244,6 @@ private fun HomeScreen(
             value = stringResource(R.string.kcal_format_signed, state.summary.monthBalanceCalories),
         ),
         SummaryItem(
-            title = stringResource(R.string.month_special_count),
-            value = stringResource(R.string.count_format, state.summary.monthSpecialCount),
-        ),
-        SummaryItem(
-            title = stringResource(R.string.month_special_delta),
-            value = stringResource(R.string.kcal_format_signed, state.summary.monthSpecialDeltaCalories),
-        ),
-        SummaryItem(
             title = burnedCaloriesTitle,
             value = calorieSummary?.todayKcal?.let { kcal ->
                 stringResource(R.string.kcal_format, kcal)
