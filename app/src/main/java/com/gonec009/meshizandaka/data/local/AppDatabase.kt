@@ -25,7 +25,7 @@ import com.gonec009.meshizandaka.data.local.entity.DrivePlanCacheEntity
         MealRecordOptionEntity::class,
         DrivePlanCacheEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -40,7 +40,7 @@ abstract class AppDatabase : RoomDatabase() {
                 AppDatabase::class.java,
                 "meshi_zandaka.db",
             )
-                .addMigrations(MIGRATION_4_5)
+                .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
                 .fallbackToDestructiveMigration()
                 .build()
         }
@@ -57,6 +57,14 @@ abstract class AppDatabase : RoomDatabase() {
                         PRIMARY KEY(datasetId)
                     )
                     """.trimIndent(),
+                )
+            }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE meal_records ADD COLUMN excludedDrivePlanItemKeysJson TEXT NOT NULL DEFAULT '[]'",
                 )
             }
         }

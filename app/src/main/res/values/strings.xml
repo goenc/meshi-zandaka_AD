@@ -98,6 +98,8 @@
     <string name="yes">はい</string>
     <string name="no">いいえ</string>
     <string name="delete_record_confirm_message">この記録を削除しますか</string>
+    <string name="delete_meal_item_confirm_message">この日の食事から「%1$s」を削除しますか</string>
+    <string name="delete_meal_item">食事項目を削除する</string>
     <string name="delete_template_confirm_message">このテンプレートを削除しますか</string>
     <string name="delete_photo_confirm_message">この写真を削除しますか</string>
     <string name="target_calories">目標摂取カロリー</string>
@@ -149,5 +151,6 @@
     <string name="meal_detail_contents">食事内容</string>
     <string name="meal_detail_record_photo">記録写真</string>
     <string name="meal_detail_drive_content_unavailable">同期済みの食事内容がありません</string>
+    <string name="meal_detail_no_items">食事項目がありません</string>
     <string name="meal_detail_preloading">写真を先読み中…</string>
 </resources>

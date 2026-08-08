@@ -388,6 +388,7 @@ class DrivePlanSnapshotReader(
                         proteinG = nutrition.proteinG,
                         fatG = nutrition.fatG,
                         carbG = nutrition.carbG,
+                        id = itemId,
                     ),
                     nutrition = nutrition,
                 )

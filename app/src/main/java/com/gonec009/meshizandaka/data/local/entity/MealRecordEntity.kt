@@ -1,5 +1,6 @@
 package com.gonec009.meshizandaka.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -19,4 +20,5 @@ data class MealRecordEntity(
     val sourceType: String,
     val memo: String,
     val photoUri: String? = null,
+    @ColumnInfo(defaultValue = "'[]'") val excludedDrivePlanItemKeysJson: String = "[]",
 )

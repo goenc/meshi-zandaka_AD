@@ -38,6 +38,7 @@ class DrivePlanCacheCodecTest {
                                     proteinG = 2.8,
                                     fatG = 0.3,
                                     carbG = 38.1,
+                                    id = "meal-item-1",
                                 ),
                             ),
                         ),

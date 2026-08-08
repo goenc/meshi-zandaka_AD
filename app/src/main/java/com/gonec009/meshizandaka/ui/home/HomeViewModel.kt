@@ -3,6 +3,7 @@ package com.gonec009.meshizandaka.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gonec009.meshizandaka.data.AppContainer
+import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.domain.model.AppSettings
 import com.gonec009.meshizandaka.domain.model.DashboardSummary
 import com.gonec009.meshizandaka.domain.model.MealType
@@ -92,6 +93,28 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             container.mealRecordRepository.deleteRecord(recordId)
             _uiState.update { it.copy(message = "記録を削除しました") }
+            onComplete()
+        }
+    }
+
+    fun deleteDrivePlanItem(
+        recordId: Long,
+        itemKey: String,
+        item: DrivePlanItem,
+        onComplete: () -> Unit,
+    ) {
+        viewModelScope.launch {
+            val deleted = container.mealRecordRepository.excludeDrivePlanItem(
+                recordId = recordId,
+                itemKey = itemKey,
+                calories = item.calories,
+                proteinG = item.proteinG,
+                fatG = item.fatG,
+                carbG = item.carbG,
+            )
+            if (deleted) {
+                _uiState.update { it.copy(message = "${item.name}をこの日の記録から削除しました") }
+            }
             onComplete()
         }
     }

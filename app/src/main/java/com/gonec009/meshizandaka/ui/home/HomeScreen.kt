@@ -69,6 +69,7 @@ import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.data.drive.DriveCalorieSummary
 import com.gonec009.meshizandaka.data.drive.DrivePlan
+import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
 import com.gonec009.meshizandaka.domain.model.DailyMealStack
 import com.gonec009.meshizandaka.domain.model.MealRecord
@@ -109,6 +110,12 @@ private data class ChartMealDialogState(
 
 private data class PendingDeleteRecord(
     val record: MealRecord,
+)
+
+private data class PendingDeleteDrivePlanItem(
+    val record: MealRecord,
+    val item: DrivePlanItem,
+    val itemKey: String,
 )
 
 private data class NutritionTotals(
@@ -200,6 +207,7 @@ fun HomeRoute(
         onDaytimeSnackClick = viewModel::recordDaytimeSnack,
         onFreeSnackClick = viewModel::recordFreeSnack,
         onDeleteRecord = viewModel::deleteRecord,
+        onDeleteDrivePlanItem = viewModel::deleteDrivePlanItem,
     )
 }
 
@@ -219,9 +227,11 @@ private fun HomeScreen(
     onDaytimeSnackClick: () -> Unit,
     onFreeSnackClick: () -> Unit,
     onDeleteRecord: (Long, () -> Unit) -> Unit,
+    onDeleteDrivePlanItem: (Long, String, DrivePlanItem, () -> Unit) -> Unit,
 ) {
     var isDatePickerVisible by remember { mutableStateOf(false) }
     var pendingDeleteRecord by remember { mutableStateOf<PendingDeleteRecord?>(null) }
+    var pendingDeleteDrivePlanItem by remember { mutableStateOf<PendingDeleteDrivePlanItem?>(null) }
     val burnedCaloriesTitle = when {
         calorieSummary?.todayKcal == null -> stringResource(R.string.today_burned_calories)
         calorieSummary.calorieDate == LocalDate.now() -> stringResource(R.string.today_burned_calories)
@@ -311,6 +321,13 @@ private fun HomeScreen(
                         record = record,
                     )
                 },
+                onDeleteDrivePlanItemRequest = { _, record, item, itemKey ->
+                    pendingDeleteDrivePlanItem = PendingDeleteDrivePlanItem(
+                        record = record,
+                        item = item,
+                        itemKey = itemKey,
+                    )
+                },
             )
         }
         item {
@@ -364,6 +381,40 @@ private fun HomeScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pendingDeleteRecord = null }) {
+                    Text(stringResource(R.string.no))
+                }
+            },
+        )
+    }
+    pendingDeleteDrivePlanItem?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteDrivePlanItem = null },
+            title = { Text(stringResource(R.string.delete)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.delete_meal_item_confirm_message,
+                        pending.item.name,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteDrivePlanItem(
+                            pending.record.id,
+                            pending.itemKey,
+                            pending.item,
+                        ) {
+                            pendingDeleteDrivePlanItem = null
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteDrivePlanItem = null }) {
                     Text(stringResource(R.string.no))
                 }
             },
@@ -424,6 +475,7 @@ private fun WeeklyChartCard(
     selectedDrivePlan: DrivePlan?,
     modifier: Modifier = Modifier,
     onDeleteRecordRequest: (ChartMealDialogState, MealRecord) -> Unit,
+    onDeleteDrivePlanItemRequest: (ChartMealDialogState, MealRecord, DrivePlanItem, String) -> Unit,
 ) {
     val scrollState = rememberScrollState()
     val resolvedMaxCalories = maxCalories.coerceAtLeast(1)
@@ -478,6 +530,10 @@ private fun WeeklyChartCard(
             onDismiss = { dialogState = null },
             onDeleteClick = { record ->
                 onDeleteRecordRequest(detail, record)
+                dialogState = null
+            },
+            onDeleteDrivePlanItemClick = { record, item, itemKey ->
+                onDeleteDrivePlanItemRequest(detail, record, item, itemKey)
                 dialogState = null
             },
         )
@@ -644,6 +700,7 @@ private fun ChartMealDetailDialog(
     selectedDrivePlan: DrivePlan?,
     onDismiss: () -> Unit,
     onDeleteClick: (MealRecord) -> Unit,
+    onDeleteDrivePlanItemClick: (MealRecord, DrivePlanItem, String) -> Unit,
 ) {
     val context = LocalContext.current
     val titleDateFormatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.JAPAN) }
@@ -720,6 +777,7 @@ private fun ChartMealDetailDialog(
             record = record,
             selectedDrivePlan = selectedDrivePlan,
             onDismiss = { selectedRecord = null },
+            onDeleteDrivePlanItemClick = onDeleteDrivePlanItemClick,
         )
     }
 }
@@ -823,6 +881,7 @@ private fun MealRecordContentDialog(
     record: MealRecord,
     selectedDrivePlan: DrivePlan?,
     onDismiss: () -> Unit,
+    onDeleteDrivePlanItemClick: (MealRecord, DrivePlanItem, String) -> Unit,
 ) {
     val timeFormatter = remember { SimpleDateFormat("yyyy/M/d HH:mm", Locale.JAPAN) }
     val planMeal = selectedDrivePlan?.mealForRecord(record)
@@ -875,7 +934,13 @@ private fun MealRecordContentDialog(
                     )
                 }
                 if (planMeal != null) {
-                    DrivePlanMealContent(meal = planMeal)
+                    DrivePlanMealContent(
+                        meal = planMeal,
+                        excludedItemKeys = record.excludedDrivePlanItemKeys,
+                        onDeleteItemClick = { item, itemKey ->
+                            onDeleteDrivePlanItemClick(record, item, itemKey)
+                        },
+                    )
                 } else {
                     Text(
                         text = stringResource(R.string.meal_detail_drive_content_unavailable),
@@ -902,7 +967,15 @@ private fun MealRecordContentDialog(
 }
 
 @Composable
-private fun DrivePlanMealContent(meal: DrivePlanMeal) {
+private fun DrivePlanMealContent(
+    meal: DrivePlanMeal,
+    excludedItemKeys: Set<String>,
+    onDeleteItemClick: (DrivePlanItem, String) -> Unit,
+) {
+    val visibleItems = meal.items.mapIndexedNotNull { index, item ->
+        val itemKey = item.exclusionKey(index)
+        if (itemKey in excludedItemKeys) null else item to itemKey
+    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.meal_detail_contents),
@@ -919,7 +992,14 @@ private fun DrivePlanMealContent(meal: DrivePlanMeal) {
                     .clip(RoundedCornerShape(10.dp)),
             )
         }
-        meal.items.forEach { item ->
+        if (visibleItems.isEmpty()) {
+            Text(
+                text = stringResource(R.string.meal_detail_no_items),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        visibleItems.forEach { (item, itemKey) ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -940,6 +1020,14 @@ private fun DrivePlanMealContent(meal: DrivePlanMeal) {
                         text = item.amountLabel,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = { onDeleteItemClick(item, itemKey) }) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_delete),
+                        contentDescription = stringResource(R.string.delete_meal_item),
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -966,6 +1054,11 @@ private fun DrivePlan.mealForRecord(record: MealRecord): DrivePlanMeal? {
 private fun DrivePlanMeal.imagePaths(): List<String> = buildList {
     imagePath?.let(::add)
     items.mapNotNull { it.imagePath }.forEach(::add)
+}
+
+private fun DrivePlanItem.exclusionKey(index: Int): String {
+    return id?.takeIf { it.isNotBlank() }
+        ?: "${name}\u001F${amountLabel}\u001F$index"
 }
 
 private fun DrawScope.drawBarBackground(maxCalories: Int) {

@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 
 class MealRecordRepository(
     private val dao: MealRecordDao,
@@ -51,6 +52,7 @@ class MealRecordRepository(
                 sourceType = record.sourceType.name,
                 memo = record.memo,
                 photoUri = record.photoUri,
+                excludedDrivePlanItemKeysJson = encodeExcludedDrivePlanItemKeys(record.excludedDrivePlanItemKeys),
             ),
         )
         if (record.selectedOptions.isNotEmpty()) {
@@ -88,6 +90,7 @@ class MealRecordRepository(
                 memo = record.memo,
                 sourceType = record.sourceType.name,
                 photoUri = record.photoUri,
+                excludedDrivePlanItemKeysJson = encodeExcludedDrivePlanItemKeys(record.excludedDrivePlanItemKeys),
             ),
         )
         dao.deleteOptionsForRecord(record.id)
@@ -136,6 +139,35 @@ class MealRecordRepository(
         return true
     }
 
+    suspend fun excludeDrivePlanItem(
+        recordId: Long,
+        itemKey: String,
+        calories: Int,
+        proteinG: Double,
+        fatG: Double,
+        carbG: Double,
+    ): Boolean {
+        if (itemKey.isBlank()) return false
+        val current = getRecord(recordId) ?: return false
+        if (itemKey in current.excludedDrivePlanItemKeys) return false
+
+        updateRecord(
+            current.copy(
+                totalCalories = (current.totalCalories - calories).coerceAtLeast(0),
+                proteinG = (current.proteinG - proteinG).coerceAtLeast(0.0),
+                fatG = (current.fatG - fatG).coerceAtLeast(0.0),
+                carbG = (current.carbG - carbG).coerceAtLeast(0.0),
+                specialDeltaCalories = if (current.isSpecial) {
+                    current.specialDeltaCalories - calories
+                } else {
+                    current.specialDeltaCalories
+                },
+                excludedDrivePlanItemKeys = current.excludedDrivePlanItemKeys + itemKey,
+            ),
+        )
+        return true
+    }
+
     suspend fun deleteRecord(recordId: Long) {
         val photoUri = dao.getRecord(recordId)?.photoUri
         dao.deleteRecord(recordId)
@@ -169,6 +201,9 @@ class MealRecordRepository(
             sourceType = SourceType.valueOf(item.record.sourceType),
             memo = item.record.memo,
             photoUri = item.record.photoUri,
+            excludedDrivePlanItemKeys = decodeExcludedDrivePlanItemKeys(
+                item.record.excludedDrivePlanItemKeysJson,
+            ),
             selectedOptions = item.selectedOptions.map { option ->
                 MealRecordOption(
                     id = option.id,
@@ -182,5 +217,24 @@ class MealRecordRepository(
                 )
             },
         )
+    }
+
+    private fun encodeExcludedDrivePlanItemKeys(keys: Set<String>): String {
+        val nonBlankKeys = keys.filter { it.isNotBlank() }
+        if (nonBlankKeys.isEmpty()) return "[]"
+        return JSONArray().apply {
+            nonBlankKeys.forEach { put(it) }
+        }.toString()
+    }
+
+    private fun decodeExcludedDrivePlanItemKeys(value: String): Set<String> {
+        return runCatching {
+            val array = JSONArray(value)
+            buildSet {
+                repeat(array.length()) {
+                    array.optString(it).takeIf { key -> key.isNotBlank() }?.let(::add)
+                }
+            }
+        }.getOrDefault(emptySet())
     }
 }

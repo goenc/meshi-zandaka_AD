@@ -41,6 +41,7 @@ internal object DrivePlanCacheCodec {
                 meal.items.forEach { item ->
                     items.put(
                         JSONObject()
+                            .putNullable("id", item.id)
                             .put("name", item.name)
                             .put("amountLabel", item.amountLabel)
                             .put("isMainDish", item.isMainDish)
@@ -103,6 +104,7 @@ internal object DrivePlanCacheCodec {
                                         proteinG = itemJson.optDouble("proteinG", 0.0),
                                         fatG = itemJson.optDouble("fatG", 0.0),
                                         carbG = itemJson.optDouble("carbG", 0.0),
+                                        id = itemJson.stringOrNull("id"),
                                     ),
                                 )
                             }
