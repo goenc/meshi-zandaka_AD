@@ -118,6 +118,7 @@ private data class NutritionTotals(
 )
 
 private val ChartBarWidth = 39.dp
+private val ChartBarHeight = 96.dp
 private const val ChartSectionCount = 6
 
 private fun formatChartCalories(calories: Int): String {
@@ -437,8 +438,8 @@ private fun WeeklyChartCard(
         ),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             LegendRow()
             Row(
@@ -527,7 +528,7 @@ private fun DayStackBar(
     Column(
         modifier = Modifier.width(ChartBarWidth),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(
             text = formatChartCalories(stack.totalCalories),
@@ -538,7 +539,7 @@ private fun DayStackBar(
         Canvas(
             modifier = Modifier
                 .width(24.dp)
-                .height(160.dp)
+                .height(ChartBarHeight)
                 .pointerInput(stack, maxCalories) {
                     detectTapGestures { offset ->
                         detectTappedMealSection(
