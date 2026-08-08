@@ -136,6 +136,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 container.createQuickRecordUseCase(
                     templateId = templateId,
                     selectedOptionIds = emptyList(),
+                    isSetRegistration = true,
                     nowMillis = recordMillis,
                     zoneId = zoneId,
                 )

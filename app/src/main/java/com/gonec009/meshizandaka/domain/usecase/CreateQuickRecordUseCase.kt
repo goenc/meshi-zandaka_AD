@@ -6,6 +6,7 @@ import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealRecordOption
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.SourceType
+import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.util.TimeRangeUtils
 import java.time.ZoneId
 
@@ -26,6 +27,7 @@ class CreateQuickRecordUseCase(
         photoUri: String? = null,
         mealType: MealType? = null,
         appendToRecordId: Long? = null,
+        isSetRegistration: Boolean = false,
         nowMillis: Long = System.currentTimeMillis(),
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): Long {
@@ -34,6 +36,11 @@ class CreateQuickRecordUseCase(
         }
         val recordMealType = mealType ?: template?.mealType
             ?: error("Meal type is required when templateId is null")
+        val shouldPreventDuplicate = isSetRegistration ||
+            (template?.shortcutRole != null && template.shortcutRole != TemplateShortcutRole.NONE)
+        if (shouldPreventDuplicate) {
+            ensureDailySetAvailable(recordMealType, nowMillis, zoneId)
+        }
         val appendTarget = appendToRecordId?.let { recordId ->
             recordRepository.getRecord(recordId)?.also { target ->
                 validateAppendTarget(target, recordMealType, nowMillis, zoneId)
@@ -95,6 +102,19 @@ class CreateQuickRecordUseCase(
             appendTarget.id
         } else {
             recordRepository.insertRecord(record)
+        }
+    }
+
+    private suspend fun ensureDailySetAvailable(
+        mealType: MealType,
+        nowMillis: Long,
+        zoneId: ZoneId,
+    ) {
+        val (startInclusive, endInclusive) = TimeRangeUtils.todayRange(nowMillis, zoneId)
+        val alreadyRegistered = recordRepository.getRecordsBetween(startInclusive, endInclusive)
+            .any { record -> record.mealType.isSameQuickRecordMealType(mealType) }
+        if (alreadyRegistered) {
+            throw DuplicateDailyMealException(mealType)
         }
     }
 

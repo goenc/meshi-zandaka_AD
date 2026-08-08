@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.fail
 import org.junit.Test
 import java.time.ZoneId
 
@@ -152,6 +153,60 @@ class CreateQuickRecordUseCaseTest {
         assertEquals(10.0, merged.proteinG, 0.0)
         assertEquals(10.0, merged.fatG, 0.0)
         assertEquals(40.0, merged.carbG, 0.0)
+    }
+
+    @Test
+    fun セットは個別項目削除後も同日に再登録できない() = runTest {
+        val templateDao = FakeMealTemplateDao(
+            template = MealTemplateWithRelations(
+                template = MealTemplateEntity(
+                    id = 4,
+                    name = "朝セット",
+                    mealType = "BREAKFAST",
+                    shortcutRole = "BREAKFAST",
+                    baseCalories = 400,
+                    proteinG = 20.0,
+                    fatG = 10.0,
+                    carbG = 30.0,
+                    isSpecial = false,
+                    comparisonTemplateId = null,
+                    weeklyLimitCount = null,
+                    monthlyLimitCount = null,
+                    memo = "",
+                ),
+                optionGroups = emptyList(),
+            ),
+        )
+        val recordDao = FakeMealRecordDao(existingRecords = mutableListOf())
+        val useCase = CreateQuickRecordUseCase(
+            templateRepository = MealTemplateRepository(templateDao),
+            recordRepository = MealRecordRepository(recordDao),
+        )
+
+        val recordId = useCase(
+            templateId = 4,
+            isSetRegistration = true,
+            nowMillis = 1780916400000,
+            zoneId = zoneId,
+        )
+
+        recordDao.updateRecord(
+            recordDao.records.single().record.copy(
+                totalCalories = 300,
+                excludedDrivePlanItemKeysJson = "[\"main-dish\"]",
+            ),
+        )
+
+        try {
+            useCase(
+                templateId = 4,
+                isSetRegistration = true,
+                nowMillis = 1780916400000,
+                zoneId = zoneId,
+            )
+            fail("DuplicateDailyMealException was expected")
+        } catch (_: DuplicateDailyMealException) {
+        }
     }
 
     @Test
