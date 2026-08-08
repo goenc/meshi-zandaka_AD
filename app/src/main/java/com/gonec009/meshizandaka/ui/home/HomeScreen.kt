@@ -485,17 +485,17 @@ private fun WeeklyChartCard(
 
 @Composable
 private fun LegendRow() {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            LegendItem(label = stringResource(R.string.chart_breakfast), color = BreakfastChartColor)
-            LegendItem(label = stringResource(R.string.chart_morning_snack), color = MorningSnackChartColor)
-            LegendItem(label = stringResource(R.string.chart_lunch), color = LunchChartColor)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            LegendItem(label = stringResource(R.string.chart_dinner), color = DinnerChartColor)
-            LegendItem(label = stringResource(R.string.chart_daytime_snack), color = DaytimeSnackChartColor)
-            LegendItem(label = stringResource(R.string.chart_free_snack), color = FreeSnackChartColor)
-        }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        LegendItem(label = stringResource(R.string.chart_breakfast), color = BreakfastChartColor)
+        LegendItem(label = stringResource(R.string.chart_morning_snack), color = MorningSnackChartColor)
+        LegendItem(label = stringResource(R.string.chart_lunch), color = LunchChartColor)
+        LegendItem(label = stringResource(R.string.chart_daytime_snack), color = DaytimeSnackChartColor)
+        LegendItem(label = stringResource(R.string.chart_dinner), color = DinnerChartColor)
+        LegendItem(label = stringResource(R.string.chart_free_snack), color = FreeSnackChartColor)
     }
 }
 
