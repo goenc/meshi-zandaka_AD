@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -136,14 +137,24 @@ private fun decodeSampledBitmap(
     if (uriString.isNullOrBlank()) return null
     val uri = runCatching { Uri.parse(uriString) }.getOrNull() ?: return null
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    context.contentResolver.openInputStream(uri)?.use { input ->
+    openImageInputStream(context, uriString, uri)?.use { input ->
         BitmapFactory.decodeStream(input, null, bounds)
     }
     val sampleSize = calculateSampleSize(bounds.outWidth, bounds.outHeight, maxSizePx)
     val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
-    return context.contentResolver.openInputStream(uri)?.use { input ->
+    return openImageInputStream(context, uriString, uri)?.use { input ->
         BitmapFactory.decodeStream(input, null, options)
     }
+}
+
+private fun openImageInputStream(
+    context: Context,
+    uriString: String,
+    uri: Uri,
+) = when (uri.scheme?.lowercase()) {
+    null, "" -> File(uriString).inputStream()
+    "file" -> uri.path?.let(::File)?.inputStream()
+    else -> context.contentResolver.openInputStream(uri)
 }
 
 private fun calculateSampleSize(
