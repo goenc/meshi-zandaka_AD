@@ -3,10 +3,13 @@ package com.gonec009.meshizandaka.ui.quickrecord
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gonec009.meshizandaka.data.AppContainer
+import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.domain.usecase.DuplicateDailyMealException
+import com.gonec009.meshizandaka.domain.usecase.RecordAppendTargetException
+import com.gonec009.meshizandaka.util.TimeRangeUtils
 import com.gonec009.meshizandaka.util.sanitizeDecimalInput
 import com.gonec009.meshizandaka.util.formatOneDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.ZoneId
 
 data class QuickRecordUiState(
     val availableTemplates: List<MealTemplate> = emptyList(),
@@ -27,6 +31,8 @@ data class QuickRecordUiState(
     val carbG: String = "",
     val memo: String = "",
     val photoUri: String? = null,
+    val todayMealRecords: List<MealRecord> = emptyList(),
+    val appendToRecordId: Long? = null,
     val isSaving: Boolean = false,
     val message: String? = null,
 )
@@ -36,6 +42,7 @@ class QuickRecordViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(QuickRecordUiState())
     val uiState: StateFlow<QuickRecordUiState> = _uiState.asStateFlow()
+    private val zoneId = ZoneId.systemDefault()
 
     init {
         viewModelScope.launch {
@@ -69,14 +76,50 @@ class QuickRecordViewModel(
                 }
             }
         }
+        viewModelScope.launch {
+            val (startInclusive, endInclusive) = TimeRangeUtils.todayRange(System.currentTimeMillis(), zoneId)
+            container.mealRecordRepository.observeRecordsBetween(startInclusive, endInclusive).collect { records ->
+                _uiState.update { state ->
+                    state.copy(
+                        todayMealRecords = records,
+                        appendToRecordId = resolveAppendTarget(
+                            selectedMealType = state.selectedMealType,
+                            currentTargetId = state.appendToRecordId,
+                            records = records,
+                        ),
+                    )
+                }
+            }
+        }
     }
 
     fun selectTemplate(template: MealTemplate) {
-        _uiState.update { applyTemplate(it, template) }
+        _uiState.update { state ->
+            applyTemplate(state, template).copy(
+                appendToRecordId = if (template.mealType == MealType.EATING_OUT) {
+                    defaultAppendTarget(state.todayMealRecords)
+                } else {
+                    null
+                },
+            )
+        }
     }
 
     fun selectMealType(mealType: MealType) {
-        _uiState.update { it.copy(selectedMealType = mealType) }
+        _uiState.update { state ->
+            state.copy(
+                selectedMealType = mealType,
+                appendToRecordId = if (mealType == MealType.EATING_OUT) {
+                    defaultAppendTarget(state.todayMealRecords)
+                } else {
+                    null
+                },
+            )
+        }
+    }
+
+    fun selectAppendTarget(recordId: Long?) {
+        _uiState.update { it.copy(appendToRecordId = recordId) }
     }
 
     fun setTemplateName(value: String) {
@@ -126,31 +169,44 @@ class QuickRecordViewModel(
     }
 
     fun saveRecord() {
-        val template = _uiState.value.selectedTemplate ?: return
+        val state = _uiState.value
+        val template = state.selectedTemplate ?: return
+        val appendToRecordId = state.appendToRecordId.takeIf { state.selectedMealType == MealType.EATING_OUT }
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
             try {
                 container.createQuickRecordUseCase(
                     templateId = template.id,
-                    templateNameSnapshot = _uiState.value.templateName.ifBlank { template.name },
-                    totalCaloriesOverride = _uiState.value.totalCalories.toIntOrNull() ?: 0,
-                    proteinOverride = _uiState.value.proteinG.toDoubleOrNull() ?: 0.0,
-                    fatOverride = _uiState.value.fatG.toDoubleOrNull() ?: 0.0,
-                    carbOverride = _uiState.value.carbG.toDoubleOrNull() ?: 0.0,
-                    isSpecialOverride = _uiState.value.isSpecial,
-                    memo = _uiState.value.memo,
-                    photoUri = _uiState.value.photoUri,
-                    mealType = _uiState.value.selectedMealType,
+                    templateNameSnapshot = state.templateName.ifBlank { template.name },
+                    totalCaloriesOverride = state.totalCalories.toIntOrNull() ?: 0,
+                    proteinOverride = state.proteinG.toDoubleOrNull() ?: 0.0,
+                    fatOverride = state.fatG.toDoubleOrNull() ?: 0.0,
+                    carbOverride = state.carbG.toDoubleOrNull() ?: 0.0,
+                    isSpecialOverride = state.isSpecial,
+                    memo = state.memo,
+                    photoUri = state.photoUri,
+                    mealType = state.selectedMealType,
+                    appendToRecordId = appendToRecordId,
                 )
                 _uiState.update {
                     it.copy(
                         isSaving = false,
                         memo = "",
                         photoUri = null,
-                        message = "記録しました",
+                        message = appendToRecordId?.let { recordId ->
+                            it.todayMealRecords.firstOrNull { record -> record.id == recordId }
+                                ?.let { record -> "${mealTypeName(record.mealType)}に追加しました" }
+                        } ?: "記録しました",
                     )
                 }
             } catch (error: DuplicateDailyMealException) {
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        message = error.message,
+                    )
+                }
+            } catch (error: RecordAppendTargetException) {
                 _uiState.update {
                     it.copy(
                         isSaving = false,
@@ -182,5 +238,33 @@ class QuickRecordViewModel(
             memo = template.memo,
             photoUri = template.photoUri,
         )
+    }
+
+    private fun defaultAppendTarget(records: List<MealRecord>): Long? {
+        return records.filter { record ->
+            record.mealType == MealType.LUNCH || record.mealType == MealType.DINNER
+        }.singleOrNull()?.id
+    }
+
+    private fun resolveAppendTarget(
+        selectedMealType: MealType,
+        currentTargetId: Long?,
+        records: List<MealRecord>,
+    ): Long? {
+        if (selectedMealType != MealType.EATING_OUT) return null
+        val target = currentTargetId?.let { id -> records.firstOrNull { it.id == id } }
+        return target?.id ?: defaultAppendTarget(records)
+    }
+
+    private fun mealTypeName(mealType: MealType): String = when (mealType) {
+        MealType.BREAKFAST -> "朝食"
+        MealType.MORNING_SNACK -> "間朝"
+        MealType.LUNCH -> "昼食"
+        MealType.DINNER -> "夕食"
+        MealType.DAYTIME_SNACK -> "間昼"
+        MealType.FREE_SNACK,
+        MealType.SNACK,
+        -> "間全"
+        MealType.EATING_OUT -> "外食"
     }
 }

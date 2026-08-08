@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
+import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
@@ -95,6 +96,7 @@ fun QuickRecordRoute(
         onMemoChange = viewModel::setMemo,
         onPhotoCaptured = viewModel::setPhotoUri,
         onPhotoRemoved = viewModel::clearPhoto,
+        onAppendTargetSelect = viewModel::selectAppendTarget,
         onSaveClick = viewModel::saveRecord,
     )
 }
@@ -115,6 +117,7 @@ private fun QuickRecordScreen(
     onMemoChange: (String) -> Unit,
     onPhotoCaptured: (String?) -> Unit,
     onPhotoRemoved: () -> Unit,
+    onAppendTargetSelect: (Long?) -> Unit,
     onSaveClick: () -> Unit,
 ) {
     var showCamera by remember { mutableStateOf(false) }
@@ -131,12 +134,32 @@ private fun QuickRecordScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item {
+            val normalTemplates = state.availableTemplates.filter { it.mealType != MealType.EATING_OUT }
+            val eatingOutTemplates = state.availableTemplates.filter { it.mealType == MealType.EATING_OUT }
+            val appendableRecords = state.todayMealRecords.filter { record ->
+                record.mealType == MealType.LUNCH || record.mealType == MealType.DINNER
+            }
+            if (normalTemplates.isNotEmpty()) item {
                 TemplateSection(
                     title = stringResource(R.string.quick_record_templates),
-                    templates = state.availableTemplates,
+                    templates = normalTemplates,
                     selectedTemplateId = state.selectedTemplate?.id,
                     onTemplateSelect = onTemplateSelect,
+                )
+            }
+            if (eatingOutTemplates.isNotEmpty()) item {
+                EatingOutTemplateSection(
+                    title = stringResource(R.string.quick_record_eating_out_templates),
+                    templates = eatingOutTemplates,
+                    selectedTemplateId = state.selectedTemplate?.id,
+                    onTemplateSelect = onTemplateSelect,
+                )
+            }
+            if (state.selectedMealType == MealType.EATING_OUT && appendableRecords.isNotEmpty()) item {
+                AppendTargetSection(
+                    records = appendableRecords,
+                    selectedRecordId = state.appendToRecordId,
+                    onTargetSelect = onAppendTargetSelect,
                 )
             }
             item {
@@ -326,6 +349,99 @@ private fun TemplateSection(
                     onClick = { onTemplateSelect(template) },
                     label = { Text(template.name) },
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EatingOutTemplateSection(
+    title: String,
+    templates: List<MealTemplate>,
+    selectedTemplateId: Long?,
+    onTemplateSelect: (MealTemplate) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = title, style = MaterialTheme.typography.titleMedium)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(templates, key = { it.id }) { template ->
+                Card(
+                    modifier = Modifier
+                        .width(180.dp)
+                        .clickable { onTemplateSelect(template) },
+                    border = if (selectedTemplateId == template.id) {
+                        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                    } else {
+                        null
+                    },
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = template.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = stringResource(R.string.kcal_format, template.baseCalories),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        if (template.memo.isNotBlank()) {
+                            Text(
+                                text = template.memo,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppendTargetSection(
+    records: List<MealRecord>,
+    selectedRecordId: Long?,
+    onTargetSelect: (Long?) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.quick_record_append_target),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = stringResource(R.string.quick_record_append_target_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    FilterChip(
+                        selected = selectedRecordId == null,
+                        onClick = { onTargetSelect(null) },
+                        label = { Text(stringResource(R.string.quick_record_new_eating_out)) },
+                    )
+                }
+                items(records, key = { it.id }) { record ->
+                    FilterChip(
+                        selected = selectedRecordId == record.id,
+                        onClick = { onTargetSelect(record.id) },
+                        label = {
+                            Text(stringResource(R.string.quick_record_append_meal, mealTypeLabel(record.mealType)))
+                        },
+                    )
+                }
             }
         }
     }

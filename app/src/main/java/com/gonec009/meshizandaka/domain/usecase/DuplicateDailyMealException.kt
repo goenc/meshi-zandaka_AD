@@ -6,6 +6,8 @@ class DuplicateDailyMealException(
     mealType: MealType,
 ) : IllegalStateException("${mealTypeLabel(mealType)}は今日はすでに登録されています。削除してから登録してください。")
 
+class RecordAppendTargetException : IllegalStateException("追加先の食事記録が見つかりません。画面を更新してから再度登録してください。")
+
 private fun mealTypeLabel(mealType: MealType): String {
     return when (mealType) {
         MealType.BREAKFAST -> "朝食"

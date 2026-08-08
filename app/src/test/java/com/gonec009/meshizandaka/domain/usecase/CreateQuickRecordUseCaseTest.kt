@@ -143,6 +143,74 @@ class CreateQuickRecordUseCaseTest {
         assertEquals(2L, insertedId)
         assertEquals(2, recordDao.records.size)
     }
+
+    @Test
+    fun 外食カードを既存の昼食へ追加できる() = runTest {
+        val templateDao = FakeMealTemplateDao(
+            template = MealTemplateWithRelations(
+                template = MealTemplateEntity(
+                    id = 3,
+                    name = "外食カード",
+                    mealType = "EATING_OUT",
+                    baseCalories = 600,
+                    proteinG = 25.0,
+                    fatG = 20.0,
+                    carbG = 70.0,
+                    isSpecial = true,
+                    comparisonTemplateId = null,
+                    weeklyLimitCount = null,
+                    monthlyLimitCount = null,
+                    memo = "",
+                ),
+                optionGroups = emptyList(),
+            ),
+        )
+        val recordDao = FakeMealRecordDao(
+            existingRecords = mutableListOf(
+                MealRecordWithRelations(
+                    record = MealRecordEntity(
+                        id = 1,
+                        eatenAt = 1780880400000,
+                        mealType = "LUNCH",
+                        templateId = 10,
+                        templateNameSnapshot = "昼食",
+                        totalCalories = 500,
+                        proteinG = 20.0,
+                        fatG = 10.0,
+                        carbG = 50.0,
+                        isSpecial = false,
+                        specialDeltaCalories = 0,
+                        sourceType = "TEMPLATE",
+                        memo = "昼のメモ",
+                    ),
+                    selectedOptions = emptyList(),
+                ),
+            ),
+        )
+        val useCase = CreateQuickRecordUseCase(
+            templateRepository = MealTemplateRepository(templateDao),
+            recordRepository = MealRecordRepository(recordDao),
+        )
+
+        val recordId = useCase(
+            templateId = 3,
+            appendToRecordId = 1L,
+            nowMillis = 1780880400000,
+            zoneId = zoneId,
+        )
+
+        val merged = recordDao.records.single().record
+        assertEquals(1L, recordId)
+        assertEquals(1, recordDao.records.size)
+        assertEquals("昼食 / 外食カード", merged.templateNameSnapshot)
+        assertEquals(1100, merged.totalCalories)
+        assertEquals(45.0, merged.proteinG, 0.0)
+        assertEquals(30.0, merged.fatG, 0.0)
+        assertEquals(120.0, merged.carbG, 0.0)
+        assertEquals("昼のメモ", merged.memo)
+        assertEquals("LUNCH", merged.mealType)
+        assertEquals(600, merged.specialDeltaCalories)
+    }
 }
 
 private class FakeMealTemplateDao(
@@ -184,6 +252,9 @@ private class FakeMealRecordDao(
 
     override suspend fun getRecord(recordId: Long): MealRecordEntity? = records.firstOrNull { it.record.id == recordId }?.record
 
+    override suspend fun getRecordWithRelations(recordId: Long): MealRecordWithRelations? =
+        records.firstOrNull { it.record.id == recordId }
+
     override suspend fun existsRecordForMealTypeBetween(
         mealType: String,
         startInclusive: Long,
@@ -202,7 +273,12 @@ private class FakeMealRecordDao(
 
     override suspend fun insertRecordOptions(options: List<MealRecordOptionEntity>) = Unit
 
-    override suspend fun updateRecord(record: MealRecordEntity) = Unit
+    override suspend fun updateRecord(record: MealRecordEntity) {
+        val index = records.indexOfFirst { it.record.id == record.id }
+        if (index >= 0) {
+            records[index] = records[index].copy(record = record)
+        }
+    }
 
     override suspend fun deleteOptionsForRecord(recordId: Long) = Unit
 

@@ -27,6 +27,8 @@ class MealRecordRepository(
 
     fun observeRecord(recordId: Long): Flow<MealRecord?> = dao.observeRecord(recordId).map { it?.let(::toModel) }
 
+    suspend fun getRecord(recordId: Long): MealRecord? = dao.getRecordWithRelations(recordId)?.let(::toModel)
+
     suspend fun existsRecordForMealTypeBetween(
         mealType: MealType,
         startInclusive: Long,
@@ -73,7 +75,14 @@ class MealRecordRepository(
         val current = dao.getRecord(record.id) ?: return
         dao.updateRecord(
             current.copy(
+                eatenAt = record.eatenAt,
+                mealType = record.mealType.name,
+                templateId = record.templateId,
+                templateNameSnapshot = record.templateNameSnapshot,
                 totalCalories = record.totalCalories,
+                proteinG = record.proteinG,
+                fatG = record.fatG,
+                carbG = record.carbG,
                 isSpecial = record.isSpecial,
                 specialDeltaCalories = record.specialDeltaCalories,
                 memo = record.memo,
@@ -81,9 +90,50 @@ class MealRecordRepository(
                 photoUri = record.photoUri,
             ),
         )
+        dao.deleteOptionsForRecord(record.id)
+        if (record.selectedOptions.isNotEmpty()) {
+            dao.insertRecordOptions(
+                record.selectedOptions.map { option ->
+                    MealRecordOptionEntity(
+                        mealRecordId = record.id,
+                        optionGroupNameSnapshot = option.optionGroupNameSnapshot,
+                        optionNameSnapshot = option.optionNameSnapshot,
+                        calorieDelta = option.calorieDelta,
+                        proteinDeltaG = option.proteinDeltaG,
+                        fatDeltaG = option.fatDeltaG,
+                        carbDeltaG = option.carbDeltaG,
+                    )
+                },
+            )
+        }
         if (current.photoUri != record.photoUri) {
             deletePhoto(current.photoUri)
         }
+    }
+
+    suspend fun appendToRecord(recordId: Long, addition: MealRecord): Boolean {
+        val current = getRecord(recordId) ?: return false
+        val combinedName = listOf(current.templateNameSnapshot, addition.templateNameSnapshot)
+            .filter { it.isNotBlank() }
+            .joinToString(" / ")
+        val combinedMemo = listOf(current.memo, addition.memo)
+            .filter { it.isNotBlank() }
+            .joinToString("\n")
+        updateRecord(
+            current.copy(
+                templateNameSnapshot = combinedName,
+                totalCalories = current.totalCalories + addition.totalCalories,
+                proteinG = current.proteinG + addition.proteinG,
+                fatG = current.fatG + addition.fatG,
+                carbG = current.carbG + addition.carbG,
+                isSpecial = current.isSpecial || addition.isSpecial,
+                specialDeltaCalories = current.specialDeltaCalories + addition.specialDeltaCalories,
+                memo = combinedMemo,
+                photoUri = current.photoUri ?: addition.photoUri,
+                selectedOptions = current.selectedOptions + addition.selectedOptions,
+            ),
+        )
+        return true
     }
 
     suspend fun deleteRecord(recordId: Long) {

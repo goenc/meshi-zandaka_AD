@@ -25,12 +25,20 @@ class CreateQuickRecordUseCase(
         memo: String = "",
         photoUri: String? = null,
         mealType: MealType? = null,
+        appendToRecordId: Long? = null,
         nowMillis: Long = System.currentTimeMillis(),
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): Long {
         val template = templateRepository.getTemplate(templateId) ?: error("Template not found: $templateId")
         val recordMealType = mealType ?: template.mealType
-        ensureDailyMealSlotAvailable(recordMealType, nowMillis, zoneId)
+        val appendTarget = appendToRecordId?.let { recordId ->
+            recordRepository.getRecord(recordId)?.also { target ->
+                validateAppendTarget(target, recordMealType, nowMillis, zoneId)
+            } ?: throw RecordAppendTargetException()
+        }
+        if (appendTarget == null) {
+            ensureDailyMealSlotAvailable(recordMealType, nowMillis, zoneId)
+        }
         val selectedOptions = template.optionGroups.flatMap { group ->
             group.options.filter { it.id in selectedOptionIds }.map { option ->
                 MealRecordOption(
@@ -59,24 +67,30 @@ class CreateQuickRecordUseCase(
         val carb = carbOverride ?: template.carbG + selectedOptions.sumOf { it.carbDeltaG }
         val isSpecial = isSpecialOverride ?: template.isSpecial
 
-        return recordRepository.insertRecord(
-            MealRecord(
-                eatenAt = nowMillis,
-                mealType = recordMealType,
-                templateId = template.id,
-                templateNameSnapshot = templateNameSnapshot ?: template.name,
-                totalCalories = totalCalories,
-                proteinG = protein,
-                fatG = fat,
-                carbG = carb,
-                isSpecial = isSpecial,
-                specialDeltaCalories = if (isSpecial) totalCalories - comparisonCalories else 0,
-                sourceType = SourceType.QUICK_BUTTON,
-                memo = memo,
-                photoUri = photoUri,
-                selectedOptions = selectedOptions,
-            ),
+        val record = MealRecord(
+            eatenAt = nowMillis,
+            mealType = recordMealType,
+            templateId = template.id,
+            templateNameSnapshot = templateNameSnapshot ?: template.name,
+            totalCalories = totalCalories,
+            proteinG = protein,
+            fatG = fat,
+            carbG = carb,
+            isSpecial = isSpecial,
+            specialDeltaCalories = if (isSpecial) totalCalories - comparisonCalories else 0,
+            sourceType = SourceType.QUICK_BUTTON,
+            memo = memo,
+            photoUri = photoUri,
+            selectedOptions = selectedOptions,
         )
+        return if (appendTarget != null) {
+            if (!recordRepository.appendToRecord(appendTarget.id, record)) {
+                throw RecordAppendTargetException()
+            }
+            appendTarget.id
+        } else {
+            recordRepository.insertRecord(record)
+        }
     }
 
     private suspend fun ensureDailyMealSlotAvailable(
@@ -88,6 +102,23 @@ class CreateQuickRecordUseCase(
         val (startInclusive, endInclusive) = TimeRangeUtils.todayRange(nowMillis, zoneId)
         if (recordRepository.existsRecordForMealTypeBetween(mealType, startInclusive, endInclusive)) {
             throw DuplicateDailyMealException(mealType)
+        }
+    }
+
+    private fun validateAppendTarget(
+        target: MealRecord,
+        recordMealType: MealType,
+        nowMillis: Long,
+        zoneId: ZoneId,
+    ) {
+        if (recordMealType != MealType.EATING_OUT ||
+            (target.mealType != MealType.LUNCH && target.mealType != MealType.DINNER)
+        ) {
+            throw RecordAppendTargetException()
+        }
+        val (startInclusive, endInclusive) = TimeRangeUtils.todayRange(nowMillis, zoneId)
+        if (target.eatenAt !in startInclusive..endInclusive) {
+            throw RecordAppendTargetException()
         }
     }
 
