@@ -84,6 +84,31 @@ class DrivePlanSnapshotReader(
             }
             .toMap()
 
+        val storedRecipeRows = rows
+            .asSequence()
+            .filter { it.isEntity("RecipeEntity") }
+            .mapNotNull { row ->
+                val payload = row.payload ?: return@mapNotNull null
+                idKey(payload.stringOrNull("id") ?: row.rowKey) to row
+            }
+            .toMap()
+        val storedRecipeIngredientRows = groupRowsByField(
+            rows.filter { it.isEntity("RecipeIngredientEntity") },
+            "recipeId",
+        )
+        val storedFoodRows = rows
+            .asSequence()
+            .filter { it.isEntity("FoodEntity") }
+            .mapNotNull { row ->
+                val payload = row.payload ?: return@mapNotNull null
+                idKey(payload.stringOrNull("id") ?: row.rowKey) to row
+            }
+            .toMap()
+        val storedFoodPortionRows = groupRowsByField(
+            rows.filter { it.isEntity("FoodPortionEntity") },
+            "foodId",
+        )
+
         val mealRows = rows.filter { it.isEntity("DailyPlanMealSnapshotEntity") }
         val itemRows = rows.filter { it.isEntity("DailyPlanMealItemSnapshotEntity") }
         val foodRows = rows.filter { it.isEntity("DailyPlanFoodSnapshotEntity") }
@@ -156,9 +181,148 @@ class DrivePlanSnapshotReader(
             ?.stringOrNull("selectedPlanId")
             ?.let { preferredId -> plans.firstOrNull { it.id.equals(preferredId, ignoreCase = true) }?.id }
 
+        val externalCards = buildExternalCards(
+            recipeRows = storedRecipeRows,
+            ingredientRows = storedRecipeIngredientRows,
+            foodRows = storedFoodRows,
+            foodPortionRows = storedFoodPortionRows,
+            imageHashes = imageHashes,
+        )
+
         return DrivePlanCatalog(
             plans = plans,
             preferredPlanId = preferredPlanId,
+            externalCards = externalCards,
+        )
+    }
+
+    private fun buildExternalCards(
+        recipeRows: Map<String, SnapshotRow>,
+        ingredientRows: Map<String, List<SnapshotRow>>,
+        foodRows: Map<String, SnapshotRow>,
+        foodPortionRows: Map<String, List<SnapshotRow>>,
+        imageHashes: Map<String, String>,
+    ): List<DriveExternalCard> = recipeRows.values
+        .asSequence()
+        .mapNotNull { row ->
+            val recipe = row.payload ?: return@mapNotNull null
+            if (!recipe.isEatingOutRecipe() || recipe.optBooleanIgnoreCase("isArchived", false)) {
+                return@mapNotNull null
+            }
+            val id = recipe.stringOrNull("id") ?: row.rowKey
+            val ingredients = ingredientRows[idKey(id)].orEmpty()
+            if (ingredients.none { ingredient ->
+                    ingredient.payload?.optBooleanIgnoreCase("isEnabled", true) == true
+                }
+            ) {
+                return@mapNotNull null
+            }
+            val nutrition = nutritionForStoredRecipe(
+                recipe = recipe,
+                recipeRows = recipeRows,
+                ingredientRows = ingredientRows,
+                foodRows = foodRows,
+                foodPortionRows = foodPortionRows,
+                visiting = emptySet(),
+            )
+            DriveExternalCard(
+                id = id,
+                name = recipe.stringOrNull("name").orEmpty().ifBlank { "外食カード" },
+                storeName = recipe.stringOrNull("externalStoreName"),
+                tabName = recipe.stringOrNull("externalTabName"),
+                amountLabel = formatStoredAmount(1_000_000L, 2, null),
+                memo = recipe.stringOrNull("memo").orEmpty(),
+                imageContentHash = recipe.stringOrNull("imageAssetId")
+                    ?.let { imageHashes[idKey(it)] },
+                calories = nutrition.calories.roundToInt(),
+                proteinG = nutrition.proteinG,
+                fatG = nutrition.fatG,
+                carbG = nutrition.carbG,
+            )
+        }
+        .sortedWith(
+            compareBy<DriveExternalCard> { it.storeName.orEmpty() }
+                .thenBy { it.tabName.orEmpty() }
+                .thenBy { it.name }
+                .thenBy { it.id },
+        )
+        .toList()
+
+    private fun nutritionForStoredRecipe(
+        recipe: JSONObject,
+        recipeRows: Map<String, SnapshotRow>,
+        ingredientRows: Map<String, List<SnapshotRow>>,
+        foodRows: Map<String, SnapshotRow>,
+        foodPortionRows: Map<String, List<SnapshotRow>>,
+        visiting: Set<String>,
+    ): NutritionTotals {
+        val directNutrition = externalNutrition(recipe)
+        if (directNutrition != null) return directNutrition
+
+        val recipeId = idKey(recipe.stringOrNull("id"))
+        if (recipeId.isBlank() || recipeId in visiting) return NutritionTotals()
+        val nextVisiting = visiting + recipeId
+        return ingredientRows[recipeId]
+            .orEmpty()
+            .asSequence()
+            .mapNotNull { ingredientRow ->
+                val ingredient = ingredientRow.payload ?: return@mapNotNull null
+                if (!ingredient.optBooleanIgnoreCase("isEnabled", true)) return@mapNotNull null
+                nutritionForStoredIngredient(
+                    ingredient = ingredient,
+                    recipeRows = recipeRows,
+                    ingredientRows = ingredientRows,
+                    foodRows = foodRows,
+                    foodPortionRows = foodPortionRows,
+                    visiting = nextVisiting,
+                )
+            }
+            .fold(NutritionTotals()) { total, ingredient -> total + ingredient }
+    }
+
+    private fun nutritionForStoredIngredient(
+        ingredient: JSONObject,
+        recipeRows: Map<String, SnapshotRow>,
+        ingredientRows: Map<String, List<SnapshotRow>>,
+        foodRows: Map<String, SnapshotRow>,
+        foodPortionRows: Map<String, List<SnapshotRow>>,
+        visiting: Set<String>,
+    ): NutritionTotals {
+        val componentType = ingredient.optIntIgnoreCase("componentType", 0)
+        if (componentType == 1) {
+            val referencedRecipeId = ingredient.stringOrNull("referencedRecipeId")
+                ?: return NutritionTotals()
+            val referencedRecipe = recipeRows[idKey(referencedRecipeId)]?.payload
+                ?: return NutritionTotals()
+            return nutritionForStoredRecipe(
+                recipe = referencedRecipe,
+                recipeRows = recipeRows,
+                ingredientRows = ingredientRows,
+                foodRows = foodRows,
+                foodPortionRows = foodPortionRows,
+                visiting = visiting,
+            ).scaled(recipeQuantityFactor(ingredient, referencedRecipe))
+        }
+
+        val foodId = ingredient.stringOrNull("foodId") ?: return NutritionTotals()
+        return nutritionForFood(
+            food = foodRows[idKey(foodId)]?.payload,
+            item = ingredient,
+            portionRows = foodPortionRows[idKey(foodId)].orEmpty(),
+        )
+    }
+
+    private fun externalNutrition(recipe: JSONObject): NutritionTotals? {
+        val energy = recipe.longOrNullIgnoreCase("externalEnergyTenthsKcal")
+        val protein = recipe.longOrNullIgnoreCase("externalProteinMilligrams")
+        val fat = recipe.longOrNullIgnoreCase("externalFatMilligrams")
+        val carbohydrate = recipe.longOrNullIgnoreCase("externalCarbohydrateMilligrams")
+        if (energy == null || protein == null || fat == null || carbohydrate == null) return null
+        return NutritionTotals(
+            calories = energy / 10.0,
+            proteinG = protein / 1_000.0,
+            fatG = fat / 1_000.0,
+            carbG = carbohydrate / 1_000.0,
         )
     }
 
@@ -428,6 +592,15 @@ class DrivePlanSnapshotReader(
             }
             else -> -1
         }
+    }
+
+    private fun JSONObject.isEatingOutRecipe(): Boolean = when (val kind = valueIgnoreCase("kind")) {
+        is Number -> kind.toInt() == 1
+        is String -> when (kind.lowercase(Locale.ROOT)) {
+            "1", "eatingout", "eating_out", "eating-out" -> true
+            else -> false
+        }
+        else -> false
     }
 
     private fun formatStoredAmount(amount: Long, unit: Int, customUnitName: String?): String {

@@ -45,14 +45,31 @@ data class DrivePlan(
     val meals: List<DrivePlanMeal>,
 )
 
+data class DriveExternalCard(
+    val id: String,
+    val name: String,
+    val storeName: String? = null,
+    val tabName: String? = null,
+    val amountLabel: String = "1 個",
+    val memo: String = "",
+    val imageContentHash: String? = null,
+    val imagePath: String? = null,
+    val calories: Int = 0,
+    val proteinG: Double = 0.0,
+    val fatG: Double = 0.0,
+    val carbG: Double = 0.0,
+)
+
 data class DrivePlanCatalog(
     val plans: List<DrivePlan>,
     val preferredPlanId: String?,
+    val externalCards: List<DriveExternalCard> = emptyList(),
 )
 
 data class DrivePlanState(
     val phase: DrivePlanPhase = DrivePlanPhase.IDLE,
     val plans: List<DrivePlan> = emptyList(),
+    val externalCards: List<DriveExternalCard> = emptyList(),
     val selectedPlanId: String? = null,
     val imageLoading: Boolean = false,
     val errorMessage: String? = null,

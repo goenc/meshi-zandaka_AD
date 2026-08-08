@@ -3,7 +3,6 @@ package com.gonec009.meshizandaka.ui.quickrecord
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gonec009.meshizandaka.data.AppContainer
-import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
@@ -23,7 +22,13 @@ import java.time.ZoneId
 data class QuickRecordDriveCard(
     val id: String,
     val mealLabel: String,
-    val item: DrivePlanItem,
+    val name: String,
+    val amountLabel: String,
+    val imagePath: String?,
+    val calories: Int,
+    val proteinG: Double,
+    val fatG: Double,
+    val carbG: Double,
 )
 
 data class QuickRecordUiState(
@@ -92,17 +97,21 @@ class QuickRecordViewModel(
         }
         viewModelScope.launch {
             container.driveAccessManager.planState.collect { planState ->
-                val selectedPlan = planState.selectedPlan
-                val cards = selectedPlan?.meals?.flatMap { meal ->
-                    meal.items.mapIndexedNotNull { itemIndex, item ->
-                        if (!item.isEatingOutCard()) return@mapIndexedNotNull null
-                        QuickRecordDriveCard(
-                            id = "${selectedPlan.id}:${meal.slot}:$itemIndex",
-                            mealLabel = meal.name,
-                            item = item,
-                        )
-                    }
-                }.orEmpty()
+                val cards = planState.externalCards.map { card ->
+                    QuickRecordDriveCard(
+                        id = card.id,
+                        mealLabel = listOfNotNull(card.storeName, card.tabName)
+                            .joinToString(" / ")
+                            .ifBlank { "Driveの外食カード" },
+                        name = card.name,
+                        amountLabel = card.amountLabel,
+                        imagePath = card.imagePath,
+                        calories = card.calories,
+                        proteinG = card.proteinG,
+                        fatG = card.fatG,
+                        carbG = card.carbG,
+                    )
+                }
                 _uiState.update { state ->
                     val selectedCard = state.selectedDriveEatingOutCard?.let { current ->
                         cards.firstOrNull { card -> card.id == current.id }
@@ -149,15 +158,15 @@ class QuickRecordViewModel(
             state.copy(
                 selectedTemplate = null,
                 selectedDriveEatingOutCard = card,
-                templateName = card.item.name,
+                templateName = card.name,
                 selectedMealType = MealType.EATING_OUT,
                 isSpecial = true,
-                totalCalories = card.item.calories.toString(),
-                proteinG = formatOneDecimal(card.item.proteinG),
-                fatG = formatOneDecimal(card.item.fatG),
-                carbG = formatOneDecimal(card.item.carbG),
-                memo = card.item.amountLabel,
-                photoUri = card.item.imagePath,
+                totalCalories = card.calories.toString(),
+                proteinG = formatOneDecimal(card.proteinG),
+                fatG = formatOneDecimal(card.fatG),
+                carbG = formatOneDecimal(card.carbG),
+                memo = card.amountLabel,
+                photoUri = card.imagePath,
                 appendToRecordId = defaultAppendTarget(state.todayMealRecords),
             )
         }
@@ -238,7 +247,7 @@ class QuickRecordViewModel(
                 container.createQuickRecordUseCase(
                     templateId = template?.id,
                     templateNameSnapshot = state.templateName.ifBlank {
-                        template?.name ?: driveCard?.item?.name.orEmpty()
+                        template?.name ?: driveCard?.name.orEmpty()
                     },
                     totalCaloriesOverride = state.totalCalories.toIntOrNull() ?: 0,
                     proteinOverride = state.proteinG.toDoubleOrNull() ?: 0.0,
@@ -329,6 +338,4 @@ class QuickRecordViewModel(
         -> "間全"
         MealType.EATING_OUT -> "外食"
     }
-
-    private fun DrivePlanItem.isEatingOutCard(): Boolean = name.contains("外食")
 }

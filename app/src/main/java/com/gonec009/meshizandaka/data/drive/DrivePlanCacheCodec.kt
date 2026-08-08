@@ -8,6 +8,7 @@ internal object DrivePlanCacheCodec {
         val root = JSONObject()
             .putNullable("preferredPlanId", catalog.preferredPlanId)
             .put("plans", JSONArray())
+            .put("externalCards", JSONArray())
         val plans = root.getJSONArray("plans")
 
         catalog.plans.forEach { plan ->
@@ -54,12 +55,31 @@ internal object DrivePlanCacheCodec {
             }
             plans.put(planJson)
         }
+        val externalCards = root.getJSONArray("externalCards")
+        catalog.externalCards.forEach { card ->
+            externalCards.put(
+                JSONObject()
+                    .put("id", card.id)
+                    .put("name", card.name)
+                    .putNullable("storeName", card.storeName)
+                    .putNullable("tabName", card.tabName)
+                    .put("amountLabel", card.amountLabel)
+                    .put("memo", card.memo)
+                    .putNullable("imageContentHash", card.imageContentHash)
+                    .putNullable("imagePath", card.imagePath)
+                    .put("calories", card.calories)
+                    .put("proteinG", card.proteinG)
+                    .put("fatG", card.fatG)
+                    .put("carbG", card.carbG),
+            )
+        }
         return root.toString()
     }
 
     fun decode(value: String): DrivePlanCatalog {
         val root = JSONObject(value)
         val plansJson = root.optJSONArray("plans") ?: error("保存済みプランデータが不正です。")
+        val externalCardsJson = root.optJSONArray("externalCards") ?: JSONArray()
         val plans = buildList {
             for (planIndex in 0 until plansJson.length()) {
                 val planJson = plansJson.optJSONObject(planIndex) ?: continue
@@ -118,9 +138,32 @@ internal object DrivePlanCacheCodec {
                 )
             }
         }
+        val externalCards = buildList {
+            for (index in 0 until externalCardsJson.length()) {
+                val cardJson = externalCardsJson.optJSONObject(index) ?: continue
+                val id = cardJson.stringOrNull("id") ?: continue
+                add(
+                    DriveExternalCard(
+                        id = id,
+                        name = cardJson.stringOrNull("name").orEmpty().ifBlank { "外食カード" },
+                        storeName = cardJson.stringOrNull("storeName"),
+                        tabName = cardJson.stringOrNull("tabName"),
+                        amountLabel = cardJson.stringOrNull("amountLabel").orEmpty().ifBlank { "1 個" },
+                        memo = cardJson.stringOrNull("memo").orEmpty(),
+                        imageContentHash = cardJson.stringOrNull("imageContentHash"),
+                        imagePath = cardJson.stringOrNull("imagePath"),
+                        calories = cardJson.optInt("calories", 0),
+                        proteinG = cardJson.optDouble("proteinG", 0.0),
+                        fatG = cardJson.optDouble("fatG", 0.0),
+                        carbG = cardJson.optDouble("carbG", 0.0),
+                    ),
+                )
+            }
+        }
         return DrivePlanCatalog(
             plans = plans,
             preferredPlanId = root.stringOrNull("preferredPlanId"),
+            externalCards = externalCards,
         )
     }
 

@@ -384,10 +384,10 @@ private fun DriveEatingOutCardSection(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        card.item.imagePath?.let { imagePath ->
+                        card.imagePath?.let { imagePath ->
                             DriveCachedImage(
                                 path = imagePath,
-                                contentDescription = card.item.name,
+                                contentDescription = card.name,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(96.dp)
@@ -395,7 +395,7 @@ private fun DriveEatingOutCardSection(
                             )
                         }
                         Text(
-                            text = card.item.name,
+                            text = card.name,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -405,16 +405,16 @@ private fun DriveEatingOutCardSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = card.item.amountLabel,
+                            text = card.amountLabel,
                             style = MaterialTheme.typography.bodySmall,
                         )
                         Text(
                             text = stringResource(
                                 R.string.template_management_meal_nutrition,
-                                card.item.calories,
-                                formatOneDecimal(card.item.proteinG),
-                                formatOneDecimal(card.item.fatG),
-                                formatOneDecimal(card.item.carbG),
+                                card.calories,
+                                formatOneDecimal(card.proteinG),
+                                formatOneDecimal(card.fatG),
+                                formatOneDecimal(card.carbG),
                             ),
                             style = MaterialTheme.typography.bodyMedium,
                         )

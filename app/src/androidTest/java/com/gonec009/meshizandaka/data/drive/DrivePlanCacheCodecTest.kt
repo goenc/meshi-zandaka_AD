@@ -45,6 +45,21 @@ class DrivePlanCacheCodecTest {
                 ),
             ),
             preferredPlanId = "plan-1",
+            externalCards = listOf(
+                DriveExternalCard(
+                    id = "card-1",
+                    name = "ビックマックサラダ",
+                    storeName = "マック",
+                    amountLabel = "1 個",
+                    memo = "外食カード",
+                    imageContentHash = "card-image-hash",
+                    imagePath = "/data/user/0/com.gonec009.meshizandaka/files/card.jpg",
+                    calories = 534,
+                    proteinG = 26.6,
+                    fatG = 28.1,
+                    carbG = 44.3,
+                ),
+            ),
         )
 
         val restored = DrivePlanCacheCodec.decode(DrivePlanCacheCodec.encode(catalog))
