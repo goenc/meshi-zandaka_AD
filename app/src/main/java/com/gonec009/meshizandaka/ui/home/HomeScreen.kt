@@ -145,11 +145,11 @@ private fun DailyMealStack.recordsForSection(section: ChartMealSection): List<Me
     ChartMealSection.FREE_SNACK -> freeSnackRecords
 }
 
-private fun DailyMealStack.allRecords(): List<MealRecord> {
+internal fun DailyMealStack.allRecords(): List<MealRecord> {
     return breakfastRecords +
-        morningSnackRecords +
         lunchRecords +
         dinnerRecords +
+        morningSnackRecords +
         daytimeSnackRecords +
         freeSnackRecords
 }
@@ -718,7 +718,7 @@ private fun ChartMealDetailDialog(
     val context = LocalContext.current
     val titleDateFormatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.JAPAN) }
     val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.JAPAN) }
-    val records = remember(state.stack) { state.stack.allRecords().sortedBy(MealRecord::eatenAt) }
+    val records = remember(state.stack) { state.stack.allRecords() }
     val detailPhotoUris = remember(records) {
         records.mapNotNull { record ->
             record.photoUri?.takeIf { it.isNotBlank() }
