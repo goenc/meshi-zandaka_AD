@@ -1031,12 +1031,28 @@ private fun DrivePlanMealContent(
         record.selectedDrivePlanMainDishItemKey != null
     val visibleItems = itemEntries.filterNot { (_, itemKey) -> itemKey in excludedItemKeys }
     val orderedItems = orderDrivePlanMealItems(visibleItems, selectedMainDishKey)
+    val hasMultipleMainDishCandidates = visibleItems.count { (item, _) ->
+        item.isMainDishCandidate
+    } > 1
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.meal_detail_contents),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.meal_detail_contents),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (hasMultipleMainDishCandidates) {
+                Text(
+                    text = stringResource(R.string.meal_detail_multiple_main_dishes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         meal.imagePath?.let { path ->
             DriveCachedImage(
                 path = path,
@@ -1121,10 +1137,13 @@ internal fun orderDrivePlanMealItems(
     itemEntries: List<Pair<DrivePlanItem, String>>,
     selectedMainDishKey: String?,
 ): List<Pair<DrivePlanItem, String>> {
-    val (selectedItems, otherItems) = itemEntries.partition { (_, itemKey) ->
+    val (selectedItems, remainingItems) = itemEntries.partition { (_, itemKey) ->
         itemKey == selectedMainDishKey
     }
-    return selectedItems + otherItems
+    val (regularItems, unselectedCandidateItems) = remainingItems.partition { (item, _) ->
+        !item.isMainDishCandidate
+    }
+    return selectedItems + regularItems + unselectedCandidateItems
 }
 
 private fun DrivePlan.mealForRecord(record: MealRecord): DrivePlanMeal? {

@@ -151,6 +151,7 @@
     <string name="template_management_main_dish">主菜</string>
     <string name="select_main_dish">主菜に切り替え</string>
     <string name="meal_detail_contents">食事内容</string>
+    <string name="meal_detail_multiple_main_dishes">（主菜複数あり）</string>
     <string name="meal_detail_record_photo">記録写真</string>
     <string name="meal_detail_drive_content_unavailable">同期済みの食事内容がありません</string>
     <string name="meal_detail_no_items">食事項目がありません</string>

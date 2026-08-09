@@ -7,7 +7,7 @@ import org.junit.Test
 
 class HomeScreenMealItemOrderTest {
     @Test
-    fun 選択中の主菜を先頭へ移動し他の項目の順序を維持する() {
+    fun 選択中の主菜を先頭へ移動し未選択候補を末尾へ移動する() {
         val chicken = DrivePlanItem(
             name = "鶏もも肉",
             amountLabel = "80 g",
@@ -38,6 +38,6 @@ class HomeScreenMealItemOrderTest {
             selectedMainDishKey = salmon.recordKey(2),
         )
 
-        assertEquals(listOf("鮭", "鶏もも肉", "白米"), ordered.map { (item, _) -> item.name })
+        assertEquals(listOf("鮭", "白米", "鶏もも肉"), ordered.map { (item, _) -> item.name })
     }
 }
