@@ -1220,7 +1220,8 @@ internal fun orderDrivePlanMealItems(
     return selectedItems + regularItems + unselectedCandidateItems
 }
 
-private fun DrivePlan.mealForRecord(record: MealRecord): DrivePlanMeal? {
+internal fun DrivePlan.mealForRecord(record: MealRecord): DrivePlanMeal? {
+    if (record.templateId == null) return null
     val slot = when (record.mealType) {
         MealType.BREAKFAST -> 0
         MealType.MORNING_SNACK -> 1
