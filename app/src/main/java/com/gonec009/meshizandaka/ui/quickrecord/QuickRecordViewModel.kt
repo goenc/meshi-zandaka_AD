@@ -163,6 +163,19 @@ class QuickRecordViewModel(
         }
     }
 
+    fun selectManualTab() {
+        _uiState.update { state ->
+            val clearedState = state.copy(selectedDriveEatingOutCard = null)
+            if (clearedState.selectedTemplate != null) {
+                clearedState
+            } else {
+                defaultTemplate(clearedState.availableTemplates)?.let { template ->
+                    applyTemplate(clearedState, template)
+                } ?: clearedState
+            }
+        }
+    }
+
     fun selectMealType(mealType: MealType) {
         _uiState.update { it.copy(selectedMealType = mealType) }
     }

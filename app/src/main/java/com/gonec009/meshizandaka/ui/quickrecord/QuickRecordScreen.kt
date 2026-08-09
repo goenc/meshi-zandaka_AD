@@ -33,6 +33,8 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +71,9 @@ import com.gonec009.meshizandaka.ui.mealTypeLabel
 import com.gonec009.meshizandaka.util.formatOneDecimal
 import kotlinx.coroutines.launch
 
+private const val MANUAL_TAB_INDEX = 0
+private const val EATING_OUT_TAB_INDEX = 1
+
 @Composable
 fun QuickRecordRoute(
     container: AppContainer,
@@ -87,6 +93,7 @@ fun QuickRecordRoute(
     QuickRecordScreen(
         innerPadding = innerPadding,
         state = state,
+        onManualTabSelected = viewModel::selectManualTab,
         onTemplateSelect = viewModel::selectTemplate,
         onDriveEatingOutCardSelect = viewModel::selectDriveEatingOutCard,
         onTemplateNameChange = viewModel::setTemplateName,
@@ -107,6 +114,7 @@ fun QuickRecordRoute(
 private fun QuickRecordScreen(
     innerPadding: PaddingValues,
     state: QuickRecordUiState,
+    onManualTabSelected: () -> Unit,
     onTemplateSelect: (MealTemplate) -> Unit,
     onDriveEatingOutCardSelect: (QuickRecordDriveCard) -> Unit,
     onTemplateNameChange: (String) -> Unit,
@@ -123,174 +131,213 @@ private fun QuickRecordScreen(
     var showCamera by remember { mutableStateOf(false) }
     var mealTypeExpanded by remember { mutableStateOf(false) }
     var showDeletePhotoDialog by remember { mutableStateOf(false) }
+    var selectedTabIndex by rememberSaveable { mutableStateOf(MANUAL_TAB_INDEX) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            val normalTemplates = state.availableTemplates.filter { it.mealType != MealType.EATING_OUT }
-            if (normalTemplates.isNotEmpty()) item {
-                TemplateSection(
-                    title = stringResource(R.string.quick_record_templates),
-                    templates = normalTemplates,
-                    selectedTemplateId = state.selectedTemplate?.id,
-                    onTemplateSelect = onTemplateSelect,
-                )
+            TabRow(selectedTabIndex = selectedTabIndex) {
+                listOf(
+                    stringResource(R.string.quick_record_tab_manual),
+                    stringResource(R.string.quick_record_tab_eating_out),
+                ).forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = {
+                            selectedTabIndex = index
+                            if (index == MANUAL_TAB_INDEX) {
+                                onManualTabSelected()
+                            }
+                        },
+                        text = { Text(title) },
+                    )
+                }
             }
-            if (state.driveEatingOutCards.isNotEmpty()) item {
-                DriveEatingOutCardSection(
-                    title = stringResource(R.string.quick_record_eating_out_templates),
-                    cards = state.driveEatingOutCards,
-                    selectedCardId = state.selectedDriveEatingOutCard?.id,
-                    onCardSelect = onDriveEatingOutCardSelect,
-                )
-            }
-            state.selectedDriveEatingOutCard
-                ?.takeIf { it.items.isNotEmpty() }
-                ?.let { card ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                val isManualTab = selectedTabIndex == MANUAL_TAB_INDEX
+                if (isManualTab) {
+                    val normalTemplates = state.availableTemplates.filter { it.mealType != MealType.EATING_OUT }
+                    if (normalTemplates.isNotEmpty()) item {
+                        TemplateSection(
+                            title = stringResource(R.string.quick_record_templates),
+                            templates = normalTemplates,
+                            selectedTemplateId = state.selectedTemplate?.id,
+                            onTemplateSelect = onTemplateSelect,
+                        )
+                    }
+                } else if (state.driveEatingOutCards.isNotEmpty()) {
                     item {
-                        DriveEatingOutItemSection(
-                            card = card,
-                            selectedMealType = state.selectedMealType,
+                        DriveEatingOutCardSection(
+                            title = stringResource(R.string.quick_record_eating_out_templates),
+                            cards = state.driveEatingOutCards,
+                            selectedCardId = state.selectedDriveEatingOutCard?.id,
+                            onCardSelect = onDriveEatingOutCardSelect,
+                        )
+                    }
+                } else {
+                    item {
+                        Text(
+                            text = stringResource(R.string.quick_record_no_eating_out_cards),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        if (state.selectedDriveEatingOutCard == null) {
-                            CompactOutlinedField(
-                                value = state.templateName,
-                                onValueChange = onTemplateNameChange,
-                                label = { Text(stringResource(R.string.template_name)) },
-                                modifier = compactFieldModifier(),
-                                textStyle = compactFieldTextStyle(),
-                                singleLine = true,
-                            )
-                        }
-                        ExposedDropdownMenuBox(
-                            expanded = mealTypeExpanded,
-                            onExpandedChange = { mealTypeExpanded = it },
-                        ) {
-                            LabeledMealSettingField(
-                                mealTypeLabel = stringResource(R.string.meal_type),
-                                selectedMealType = mealTypeLabel(state.selectedMealType),
-                                expanded = mealTypeExpanded,
-                                mealFieldModifier = Modifier.menuAnchor(),
-                            )
-                            DropdownMenu(
-                                expanded = mealTypeExpanded,
-                                onDismissRequest = { mealTypeExpanded = false },
-                            ) {
-                                MealType.entries
-                                    .filterNot {
-                                        it == MealType.EATING_OUT || it == MealType.SNACK
-                                    }
-                                    .forEach { mealType ->
-                                        DropdownMenuItem(
-                                            text = { Text(mealTypeLabel(mealType)) },
-                                            onClick = {
-                                                mealTypeExpanded = false
-                                                onMealTypeSelect(mealType)
-                                            },
-                                        )
-                                    }
-                            }
-                        }
-                        if (state.selectedDriveEatingOutCard == null) {
-                            CompactOutlinedField(
-                                value = state.totalCalories,
-                                onValueChange = onTotalCaloriesChange,
-                                label = { Text(stringResource(R.string.base_calories)) },
-                                modifier = compactFieldModifier(),
-                                textStyle = compactFieldTextStyle(),
-                                singleLine = true,
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                CompactMacroField(
-                                    label = stringResource(R.string.protein_short),
-                                    value = state.proteinG,
-                                    onValueChange = onProteinChange,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                CompactMacroField(
-                                    label = stringResource(R.string.fat_short),
-                                    value = state.fatG,
-                                    onValueChange = onFatChange,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                CompactMacroField(
-                                    label = stringResource(R.string.carb_short),
-                                    value = state.carbG,
-                                    onValueChange = onCarbChange,
-                                    modifier = Modifier.weight(1f),
+                if (!isManualTab) {
+                    state.selectedDriveEatingOutCard
+                        ?.takeIf { it.items.isNotEmpty() }
+                        ?.let { card ->
+                            item {
+                                DriveEatingOutItemSection(
+                                    card = card,
+                                    selectedMealType = state.selectedMealType,
                                 )
                             }
-                            CompactOutlinedField(
-                                value = state.memo,
-                                onValueChange = onMemoChange,
-                                label = { Text(stringResource(R.string.memo)) },
-                                modifier = compactFieldModifier(),
-                                textStyle = compactFieldTextStyle(),
-                                minLines = 4,
-                                maxLines = 6,
-                            )
                         }
-                        Button(
-                            onClick = onSaveClick,
-                            enabled = (state.selectedTemplate != null ||
-                                state.selectedDriveEatingOutCard != null) && !state.isSaving,
+                }
+                if (isManualTab || state.selectedDriveEatingOutCard != null) {
+                    item {
+                        Card(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(stringResource(R.string.record_now))
-                        }
-                        if (state.selectedDriveEatingOutCard == null) {
-                            Button(
-                                onClick = { showCamera = true },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(stringResource(R.string.take_meal_photo))
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                            ) {
-                                Text(
-                                    text = if (state.photoUri == null) {
-                                        stringResource(R.string.meal_photo_not_added)
-                                    } else {
-                                        stringResource(R.string.meal_photo_added)
-                                    },
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            MealPhotoWithDeleteAction(
-                                uriString = state.photoUri,
-                                contentDescription = stringResource(R.string.meal_photo_added),
-                                onDeleteClick = { showDeletePhotoDialog = true },
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .aspectRatio(16f / 9f)
-                                    .clip(RoundedCornerShape(8.dp)),
-                            )
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                if (state.selectedDriveEatingOutCard == null) {
+                                    CompactOutlinedField(
+                                        value = state.templateName,
+                                        onValueChange = onTemplateNameChange,
+                                        label = { Text(stringResource(R.string.template_name)) },
+                                        modifier = compactFieldModifier(),
+                                        textStyle = compactFieldTextStyle(),
+                                        singleLine = true,
+                                    )
+                                }
+                                ExposedDropdownMenuBox(
+                                    expanded = mealTypeExpanded,
+                                    onExpandedChange = { mealTypeExpanded = it },
+                                ) {
+                                    LabeledMealSettingField(
+                                        mealTypeLabel = stringResource(R.string.meal_type),
+                                        selectedMealType = mealTypeLabel(state.selectedMealType),
+                                        expanded = mealTypeExpanded,
+                                        mealFieldModifier = Modifier.menuAnchor(),
+                                    )
+                                    DropdownMenu(
+                                        expanded = mealTypeExpanded,
+                                        onDismissRequest = { mealTypeExpanded = false },
+                                    ) {
+                                        MealType.entries
+                                            .filterNot {
+                                                it == MealType.EATING_OUT || it == MealType.SNACK
+                                            }
+                                            .forEach { mealType ->
+                                                DropdownMenuItem(
+                                                    text = { Text(mealTypeLabel(mealType)) },
+                                                    onClick = {
+                                                        mealTypeExpanded = false
+                                                        onMealTypeSelect(mealType)
+                                                    },
+                                                )
+                                            }
+                                    }
+                                }
+                                if (state.selectedDriveEatingOutCard == null) {
+                                    CompactOutlinedField(
+                                        value = state.totalCalories,
+                                        onValueChange = onTotalCaloriesChange,
+                                        label = { Text(stringResource(R.string.base_calories)) },
+                                        modifier = compactFieldModifier(),
+                                        textStyle = compactFieldTextStyle(),
+                                        singleLine = true,
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        CompactMacroField(
+                                            label = stringResource(R.string.protein_short),
+                                            value = state.proteinG,
+                                            onValueChange = onProteinChange,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        CompactMacroField(
+                                            label = stringResource(R.string.fat_short),
+                                            value = state.fatG,
+                                            onValueChange = onFatChange,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        CompactMacroField(
+                                            label = stringResource(R.string.carb_short),
+                                            value = state.carbG,
+                                            onValueChange = onCarbChange,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                    }
+                                    CompactOutlinedField(
+                                        value = state.memo,
+                                        onValueChange = onMemoChange,
+                                        label = { Text(stringResource(R.string.memo)) },
+                                        modifier = compactFieldModifier(),
+                                        textStyle = compactFieldTextStyle(),
+                                        minLines = 4,
+                                        maxLines = 6,
+                                    )
+                                }
+                                Button(
+                                    onClick = onSaveClick,
+                                    enabled = (state.selectedTemplate != null ||
+                                        state.selectedDriveEatingOutCard != null) && !state.isSaving,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(stringResource(R.string.record_now))
+                                }
+                                if (state.selectedDriveEatingOutCard == null) {
+                                    Button(
+                                        onClick = { showCamera = true },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Text(stringResource(R.string.take_meal_photo))
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                                    ) {
+                                        Text(
+                                            text = if (state.photoUri == null) {
+                                                stringResource(R.string.meal_photo_not_added)
+                                            } else {
+                                                stringResource(R.string.meal_photo_added)
+                                            },
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    MealPhotoWithDeleteAction(
+                                        uriString = state.photoUri,
+                                        contentDescription = stringResource(R.string.meal_photo_added),
+                                        onDeleteClick = { showDeletePhotoDialog = true },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(16f / 9f)
+                                            .clip(RoundedCornerShape(8.dp)),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
