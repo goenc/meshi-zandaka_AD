@@ -717,7 +717,6 @@ private fun ChartMealDetailDialog(
 ) {
     val context = LocalContext.current
     val titleDateFormatter = remember { DateTimeFormatter.ofPattern("M/d", Locale.JAPAN) }
-    val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.JAPAN) }
     val records = remember(state.stack) { state.stack.allRecords() }
     val detailPhotoUris = remember(records) {
         records.mapNotNull { record ->
@@ -784,7 +783,6 @@ private fun ChartMealDetailDialog(
                 MealRecordSection(
                     records = records,
                     total = records.pfcTotals(),
-                    timeFormatter = timeFormatter,
                     detailsReady = detailsReady,
                     onRecordClick = { selectedRecord = it },
                     onDeleteClick = onDeleteClick,
@@ -830,7 +828,6 @@ private fun ChartMealDetailDialog(
 private fun MealRecordSection(
     records: List<MealRecord>,
     total: NutritionTotals,
-    timeFormatter: SimpleDateFormat,
     detailsReady: Boolean,
     onRecordClick: (MealRecord) -> Unit,
     onDeleteClick: (MealRecord) -> Unit,
@@ -883,7 +880,7 @@ private fun MealRecordSection(
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            text = "${timeFormatter.format(Date(record.eatenAt))}  ${stringResource(R.string.kcal_format, record.totalCalories)}",
+                            text = stringResource(R.string.kcal_format, record.totalCalories),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
