@@ -57,39 +57,41 @@ fun MeshiZandakaAppRoot(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    if (currentDestination == AppDestination.Home) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.Bottom,
-                        ) {
+            if (currentDestination != AppDestination.QuickRecord) {
+                TopAppBar(
+                    title = {
+                        if (currentDestination == AppDestination.Home) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.Bottom,
+                            ) {
+                                Text(stringResource(currentDestination.titleResId))
+                                Text(stringResource(R.string.kcal_format, dashboard.summary.todayBalanceCalories))
+                            }
+                        } else {
                             Text(stringResource(currentDestination.titleResId))
-                            Text(stringResource(R.string.kcal_format, dashboard.summary.todayBalanceCalories))
                         }
-                    } else {
-                        Text(stringResource(currentDestination.titleResId))
-                    }
-                },
-                navigationIcon = {
-                    if (currentDestination != AppDestination.Home) {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Text(text = stringResource(R.string.back))
+                    },
+                    navigationIcon = {
+                        if (currentDestination != AppDestination.Home) {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Text(text = stringResource(R.string.back))
+                            }
                         }
-                    }
-                },
-                actions = {
-                    if (currentDestination == AppDestination.Home) {
-                        IconButton(onClick = { navController.navigate(AppDestination.Settings.route) }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_settings),
-                                contentDescription = stringResource(R.string.go_to_settings),
-                                modifier = Modifier.size(24.dp),
-                            )
+                    },
+                    actions = {
+                        if (currentDestination == AppDestination.Home) {
+                            IconButton(onClick = { navController.navigate(AppDestination.Settings.route) }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_settings),
+                                    contentDescription = stringResource(R.string.go_to_settings),
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
