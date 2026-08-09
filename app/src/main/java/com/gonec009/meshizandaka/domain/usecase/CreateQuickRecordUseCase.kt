@@ -17,6 +17,7 @@ class CreateQuickRecordUseCase(
     suspend operator fun invoke(
         templateId: Long?,
         selectedOptionIds: Collection<Long> = emptyList(),
+        additionalOptions: Collection<MealRecordOption> = emptyList(),
         templateNameSnapshot: String? = null,
         totalCaloriesOverride: Int? = null,
         proteinOverride: Double? = null,
@@ -58,7 +59,7 @@ class CreateQuickRecordUseCase(
                     carbDeltaG = option.carbDeltaG,
                 )
             }
-        }
+        } + additionalOptions
 
         val comparisonCalories = template?.comparisonTemplateId
             ?.let { comparisonTemplateId ->

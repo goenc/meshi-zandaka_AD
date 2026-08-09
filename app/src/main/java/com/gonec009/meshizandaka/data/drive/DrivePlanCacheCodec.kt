@@ -72,7 +72,24 @@ internal object DrivePlanCacheCodec {
                     .put("calories", card.calories)
                     .put("proteinG", card.proteinG)
                     .put("fatG", card.fatG)
-                    .put("carbG", card.carbG),
+                    .put("carbG", card.carbG)
+                    .put("items", JSONArray().apply {
+                        card.items.forEach { item ->
+                            put(
+                                JSONObject()
+                                    .putNullable("id", item.id)
+                                    .put("name", item.name)
+                                    .put("amountLabel", item.amountLabel)
+                                    .put("isMainDish", item.isMainDish)
+                                    .put("isMainDishCandidate", item.isMainDishCandidate)
+                                    .putNullable("imageContentHash", item.imageContentHash)
+                                    .put("calories", item.calories)
+                                    .put("proteinG", item.proteinG)
+                                    .put("fatG", item.fatG)
+                                    .put("carbG", item.carbG),
+                            )
+                        }
+                    }),
             )
         }
         return root.toString()
@@ -147,6 +164,27 @@ internal object DrivePlanCacheCodec {
             for (index in 0 until externalCardsJson.length()) {
                 val cardJson = externalCardsJson.optJSONObject(index) ?: continue
                 val id = cardJson.stringOrNull("id") ?: continue
+                val itemsJson = cardJson.optJSONArray("items") ?: JSONArray()
+                val items = buildList {
+                    for (itemIndex in 0 until itemsJson.length()) {
+                        val itemJson = itemsJson.optJSONObject(itemIndex) ?: continue
+                        val isMainDish = itemJson.optBoolean("isMainDish", false)
+                        add(
+                            DrivePlanItem(
+                                name = itemJson.stringOrNull("name").orEmpty().ifBlank { "食品" },
+                                amountLabel = itemJson.stringOrNull("amountLabel").orEmpty(),
+                                isMainDish = isMainDish,
+                                isMainDishCandidate = itemJson.optBoolean("isMainDishCandidate", false) || isMainDish,
+                                imageContentHash = itemJson.stringOrNull("imageContentHash"),
+                                calories = itemJson.optInt("calories", 0),
+                                proteinG = itemJson.optDouble("proteinG", 0.0),
+                                fatG = itemJson.optDouble("fatG", 0.0),
+                                carbG = itemJson.optDouble("carbG", 0.0),
+                                id = itemJson.stringOrNull("id"),
+                            ),
+                        )
+                    }
+                }
                 add(
                     DriveExternalCard(
                         id = id,
@@ -161,6 +199,7 @@ internal object DrivePlanCacheCodec {
                         proteinG = cardJson.optDouble("proteinG", 0.0),
                         fatG = cardJson.optDouble("fatG", 0.0),
                         carbG = cardJson.optDouble("carbG", 0.0),
+                        items = items,
                     ),
                 )
             }

@@ -60,6 +60,7 @@ data class DriveExternalCard(
     val proteinG: Double = 0.0,
     val fatG: Double = 0.0,
     val carbG: Double = 0.0,
+    val items: List<DrivePlanItem> = emptyList(),
 )
 
 data class DrivePlanCatalog(

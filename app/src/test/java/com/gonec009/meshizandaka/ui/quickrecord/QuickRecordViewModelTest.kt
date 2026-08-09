@@ -61,4 +61,45 @@ class QuickRecordViewModelTest {
             QuickRecordUiState(selectedTemplate = template).templateForSave(),
         )
     }
+
+    @Test
+    fun 外食カードの材料を個別登録オプションへ変換する() {
+        val card = QuickRecordDriveCard(
+            id = "samurai-mac",
+            mealLabel = "外食",
+            name = "サムライマック",
+            amountLabel = "1 個",
+            imagePath = null,
+            calories = 600,
+            proteinG = 25.0,
+            fatG = 20.0,
+            carbG = 70.0,
+            items = listOf(
+                QuickRecordDriveItem(
+                    id = "bun",
+                    name = "バンズ",
+                    amountLabel = "1 個",
+                    calories = 180,
+                    proteinG = 5.0,
+                    fatG = 2.0,
+                    carbG = 30.0,
+                ),
+                QuickRecordDriveItem(
+                    id = "patty",
+                    name = "パティ",
+                    amountLabel = "1 個",
+                    calories = 420,
+                    proteinG = 20.0,
+                    fatG = 18.0,
+                    carbG = 10.0,
+                ),
+            ),
+        )
+
+        val options = card.toRecordOptions()
+
+        assertEquals(listOf("バンズ", "パティ"), options.map { it.optionNameSnapshot })
+        assertEquals(listOf(180, 420), options.map { it.calorieDelta })
+        assertEquals(listOf("サムライマック", "サムライマック"), options.map { it.optionGroupNameSnapshot })
+    }
 }

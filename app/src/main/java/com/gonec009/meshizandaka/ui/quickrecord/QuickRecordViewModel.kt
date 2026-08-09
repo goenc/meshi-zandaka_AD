@@ -3,6 +3,7 @@ package com.gonec009.meshizandaka.ui.quickrecord
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gonec009.meshizandaka.data.AppContainer
+import com.gonec009.meshizandaka.domain.model.MealRecordOption
 import com.gonec009.meshizandaka.domain.model.MealTemplate
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
@@ -20,6 +21,17 @@ data class QuickRecordDriveCard(
     val name: String,
     val amountLabel: String,
     val imagePath: String?,
+    val calories: Int,
+    val proteinG: Double,
+    val fatG: Double,
+    val carbG: Double,
+    val items: List<QuickRecordDriveItem> = emptyList(),
+)
+
+data class QuickRecordDriveItem(
+    val id: String,
+    val name: String,
+    val amountLabel: String,
     val calories: Int,
     val proteinG: Double,
     val fatG: Double,
@@ -101,6 +113,17 @@ class QuickRecordViewModel(
                         proteinG = card.proteinG,
                         fatG = card.fatG,
                         carbG = card.carbG,
+                        items = card.items.map { item ->
+                            QuickRecordDriveItem(
+                                id = item.id ?: "${card.id}:${item.name}",
+                                name = item.name,
+                                amountLabel = item.amountLabel,
+                                calories = item.calories,
+                                proteinG = item.proteinG,
+                                fatG = item.fatG,
+                                carbG = item.carbG,
+                            )
+                        },
                     )
                 }
                 _uiState.update { state ->
@@ -191,11 +214,13 @@ class QuickRecordViewModel(
         if (template == null && driveCard == null) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
+            val additionalOptions = driveCard?.toRecordOptions().orEmpty()
             container.createQuickRecordUseCase(
                 templateId = template?.id,
                 templateNameSnapshot = state.templateName.ifBlank {
                     template?.name ?: driveCard?.name.orEmpty()
                 },
+                additionalOptions = additionalOptions,
                 totalCaloriesOverride = state.totalCalories.toIntOrNull() ?: 0,
                 proteinOverride = state.proteinG.toDoubleOrNull() ?: 0.0,
                 fatOverride = state.fatG.toDoubleOrNull() ?: 0.0,
@@ -241,4 +266,17 @@ class QuickRecordViewModel(
 
 internal fun QuickRecordUiState.templateForSave(): MealTemplate? {
     return selectedTemplate.takeUnless { selectedDriveEatingOutCard != null }
+}
+
+internal fun QuickRecordDriveCard.toRecordOptions(): List<MealRecordOption> {
+    return items.map { item ->
+        MealRecordOption(
+            optionGroupNameSnapshot = name,
+            optionNameSnapshot = item.name,
+            calorieDelta = item.calories,
+            proteinDeltaG = item.proteinG,
+            fatDeltaG = item.fatG,
+            carbDeltaG = item.carbG,
+        )
+    }
 }

@@ -238,6 +238,14 @@ class DrivePlanSnapshotReader(
                 proteinG = nutrition.proteinG,
                 fatG = nutrition.fatG,
                 carbG = nutrition.carbG,
+                items = buildExternalCardItems(
+                    recipeId = id,
+                    ingredientRows = ingredientRows,
+                    recipeRows = recipeRows,
+                    foodRows = foodRows,
+                    foodPortionRows = foodPortionRows,
+                    imageHashes = imageHashes,
+                ),
             )
         }
         .sortedWith(
@@ -247,6 +255,71 @@ class DrivePlanSnapshotReader(
                 .thenBy { it.id },
         )
         .toList()
+
+    private fun buildExternalCardItems(
+        recipeId: String,
+        ingredientRows: Map<String, List<SnapshotRow>>,
+        recipeRows: Map<String, SnapshotRow>,
+        foodRows: Map<String, SnapshotRow>,
+        foodPortionRows: Map<String, List<SnapshotRow>>,
+        imageHashes: Map<String, String>,
+    ): List<DrivePlanItem> {
+        return ingredientRows[idKey(recipeId)]
+            .orEmpty()
+            .asSequence()
+            .mapNotNull { ingredientRow ->
+                val ingredient = ingredientRow.payload ?: return@mapNotNull null
+                if (!ingredient.optBooleanIgnoreCase("isEnabled", true)) return@mapNotNull null
+                ingredientRow
+            }
+            .sortedWith(
+                compareBy<SnapshotRow> { it.payload?.optIntIgnoreCase("displayOrder", 0) ?: 0 }
+                    .thenBy { it.rowKey },
+            )
+            .mapNotNull { ingredientRow ->
+                val ingredient = ingredientRow.payload ?: return@mapNotNull null
+                val ingredientId = ingredient.stringOrNull("id") ?: ingredientRow.rowKey
+                val componentType = ingredient.optIntIgnoreCase("componentType", 0)
+                val childId = if (componentType == 1) {
+                    ingredient.stringOrNull("referencedRecipeId")
+                } else {
+                    ingredient.stringOrNull("foodId")
+                }
+                val child = if (componentType == 1) {
+                    recipeRows[idKey(childId)]?.payload
+                } else {
+                    foodRows[idKey(childId)]?.payload
+                }
+                val nutrition = nutritionForStoredIngredient(
+                    ingredient = ingredient,
+                    recipeRows = recipeRows,
+                    ingredientRows = ingredientRows,
+                    foodRows = foodRows,
+                    foodPortionRows = foodPortionRows,
+                    visiting = emptySet(),
+                )
+                DrivePlanItem(
+                    name = child?.stringOrNull("name")
+                        ?: child?.stringOrNull("foodName")
+                        ?: if (componentType == 1) "レシピ" else "食品",
+                    amountLabel = formatStoredAmount(
+                        amount = ingredient.optLongIgnoreCase("standardAmount", 0L),
+                        unit = ingredient.optIntIgnoreCase("standardUnit", -1),
+                        customUnitName = ingredient.stringOrNull("standardCustomUnitName"),
+                    ),
+                    isMainDish = false,
+                    isMainDishCandidate = false,
+                    imageContentHash = child?.stringOrNull("imageAssetId")
+                        ?.let { imageHashes[idKey(it)] },
+                    calories = nutrition.calories.roundToInt(),
+                    proteinG = nutrition.proteinG,
+                    fatG = nutrition.fatG,
+                    carbG = nutrition.carbG,
+                    id = ingredientId,
+                )
+            }
+            .toList()
+    }
 
     private fun nutritionForStoredRecipe(
         recipe: JSONObject,

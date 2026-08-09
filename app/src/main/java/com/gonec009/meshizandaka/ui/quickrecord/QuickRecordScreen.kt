@@ -150,6 +150,16 @@ private fun QuickRecordScreen(
                     onCardSelect = onDriveEatingOutCardSelect,
                 )
             }
+            state.selectedDriveEatingOutCard
+                ?.takeIf { it.items.isNotEmpty() }
+                ?.let { card ->
+                    item {
+                        DriveEatingOutItemSection(
+                            card = card,
+                            selectedMealType = state.selectedMealType,
+                        )
+                    }
+                }
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -399,6 +409,52 @@ private fun DriveEatingOutCardSection(
                                 formatOneDecimal(card.carbG),
                             ),
                             style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DriveEatingOutItemSection(
+    card: QuickRecordDriveCard,
+    selectedMealType: MealType,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.quick_record_eating_out_items_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = stringResource(
+                R.string.quick_record_eating_out_items_description,
+                mealTypeLabel(selectedMealType),
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(card.name, fontWeight = FontWeight.SemiBold)
+                card.items.forEach { item ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = item.name,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = stringResource(R.string.kcal_format, item.calories),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
