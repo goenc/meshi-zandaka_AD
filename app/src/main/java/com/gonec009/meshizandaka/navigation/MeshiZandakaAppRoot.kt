@@ -68,7 +68,7 @@ fun MeshiZandakaAppRoot(
                                 Text(stringResource(currentDestination.titleResId))
                                 Text(stringResource(R.string.kcal_format, dashboard.summary.todayBalanceCalories))
                             }
-                        } else {
+                        } else if (currentDestination != AppDestination.Templates) {
                             Text(stringResource(currentDestination.titleResId))
                         }
                     },

@@ -79,12 +79,6 @@ private fun TemplateManagementScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            Text(
-                text = stringResource(R.string.template_management_drive_description),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
         when (state.phase) {
             DrivePlanPhase.IDLE -> {
                 item {
@@ -129,9 +123,6 @@ private fun TemplateManagementScreen(
                         }
                     }
                     state.selectedPlan?.let { plan ->
-                        item {
-                            DrivePlanHeader(plan = plan)
-                        }
                         items(plan.meals, key = { meal -> meal.slot }) { meal ->
                             DrivePlanMealCard(
                                 meal = meal,
@@ -239,39 +230,6 @@ private fun DrivePlanSelector(
                     },
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun DrivePlanHeader(plan: DrivePlan) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(plan.name, style = MaterialTheme.typography.titleMedium)
-                if (plan.isFavorite) {
-                    Text(
-                        text = stringResource(R.string.template_management_favorite),
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-            plan.targetDate?.takeIf { it.isNotBlank() }?.let { date ->
-                Text(stringResource(R.string.template_management_plan_date, date))
-            }
-            plan.memo.takeIf { it.isNotBlank() }?.let { memo ->
-                Text(stringResource(R.string.template_management_plan_memo, memo))
-            }
-            Text(
-                text = stringResource(R.string.template_management_read_only_notice),
-                style = MaterialTheme.typography.bodySmall,
-            )
         }
     }
 }
