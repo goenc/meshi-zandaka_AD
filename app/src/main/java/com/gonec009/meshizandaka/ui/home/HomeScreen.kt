@@ -743,6 +743,9 @@ private fun ChartMealDetailDialog(
         detailsReady = true
     }
     var selectedRecord by remember { mutableStateOf<MealRecord?>(null) }
+    val currentSelectedRecord = selectedRecord?.let { selected ->
+        records.firstOrNull { record -> record.id == selected.id }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
@@ -805,7 +808,7 @@ private fun ChartMealDetailDialog(
             }
         },
     )
-    selectedRecord?.let { record ->
+    currentSelectedRecord?.let { record ->
         MealRecordContentDialog(
             record = record,
             selectedDrivePlan = selectedDrivePlan,
@@ -817,9 +820,7 @@ private fun ChartMealDetailDialog(
                     currentItem,
                     selectedItem,
                     selectedItemKey,
-                ) {
-                    selectedRecord = null
-                }
+                ) {}
             },
         )
     }
@@ -1029,6 +1030,7 @@ private fun DrivePlanMealContent(
     val canSelectMainDish = record.templateId?.let { it < 0L } == true ||
         record.selectedDrivePlanMainDishItemKey != null
     val visibleItems = itemEntries.filterNot { (_, itemKey) -> itemKey in excludedItemKeys }
+    val orderedItems = orderDrivePlanMealItems(visibleItems, selectedMainDishKey)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.meal_detail_contents),
@@ -1052,7 +1054,7 @@ private fun DrivePlanMealContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        visibleItems.forEach { (item, itemKey) ->
+        orderedItems.forEach { (item, itemKey) ->
             val isUnselectedMainDish = item.isMainDishCandidate && itemKey != selectedMainDishKey
             val itemColor = if (isUnselectedMainDish) {
                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -1113,6 +1115,16 @@ private fun DrivePlanMealContent(
             }
         }
     }
+}
+
+internal fun orderDrivePlanMealItems(
+    itemEntries: List<Pair<DrivePlanItem, String>>,
+    selectedMainDishKey: String?,
+): List<Pair<DrivePlanItem, String>> {
+    val (selectedItems, otherItems) = itemEntries.partition { (_, itemKey) ->
+        itemKey == selectedMainDishKey
+    }
+    return selectedItems + otherItems
 }
 
 private fun DrivePlan.mealForRecord(record: MealRecord): DrivePlanMeal? {
