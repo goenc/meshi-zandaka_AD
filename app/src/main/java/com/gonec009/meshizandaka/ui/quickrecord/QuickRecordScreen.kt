@@ -180,7 +180,6 @@ private fun QuickRecordScreen(
                 } else if (state.driveEatingOutCards.isNotEmpty()) {
                     item {
                         DriveEatingOutCardSection(
-                            title = stringResource(R.string.quick_record_eating_out_templates),
                             cards = state.driveEatingOutCards,
                             selectedCardId = state.selectedDriveEatingOutCard?.id,
                             onCardSelect = onDriveEatingOutCardSelect,
@@ -201,7 +200,6 @@ private fun QuickRecordScreen(
                             item {
                                 DriveEatingOutItemSection(
                                     card = card,
-                                    selectedMealType = state.selectedMealType,
                                 )
                             }
                         }
@@ -408,13 +406,11 @@ private fun TemplateSection(
 
 @Composable
 private fun DriveEatingOutCardSection(
-    title: String,
     cards: List<QuickRecordDriveCard>,
     selectedCardId: String?,
     onCardSelect: (QuickRecordDriveCard) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = title, style = MaterialTheme.typography.titleMedium)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(cards, key = { it.id }) { card ->
                 Card(
@@ -448,18 +444,6 @@ private fun DriveEatingOutCardSection(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        if (selectedCardId == card.id) {
-                            Text(
-                                text = stringResource(R.string.kcal_format, card.calories),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                text = "P ${formatOneDecimal(card.proteinG)}g / F ${formatOneDecimal(card.fatG)}g / C ${formatOneDecimal(card.carbG)}g",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
                     }
                 }
             }
@@ -470,27 +454,24 @@ private fun DriveEatingOutCardSection(
 @Composable
 private fun DriveEatingOutItemSection(
     card: QuickRecordDriveCard,
-    selectedMealType: MealType,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.quick_record_eating_out_items_title),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            text = stringResource(
-                R.string.quick_record_eating_out_items_description,
-                mealTypeLabel(selectedMealType),
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(card.name, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = stringResource(R.string.kcal_format, card.calories),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "P ${formatOneDecimal(card.proteinG)}g / F ${formatOneDecimal(card.fatG)}g / C ${formatOneDecimal(card.carbG)}g",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 card.items.forEach { item ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
