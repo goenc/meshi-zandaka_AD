@@ -661,19 +661,15 @@ private fun WeeklyChartCard(
             onDismiss = { dialogState = null },
             onDeleteClick = { record ->
                 onDeleteRecordRequest(detail, record)
-                dialogState = null
             },
             onDeleteDrivePlanItemClick = { record, item, itemKey ->
                 onDeleteDrivePlanItemRequest(detail, record, item, itemKey)
-                dialogState = null
             },
             onDeleteRecordOptionClick = { record, option ->
                 onDeleteRecordOptionRequest(detail, record, option)
-                dialogState = null
             },
             onDeleteRecordPhotoClick = { record ->
                 onDeleteRecordPhotoRequest(detail, record)
-                dialogState = null
             },
             onSelectDrivePlanMainDish = onSelectDrivePlanMainDish,
         )
