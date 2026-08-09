@@ -98,6 +98,18 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    fun deleteRecordPhoto(recordId: Long, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            val record = container.mealRecordRepository.getRecord(recordId)
+                ?.takeIf { !it.photoUri.isNullOrBlank() }
+            if (record != null) {
+                container.mealRecordRepository.updateRecord(record.copy(photoUri = null))
+                _uiState.update { it.copy(message = "写真を削除しました") }
+            }
+            onComplete()
+        }
+    }
+
     fun deleteDrivePlanItem(
         recordId: Long,
         itemKey: String,
