@@ -51,7 +51,6 @@
     <string name="quick_record_tab_manual">手入力</string>
     <string name="quick_record_tab_eating_out">外食</string>
     <string name="quick_record_tab_food">食品</string>
-    <string name="quick_record_photo_only">写真のみ</string>
     <string name="quick_record_no_eating_out_cards">外食カードがありません</string>
     <string name="quick_record_no_foods">食品マスターがありません</string>
     <string name="quick_record_food_category_main_dish">主菜</string>

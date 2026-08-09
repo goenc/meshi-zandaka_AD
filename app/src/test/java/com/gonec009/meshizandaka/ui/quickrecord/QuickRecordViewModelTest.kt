@@ -104,16 +104,19 @@ class QuickRecordViewModelTest {
     }
 
     @Test
-    fun 写真のみは写真がある場合だけ保存可能() {
+    fun テンプレートなしの手入力は名前があれば保存可能() {
         assertEquals(
             false,
-            QuickRecordUiState(isPhotoOnly = true).canSave(),
+            QuickRecordUiState().canSave(),
         )
         assertEquals(
             true,
             QuickRecordUiState(
-                isPhotoOnly = true,
-                photoUri = "content://quick-record/photo",
+                templateName = "自作昼食",
+                totalCalories = "500",
+                proteinG = "25",
+                fatG = "15",
+                carbG = "50",
             ).canSave(),
         )
     }
