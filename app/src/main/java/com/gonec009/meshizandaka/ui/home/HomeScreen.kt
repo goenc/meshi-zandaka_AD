@@ -1145,7 +1145,7 @@ private fun DrivePlanMealContent(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(item.name, color = itemColor, fontWeight = FontWeight.SemiBold)
                     Text(
-                        text = item.amountLabel,
+                        text = stringResource(R.string.kcal_format, item.calories),
                         style = MaterialTheme.typography.bodySmall,
                         color = itemColor,
                     )
