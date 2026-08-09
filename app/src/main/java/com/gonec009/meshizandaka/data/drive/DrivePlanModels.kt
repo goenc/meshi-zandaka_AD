@@ -96,6 +96,99 @@ data class DrivePlanState(
         get() = plans.firstOrNull { plan -> plan.id == selectedPlanId }
 }
 
+internal fun DrivePlanCatalog.preserveImagePathsFrom(previous: DrivePlanState): DrivePlanCatalog {
+    val previousPlans = previous.plans.associateBy { plan -> plan.id }
+    val previousCards = previous.externalCards.associateBy { card -> card.id }
+    val previousFoods = previous.foods.associateBy { food -> food.id }
+    return copy(
+        plans = plans.map { plan -> plan.preserveImagePathsFrom(previousPlans[plan.id]) },
+        externalCards = externalCards.map { card ->
+            card.preserveImagePathsFrom(previousCards[card.id])
+        },
+        foods = foods.map { food ->
+            val previousFood = previousFoods[food.id]
+            food.copy(
+                imagePath = preservedImagePath(
+                    currentHash = food.imageContentHash,
+                    currentPath = food.imagePath,
+                    previousHash = previousFood?.imageContentHash,
+                    previousPath = previousFood?.imagePath,
+                ),
+            )
+        },
+    )
+}
+
+private fun DrivePlan.preserveImagePathsFrom(previous: DrivePlan?): DrivePlan {
+    val previousMeals = previous?.meals?.associateBy { meal -> meal.slot }.orEmpty()
+    return copy(
+        meals = meals.map { meal ->
+            val previousMeal = previousMeals[meal.slot]
+            meal.copy(
+                imagePath = preservedImagePath(
+                    currentHash = meal.imageContentHash,
+                    currentPath = meal.imagePath,
+                    previousHash = previousMeal?.imageContentHash,
+                    previousPath = previousMeal?.imagePath,
+                ),
+                items = meal.items.map { item ->
+                    val previousItem = previousMeal?.items?.firstOrNull { candidate ->
+                        sameImageHash(item.imageContentHash, candidate.imageContentHash) &&
+                            !candidate.imagePath.isNullOrBlank()
+                    }
+                    item.copy(
+                        imagePath = preservedImagePath(
+                            currentHash = item.imageContentHash,
+                            currentPath = item.imagePath,
+                            previousHash = previousItem?.imageContentHash,
+                            previousPath = previousItem?.imagePath,
+                        ),
+                    )
+                },
+            )
+        },
+    )
+}
+
+private fun DriveExternalCard.preserveImagePathsFrom(previous: DriveExternalCard?): DriveExternalCard {
+    return copy(
+        imagePath = preservedImagePath(
+            currentHash = imageContentHash,
+            currentPath = imagePath,
+            previousHash = previous?.imageContentHash,
+            previousPath = previous?.imagePath,
+        ),
+        items = items.map { item ->
+            val previousItem = previous?.items?.firstOrNull { candidate ->
+                sameImageHash(item.imageContentHash, candidate.imageContentHash) &&
+                    !candidate.imagePath.isNullOrBlank()
+            }
+            item.copy(
+                imagePath = preservedImagePath(
+                    currentHash = item.imageContentHash,
+                    currentPath = item.imagePath,
+                    previousHash = previousItem?.imageContentHash,
+                    previousPath = previousItem?.imagePath,
+                ),
+            )
+        },
+    )
+}
+
+private fun preservedImagePath(
+    currentHash: String?,
+    currentPath: String?,
+    previousHash: String?,
+    previousPath: String?,
+): String? {
+    if (!currentPath.isNullOrBlank()) return currentPath
+    return previousPath.takeIf { path -> !path.isNullOrBlank() && sameImageHash(currentHash, previousHash) }
+}
+
+private fun sameImageHash(first: String?, second: String?): Boolean {
+    return !first.isNullOrBlank() && !second.isNullOrBlank() && first.equals(second, ignoreCase = true)
+}
+
 fun DrivePlanItem.recordKey(index: Int): String {
     return id?.takeIf { it.isNotBlank() }
         ?: "${name}\u001F${amountLabel}\u001F$index"

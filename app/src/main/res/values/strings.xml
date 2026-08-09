@@ -117,9 +117,6 @@
     <string name="week_start_day">週の開始曜日</string>
     <string name="week_start_monday">月曜日</string>
     <string name="week_start_sunday">日曜日</string>
-    <string name="default_lunch_template">昼食の標準テンプレート</string>
-    <string name="default_dinner_template">夕食の標準テンプレート</string>
-    <string name="default_breakfast_template">朝食の標準テンプレート</string>
     <string name="template_role_none">未設定</string>
     <string name="template_role_breakfast">朝セット</string>
     <string name="template_role_morning_snack">間朝セット</string>

@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -182,23 +183,25 @@ private fun formatPfcSummary(totals: NutritionTotals): String {
 
 @Composable
 private fun MealRecordOptionRows(options: List<MealRecordOption>) {
-    options.forEach { option ->
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = option.optionNameSnapshot,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(R.string.kcal_format, option.calorieDelta),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    options.forEachIndexed { index, option ->
+        key(option.id.takeIf { it > 0L } ?: "${option.optionGroupNameSnapshot}:${option.optionNameSnapshot}:$index") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = option.optionNameSnapshot,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(R.string.kcal_format, option.calorieDelta),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -220,6 +223,7 @@ fun HomeRoute(
     innerPadding: PaddingValues,
     snackbarHostState: SnackbarHostState,
     onQuickRecordClick: () -> Unit,
+    onTemplateManagementClick: () -> Unit,
 ) {
     val viewModel: HomeViewModel = viewModel(factory = AppViewModelFactory(container))
     val state by viewModel.uiState.collectAsState()
@@ -239,6 +243,7 @@ fun HomeRoute(
         foods = drivePlanState.foods,
         calorieSummary = calorieSummary,
         onQuickRecordClick = onQuickRecordClick,
+        onTemplateManagementClick = onTemplateManagementClick,
         onMoveSelectedDate = viewModel::moveSelectedRecordDate,
         onDateSelected = viewModel::updateSelectedRecordDate,
         onBreakfastClick = viewModel::recordBreakfast,
@@ -264,6 +269,7 @@ private fun HomeScreen(
     foods: List<DriveFood>,
     calorieSummary: DriveCalorieSummary?,
     onQuickRecordClick: () -> Unit,
+    onTemplateManagementClick: () -> Unit,
     onMoveSelectedDate: (Long) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
     onBreakfastClick: () -> Unit,
@@ -395,6 +401,11 @@ private fun HomeScreen(
         }
         item {
             CompactSummaryPanel(items = summaryItems)
+        }
+        item {
+            Button(onClick = onTemplateManagementClick, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.go_to_template_management))
+            }
         }
     }
 
@@ -988,42 +999,44 @@ private fun MealRecordSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            records.forEach { record ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(enabled = detailsReady) { onRecordClick(record) }
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
+            records.forEachIndexed { index, record ->
+                key(record.id.takeIf { it > 0L } ?: "${record.eatenAt}:$index") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(enabled = detailsReady) { onRecordClick(record) }
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Top,
                     ) {
-                        Text(
-                            text = registeredMealLabel(record.mealType),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text = stringResource(R.string.kcal_format, record.totalCalories),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            text = "${stringResource(R.string.protein_short)} ${formatOneDecimal(record.proteinG)}g / ${stringResource(R.string.fat_short)} ${formatOneDecimal(record.fatG)}g / ${stringResource(R.string.carb_short)} ${formatOneDecimal(record.carbG)}g",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    IconButton(onClick = { onDeleteClick(record) }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_delete),
-                            contentDescription = stringResource(R.string.delete),
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp),
-                        )
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                text = registeredMealLabel(record.mealType),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                text = stringResource(R.string.kcal_format, record.totalCalories),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                text = "${stringResource(R.string.protein_short)} ${formatOneDecimal(record.proteinG)}g / ${stringResource(R.string.fat_short)} ${formatOneDecimal(record.fatG)}g / ${stringResource(R.string.carb_short)} ${formatOneDecimal(record.carbG)}g",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        IconButton(onClick = { onDeleteClick(record) }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_delete),
+                                contentDescription = stringResource(R.string.delete),
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -1176,48 +1189,50 @@ private fun DriveExternalCardContent(
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
-        options.forEach { option ->
-            val driveItem = card.items.firstOrNull { item -> item.name == option.optionNameSnapshot }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                driveItem?.imagePath?.let { imagePath ->
-                    DriveCachedImage(
-                        path = imagePath,
-                        contentDescription = option.optionNameSnapshot,
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(option.optionNameSnapshot, fontWeight = FontWeight.SemiBold)
-                    driveItem?.amountLabel?.takeIf { it.isNotBlank() }?.let { amountLabel ->
+        options.forEachIndexed { index, option ->
+            key(option.id.takeIf { it > 0L } ?: "${option.optionNameSnapshot}:$index") {
+                val driveItem = card.items.firstOrNull { item -> item.name == option.optionNameSnapshot }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    driveItem?.imagePath?.let { imagePath ->
+                        DriveCachedImage(
+                            path = imagePath,
+                            contentDescription = option.optionNameSnapshot,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(option.optionNameSnapshot, fontWeight = FontWeight.SemiBold)
+                        driveItem?.amountLabel?.takeIf { it.isNotBlank() }?.let { amountLabel ->
+                            Text(
+                                text = amountLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         Text(
-                            text = amountLabel,
+                            text = stringResource(R.string.kcal_format, option.calorieDelta),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Text(
-                        text = stringResource(R.string.kcal_format, option.calorieDelta),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (option.id > 0L) {
-                    IconButton(onClick = { onDeleteOptionClick(option) }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_delete),
-                            contentDescription = stringResource(R.string.delete_meal_item),
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp),
-                        )
+                    if (option.id > 0L) {
+                        IconButton(onClick = { onDeleteOptionClick(option) }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_delete),
+                                contentDescription = stringResource(R.string.delete_meal_item),
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -1240,48 +1255,50 @@ private fun MealRecordFoodContent(
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        options.forEach { option ->
-            val food = foodForRecordOption(option, foods)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                food?.imagePath?.let { imagePath ->
-                    DriveCachedImage(
-                        path = imagePath,
-                        contentDescription = option.optionNameSnapshot,
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(option.optionNameSnapshot, fontWeight = FontWeight.SemiBold)
-                    food?.amountLabel?.takeIf { it.isNotBlank() }?.let { amountLabel ->
+        options.forEachIndexed { index, option ->
+            key(option.id.takeIf { it > 0L } ?: "${option.optionNameSnapshot}:$index") {
+                val food = foodForRecordOption(option, foods)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    food?.imagePath?.let { imagePath ->
+                        DriveCachedImage(
+                            path = imagePath,
+                            contentDescription = option.optionNameSnapshot,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(option.optionNameSnapshot, fontWeight = FontWeight.SemiBold)
+                        food?.amountLabel?.takeIf { it.isNotBlank() }?.let { amountLabel ->
+                            Text(
+                                text = amountLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         Text(
-                            text = amountLabel,
+                            text = stringResource(R.string.kcal_format, option.calorieDelta),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Text(
-                        text = stringResource(R.string.kcal_format, option.calorieDelta),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (option.id > 0L) {
-                    IconButton(onClick = { onDeleteOptionClick(option) }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_delete),
-                            contentDescription = stringResource(R.string.delete_meal_item),
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp),
-                        )
+                    if (option.id > 0L) {
+                        IconButton(onClick = { onDeleteOptionClick(option) }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_delete),
+                                contentDescription = stringResource(R.string.delete_meal_item),
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -1358,61 +1375,63 @@ private fun DrivePlanMealContent(
             )
         }
         orderedItems.forEach { (item, itemKey) ->
-            val isUnselectedMainDish = item.isMainDishCandidate && itemKey != selectedMainDishKey
-            val itemColor = if (isUnselectedMainDish) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        if (isUnselectedMainDish) {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
-                        } else {
-                            Color.Transparent
-                        },
-                    )
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                item.imagePath?.let { path ->
-                    DriveCachedImage(
-                        path = path,
-                        contentDescription = item.name,
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .alpha(if (isUnselectedMainDish) 0.55f else 1f),
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(item.name, color = itemColor, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        text = stringResource(R.string.kcal_format, item.calories),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = itemColor,
-                    )
-                }
-                if (isUnselectedMainDish && canSelectMainDish) {
-                    TextButton(
-                        onClick = {
-                            onSelectMainDishClick(selectedMainDishItem, item, itemKey)
-                        },
-                    ) {
-                        Text(stringResource(R.string.select_main_dish))
-                    }
+            key(itemKey) {
+                val isUnselectedMainDish = item.isMainDishCandidate && itemKey != selectedMainDishKey
+                val itemColor = if (isUnselectedMainDish) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
                 } else {
-                    IconButton(onClick = { onDeleteItemClick(item, itemKey) }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_delete),
-                            contentDescription = stringResource(R.string.delete_meal_item),
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp),
+                    MaterialTheme.colorScheme.onSurface
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isUnselectedMainDish) {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
+                            } else {
+                                Color.Transparent
+                            },
                         )
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    item.imagePath?.let { path ->
+                        DriveCachedImage(
+                            path = path,
+                            contentDescription = item.name,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .alpha(if (isUnselectedMainDish) 0.55f else 1f),
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(item.name, color = itemColor, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = stringResource(R.string.kcal_format, item.calories),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = itemColor,
+                        )
+                    }
+                    if (isUnselectedMainDish && canSelectMainDish) {
+                        TextButton(
+                            onClick = {
+                                onSelectMainDishClick(selectedMainDishItem, item, itemKey)
+                            },
+                        ) {
+                            Text(stringResource(R.string.select_main_dish))
+                        }
+                    } else {
+                        IconButton(onClick = { onDeleteItemClick(item, itemKey) }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_delete),
+                                contentDescription = stringResource(R.string.delete_meal_item),
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
             }

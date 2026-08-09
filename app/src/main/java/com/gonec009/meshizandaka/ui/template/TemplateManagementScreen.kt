@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -318,8 +319,10 @@ private fun DrivePlanMealCard(
             if (meal.items.isEmpty()) {
                 Text(stringResource(R.string.template_management_no_items))
             } else {
-                meal.items.forEach { item ->
-                    DrivePlanItemRow(item = item)
+                meal.items.forEachIndexed { index, item ->
+                    key(item.id ?: "${item.name}:${item.amountLabel}:$index") {
+                        DrivePlanItemRow(item = item)
+                    }
                 }
             }
         }

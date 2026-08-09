@@ -85,16 +85,17 @@ class DriveAccessManager(
 
     suspend fun restoreCachedPlans() {
         val cached = runCatching { cacheRepository.load() }.getOrNull() ?: return
+        val catalog = cached.catalog.preserveImagePathsFrom(_planState.value)
         val selectedPlanId = cached.selectedPlanId
-            ?.takeIf { selectedId -> cached.catalog.plans.any { it.id == selectedId } }
-            ?: cached.catalog.preferredPlanId
-                ?.takeIf { preferredId -> cached.catalog.plans.any { it.id == preferredId } }
-            ?: cached.catalog.plans.firstOrNull()?.id
+            ?.takeIf { selectedId -> catalog.plans.any { it.id == selectedId } }
+            ?: catalog.preferredPlanId
+                ?.takeIf { preferredId -> catalog.plans.any { it.id == preferredId } }
+            ?: catalog.plans.firstOrNull()?.id
         _planState.value = DrivePlanState(
             phase = DrivePlanPhase.READY,
-            plans = cached.catalog.plans,
-            externalCards = cached.catalog.externalCards,
-            foods = cached.catalog.foods,
+            plans = catalog.plans,
+            externalCards = catalog.externalCards,
+            foods = catalog.foods,
             selectedPlanId = selectedPlanId,
         )
         selectedPlanId?.let { selectPlan(it) }
@@ -160,14 +161,15 @@ class DriveAccessManager(
         val selectedPlanId = catalog.preferredPlanId
             ?: catalog.plans.firstOrNull { it.isFavorite }?.id
             ?: catalog.plans.firstOrNull()?.id
+        val displayCatalog = catalog.preserveImagePathsFrom(_planState.value)
         val cacheSaveError = runCatching {
             cacheRepository.save(catalog, selectedPlanId)
         }.exceptionOrNull()
         _planState.value = DrivePlanState(
             phase = DrivePlanPhase.READY,
-            plans = catalog.plans,
-            externalCards = catalog.externalCards,
-            foods = catalog.foods,
+            plans = displayCatalog.plans,
+            externalCards = displayCatalog.externalCards,
+            foods = displayCatalog.foods,
             selectedPlanId = selectedPlanId,
             errorMessage = cacheSaveError?.let { "最新のDriveデータを端末へ保存できません。" },
         )
@@ -210,9 +212,15 @@ class DriveAccessManager(
         } else {
             latest.externalCards.map { card ->
                 card.copy(
-                    imagePath = card.imageContentHash?.let { loaded.paths[it.lowercase()] },
+                    imagePath = card.imageContentHash?.let { hash ->
+                        loaded.paths[hash.lowercase()] ?: card.imagePath
+                    },
                     items = card.items.map { item ->
-                        item.copy(imagePath = item.imageContentHash?.let { loaded.paths[it.lowercase()] })
+                        item.copy(
+                            imagePath = item.imageContentHash?.let { hash ->
+                                loaded.paths[hash.lowercase()] ?: item.imagePath
+                            },
+                        )
                     },
                 )
             }
@@ -221,7 +229,11 @@ class DriveAccessManager(
             latest.foods
         } else {
             latest.foods.map { food ->
-                food.copy(imagePath = food.imageContentHash?.let { loaded.paths[it.lowercase()] })
+                food.copy(
+                    imagePath = food.imageContentHash?.let { hash ->
+                        loaded.paths[hash.lowercase()] ?: food.imagePath
+                    },
+                )
             }
         }
         _planState.value = latest.copy(
@@ -301,9 +313,15 @@ class DriveAccessManager(
     ): DrivePlan = plan.copy(
         meals = plan.meals.map { meal ->
             meal.copy(
-                imagePath = meal.imageContentHash?.let { paths[it.lowercase()] },
+                imagePath = meal.imageContentHash?.let { hash ->
+                    paths[hash.lowercase()] ?: meal.imagePath
+                },
                 items = meal.items.map { item ->
-                    item.copy(imagePath = item.imageContentHash?.let { paths[it.lowercase()] })
+                    item.copy(
+                        imagePath = item.imageContentHash?.let { hash ->
+                            paths[hash.lowercase()] ?: item.imagePath
+                        },
+                    )
                 },
             )
         },

@@ -26,7 +26,6 @@ class AppContainer(context: Context) {
     val drivePlanShortcutSynchronizer by lazy {
         DrivePlanShortcutSynchronizer(
             mealTemplateRepository = mealTemplateRepository,
-            settingsRepository = settingsRepository,
         )
     }
     val budgetCalculator by lazy { BudgetCalculator() }
@@ -42,7 +41,6 @@ class AppContainer(context: Context) {
     val ensureSeedDataUseCase by lazy {
         EnsureSeedDataUseCase(
             templateRepository = mealTemplateRepository,
-            settingsRepository = settingsRepository,
         )
     }
     val createQuickRecordUseCase by lazy {

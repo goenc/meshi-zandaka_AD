@@ -105,6 +105,7 @@ fun MeshiZandakaAppRoot(
                     innerPadding = innerPadding,
                     snackbarHostState = snackbarHostState,
                     onQuickRecordClick = { navController.navigate(AppDestination.QuickRecord.route) },
+                    onTemplateManagementClick = { navController.navigate(AppDestination.Templates.route) },
                 )
             }
             composable(AppDestination.QuickRecord.route) {
@@ -126,7 +127,6 @@ fun MeshiZandakaAppRoot(
                     container = container,
                     innerPadding = innerPadding,
                     snackbarHostState = snackbarHostState,
-                    onTemplateManagementClick = { navController.navigate(AppDestination.Templates.route) },
                     onDriveConnect = onDriveConnect,
                 )
             }

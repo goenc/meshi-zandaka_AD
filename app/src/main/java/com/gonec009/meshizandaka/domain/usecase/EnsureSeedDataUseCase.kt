@@ -4,13 +4,9 @@ import com.gonec009.meshizandaka.data.local.entity.MealTemplateEntity
 import com.gonec009.meshizandaka.data.local.entity.TemplateOptionEntity
 import com.gonec009.meshizandaka.data.local.entity.TemplateOptionGroupEntity
 import com.gonec009.meshizandaka.data.repository.MealTemplateRepository
-import com.gonec009.meshizandaka.data.repository.SettingsRepository
-import com.gonec009.meshizandaka.domain.model.AppSettings
-import kotlinx.coroutines.flow.first
 
 class EnsureSeedDataUseCase(
     private val templateRepository: MealTemplateRepository,
-    private val settingsRepository: SettingsRepository,
 ) {
     suspend operator fun invoke() {
         if (templateRepository.countTemplates() > 0) {
@@ -141,14 +137,6 @@ class EnsureSeedDataUseCase(
             (1 to 1) to riceOptions,
         )
 
-        val insertedIds = templateRepository.insertSeedData(templates, groupsByTemplateIndex, optionsByGroupIndex)
-        val currentSettings = settingsRepository.settingsFlow.first()
-        settingsRepository.updateSettings(
-            currentSettings.copy(
-                defaultBreakfastTemplateId = insertedIds[0],
-                defaultLunchTemplateId = insertedIds[1],
-                defaultDinnerTemplateId = insertedIds[2],
-            ),
-        )
+        templateRepository.insertSeedData(templates, groupsByTemplateIndex, optionsByGroupIndex)
     }
 }

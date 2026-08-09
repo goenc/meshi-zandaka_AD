@@ -8,7 +8,6 @@ import com.gonec009.meshizandaka.data.drive.recordKey
 import com.gonec009.meshizandaka.domain.model.AppSettings
 import com.gonec009.meshizandaka.domain.model.DashboardSummary
 import com.gonec009.meshizandaka.domain.model.MealRecordOption
-import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.domain.model.WeeklyMealChart
 import com.gonec009.meshizandaka.domain.usecase.DuplicateDailyMealException
@@ -205,15 +204,6 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     private fun resolveTemplateId(role: TemplateShortcutRole): Long? {
         return _uiState.value.templates.firstOrNull { it.shortcutRole == role }?.id
-            ?: when (role) {
-                TemplateShortcutRole.BREAKFAST -> _uiState.value.settings.defaultBreakfastTemplateId
-                TemplateShortcutRole.LUNCH -> _uiState.value.settings.defaultLunchTemplateId
-                TemplateShortcutRole.DINNER -> _uiState.value.settings.defaultDinnerTemplateId
-                TemplateShortcutRole.MORNING_SNACK -> resolveNormalTemplateId(MealType.MORNING_SNACK)
-                TemplateShortcutRole.DAYTIME_SNACK -> resolveNormalTemplateId(MealType.DAYTIME_SNACK)
-                TemplateShortcutRole.FREE_SNACK -> resolveNormalTemplateId(MealType.FREE_SNACK, MealType.SNACK)
-                TemplateShortcutRole.NONE -> null
-            }
     }
 
     private fun resolveDrivePlanMainDishItemKey(
@@ -242,9 +232,4 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         TemplateShortcutRole.NONE -> null
     }
 
-    private fun resolveNormalTemplateId(vararg mealTypes: MealType): Long? {
-        return _uiState.value.templates.firstOrNull { template ->
-            template.shortcutRole == TemplateShortcutRole.NONE && template.mealType in mealTypes
-        }?.id
-    }
 }

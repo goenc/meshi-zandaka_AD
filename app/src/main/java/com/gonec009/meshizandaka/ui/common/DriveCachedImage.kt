@@ -5,8 +5,11 @@ import android.graphics.Bitmap
 import android.util.LruCache
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -48,11 +51,13 @@ fun DriveCachedImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
 ) {
-    val bitmap by produceState<ImageBitmap?>(
-        initialValue = DriveImageMemoryCache.get(path)?.asImageBitmap(),
-        key1 = path,
-    ) {
-        value = DriveImageMemoryCache.load(path)?.asImageBitmap()
+    var bitmap by remember {
+        mutableStateOf(DriveImageMemoryCache.get(path)?.asImageBitmap())
+    }
+    LaunchedEffect(path) {
+        DriveImageMemoryCache.load(path)
+            ?.asImageBitmap()
+            ?.let { loadedBitmap -> bitmap = loadedBitmap }
     }
     bitmap?.let { image ->
         Image(

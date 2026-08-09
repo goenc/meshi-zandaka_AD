@@ -42,7 +42,6 @@ fun SettingsRoute(
     container: AppContainer,
     innerPadding: PaddingValues,
     snackbarHostState: SnackbarHostState,
-    onTemplateManagementClick: () -> Unit,
     onDriveConnect: () -> Unit,
 ) {
     val viewModel: SettingsViewModel = viewModel(factory = AppViewModelFactory(container))
@@ -62,10 +61,6 @@ fun SettingsRoute(
         onTargetChange = viewModel::updateTarget,
         onMaintenanceChange = viewModel::updateMaintenance,
         onWeekStartChange = viewModel::updateWeekStart,
-        onBreakfastTemplateChange = viewModel::updateBreakfastTemplate,
-        onLunchTemplateChange = viewModel::updateLunchTemplate,
-        onDinnerTemplateChange = viewModel::updateDinnerTemplate,
-        onTemplateManagementClick = onTemplateManagementClick,
         onSave = viewModel::save,
         driveState = driveState,
         onDriveConnect = onDriveConnect,
@@ -80,18 +75,11 @@ private fun SettingsScreen(
     onTargetChange: (String) -> Unit,
     onMaintenanceChange: (String) -> Unit,
     onWeekStartChange: (WeekStartDay) -> Unit,
-    onBreakfastTemplateChange: (Long?) -> Unit,
-    onLunchTemplateChange: (Long?) -> Unit,
-    onDinnerTemplateChange: (Long?) -> Unit,
-    onTemplateManagementClick: () -> Unit,
     onSave: () -> Unit,
     driveState: DriveConnectionState,
     onDriveConnect: () -> Unit,
 ) {
     var weekStartExpanded by remember { mutableStateOf(false) }
-    var breakfastExpanded by remember { mutableStateOf(false) }
-    var lunchExpanded by remember { mutableStateOf(false) }
-    var dinnerExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -113,9 +101,6 @@ private fun SettingsScreen(
             label = { Text(stringResource(R.string.maintenance_calories)) },
             modifier = Modifier.fillMaxWidth(),
         )
-        Button(onClick = onTemplateManagementClick, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.go_to_template_management))
-        }
         ExposedDropdownMenuBox(
             expanded = weekStartExpanded,
             onExpandedChange = { weekStartExpanded = it },
@@ -140,93 +125,6 @@ private fun SettingsScreen(
                         onClick = {
                             weekStartExpanded = false
                             onWeekStartChange(day)
-                        },
-                    )
-                }
-            }
-        }
-        ExposedDropdownMenuBox(
-            expanded = lunchExpanded,
-            onExpandedChange = { lunchExpanded = it },
-        ) {
-            OutlinedTextField(
-                value = state.normalTemplates.firstOrNull { it.id == state.defaultLunchTemplateId }?.name.orEmpty(),
-                onValueChange = {},
-                readOnly = true,
-                label = { Text(stringResource(R.string.default_lunch_template)) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = lunchExpanded) },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth(),
-            )
-            DropdownMenu(
-                expanded = lunchExpanded,
-                onDismissRequest = { lunchExpanded = false },
-            ) {
-                state.normalTemplates.forEach { template ->
-                    DropdownMenuItem(
-                        text = { Text(template.name) },
-                        onClick = {
-                            lunchExpanded = false
-                            onLunchTemplateChange(template.id)
-                        },
-                    )
-                }
-            }
-        }
-        ExposedDropdownMenuBox(
-            expanded = breakfastExpanded,
-            onExpandedChange = { breakfastExpanded = it },
-        ) {
-            OutlinedTextField(
-                value = state.normalTemplates.firstOrNull { it.id == state.defaultBreakfastTemplateId }?.name.orEmpty(),
-                onValueChange = {},
-                readOnly = true,
-                label = { Text(stringResource(R.string.default_breakfast_template)) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = breakfastExpanded) },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth(),
-            )
-            DropdownMenu(
-                expanded = breakfastExpanded,
-                onDismissRequest = { breakfastExpanded = false },
-            ) {
-                state.normalTemplates.forEach { template ->
-                    DropdownMenuItem(
-                        text = { Text(template.name) },
-                        onClick = {
-                            breakfastExpanded = false
-                            onBreakfastTemplateChange(template.id)
-                        },
-                    )
-                }
-            }
-        }
-        ExposedDropdownMenuBox(
-            expanded = dinnerExpanded,
-            onExpandedChange = { dinnerExpanded = it },
-        ) {
-            OutlinedTextField(
-                value = state.normalTemplates.firstOrNull { it.id == state.defaultDinnerTemplateId }?.name.orEmpty(),
-                onValueChange = {},
-                readOnly = true,
-                label = { Text(stringResource(R.string.default_dinner_template)) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dinnerExpanded) },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth(),
-            )
-            DropdownMenu(
-                expanded = dinnerExpanded,
-                onDismissRequest = { dinnerExpanded = false },
-            ) {
-                state.normalTemplates.forEach { template ->
-                    DropdownMenuItem(
-                        text = { Text(template.name) },
-                        onClick = {
-                            dinnerExpanded = false
-                            onDinnerTemplateChange(template.id)
                         },
                     )
                 }

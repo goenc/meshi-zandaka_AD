@@ -11,8 +11,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.ImageBitmap
@@ -76,12 +79,13 @@ fun MealPhoto(
     maxSizePx: Int = 720,
 ) {
     val context = LocalContext.current
-    val imageBitmap by produceState(
-        initialValue = MealPhotoMemoryCache.get(uriString, maxSizePx)?.asImageBitmap(),
-        uriString,
-        maxSizePx,
-    ) {
-        value = MealPhotoMemoryCache.load(context, uriString, maxSizePx)?.asImageBitmap()
+    var imageBitmap by remember {
+        mutableStateOf(MealPhotoMemoryCache.get(uriString, maxSizePx)?.asImageBitmap())
+    }
+    LaunchedEffect(uriString, maxSizePx) {
+        MealPhotoMemoryCache.load(context, uriString, maxSizePx)
+            ?.asImageBitmap()
+            ?.let { loadedBitmap -> imageBitmap = loadedBitmap }
     }
     imageBitmap?.let { bitmap ->
         Image(
