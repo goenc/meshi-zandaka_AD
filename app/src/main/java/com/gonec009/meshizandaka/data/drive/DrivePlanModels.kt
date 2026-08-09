@@ -63,16 +63,31 @@ data class DriveExternalCard(
     val items: List<DrivePlanItem> = emptyList(),
 )
 
+data class DriveFood(
+    val id: String,
+    val name: String,
+    val mealCategory: Int,
+    val amountLabel: String = "",
+    val imageContentHash: String? = null,
+    val imagePath: String? = null,
+    val calories: Int = 0,
+    val proteinG: Double = 0.0,
+    val fatG: Double = 0.0,
+    val carbG: Double = 0.0,
+)
+
 data class DrivePlanCatalog(
     val plans: List<DrivePlan>,
     val preferredPlanId: String?,
     val externalCards: List<DriveExternalCard> = emptyList(),
+    val foods: List<DriveFood> = emptyList(),
 )
 
 data class DrivePlanState(
     val phase: DrivePlanPhase = DrivePlanPhase.IDLE,
     val plans: List<DrivePlan> = emptyList(),
     val externalCards: List<DriveExternalCard> = emptyList(),
+    val foods: List<DriveFood> = emptyList(),
     val selectedPlanId: String? = null,
     val imageLoading: Boolean = false,
     val errorMessage: String? = null,

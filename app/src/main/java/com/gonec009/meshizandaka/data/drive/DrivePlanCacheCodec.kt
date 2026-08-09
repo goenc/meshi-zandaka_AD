@@ -9,6 +9,7 @@ internal object DrivePlanCacheCodec {
             .putNullable("preferredPlanId", catalog.preferredPlanId)
             .put("plans", JSONArray())
             .put("externalCards", JSONArray())
+            .put("foods", JSONArray())
         val plans = root.getJSONArray("plans")
 
         catalog.plans.forEach { plan ->
@@ -93,6 +94,22 @@ internal object DrivePlanCacheCodec {
                     }),
             )
         }
+        val foods = root.getJSONArray("foods")
+        catalog.foods.forEach { food ->
+            foods.put(
+                JSONObject()
+                    .put("id", food.id)
+                    .put("name", food.name)
+                    .put("mealCategory", food.mealCategory)
+                    .put("amountLabel", food.amountLabel)
+                    .putNullable("imageContentHash", food.imageContentHash)
+                    .putNullable("imagePath", food.imagePath)
+                    .put("calories", food.calories)
+                    .put("proteinG", food.proteinG)
+                    .put("fatG", food.fatG)
+                    .put("carbG", food.carbG),
+            )
+        }
         return root.toString()
     }
 
@@ -100,6 +117,7 @@ internal object DrivePlanCacheCodec {
         val root = JSONObject(value)
         val plansJson = root.optJSONArray("plans") ?: error("保存済みプランデータが不正です。")
         val externalCardsJson = root.optJSONArray("externalCards") ?: JSONArray()
+        val foodsJson = root.optJSONArray("foods") ?: JSONArray()
         val plans = buildList {
             for (planIndex in 0 until plansJson.length()) {
                 val planJson = plansJson.optJSONObject(planIndex) ?: continue
@@ -206,10 +224,32 @@ internal object DrivePlanCacheCodec {
                 )
             }
         }
+        val foods = buildList {
+            for (index in 0 until foodsJson.length()) {
+                val foodJson = foodsJson.optJSONObject(index) ?: continue
+                val id = foodJson.stringOrNull("id") ?: continue
+                add(
+                    DriveFood(
+                        id = id,
+                        name = foodJson.stringOrNull("name").orEmpty().ifBlank { "食品" },
+                        mealCategory = foodJson.optInt("mealCategory", 4)
+                            .takeIf { it in 0..4 } ?: 4,
+                        amountLabel = foodJson.stringOrNull("amountLabel").orEmpty(),
+                        imageContentHash = foodJson.stringOrNull("imageContentHash"),
+                        imagePath = foodJson.stringOrNull("imagePath"),
+                        calories = foodJson.optInt("calories", 0),
+                        proteinG = foodJson.optDouble("proteinG", 0.0),
+                        fatG = foodJson.optDouble("fatG", 0.0),
+                        carbG = foodJson.optDouble("carbG", 0.0),
+                    ),
+                )
+            }
+        }
         return DrivePlanCatalog(
             plans = plans,
             preferredPlanId = root.stringOrNull("preferredPlanId"),
             externalCards = externalCards,
+            foods = foods,
         )
     }
 

@@ -188,12 +188,93 @@ class DrivePlanSnapshotReader(
             foodPortionRows = storedFoodPortionRows,
             imageHashes = imageHashes,
         )
+        val foods = buildFoods(
+            foodRows = storedFoodRows,
+            foodPortionRows = storedFoodPortionRows,
+            imageHashes = imageHashes,
+        )
 
         return DrivePlanCatalog(
             plans = plans,
             preferredPlanId = preferredPlanId,
             externalCards = externalCards,
+            foods = foods,
         )
+    }
+
+    private fun buildFoods(
+        foodRows: Map<String, SnapshotRow>,
+        foodPortionRows: Map<String, List<SnapshotRow>>,
+        imageHashes: Map<String, String>,
+    ): List<DriveFood> = foodRows.values
+        .asSequence()
+        .mapNotNull { row ->
+            val food = row.payload ?: return@mapNotNull null
+            if (food.optBooleanIgnoreCase("isArchived", false)) return@mapNotNull null
+            val id = food.stringOrNull("id") ?: row.rowKey
+            val name = food.stringOrNull("displayName")
+                ?: food.stringOrNull("name")
+                ?: food.stringOrNull("officialName")
+                ?: food.stringOrNull("foodName")
+                ?: return@mapNotNull null
+            val standardAmount = food.optLongIgnoreCase("standardAmount", 0L)
+                .takeIf { it > 0L }
+                ?: food.optLongIgnoreCase("referenceAmount", 0L)
+            val standardUnit = food.optIntIgnoreCase("standardUnit", -1)
+                .takeIf { it >= 0 }
+                ?: food.optIntIgnoreCase("referenceUnit", -1)
+            val standardCustomUnitName = food.stringOrNull("standardCustomUnitName")
+                ?: food.stringOrNull("referenceCustomUnitName")
+            val nutritionItem = JSONObject()
+                .put("standardAmount", standardAmount)
+                .put("standardUnit", standardUnit)
+                .putNullable("standardCustomUnitName", standardCustomUnitName)
+            val nutrition = nutritionForFood(
+                food = food,
+                item = nutritionItem,
+                portionRows = foodPortionRows[idKey(id)].orEmpty(),
+            )
+            DriveFood(
+                id = id,
+                name = name,
+                mealCategory = foodMealCategory(food),
+                amountLabel = formatStoredAmount(
+                    amount = standardAmount,
+                    unit = standardUnit,
+                    customUnitName = standardCustomUnitName,
+                ),
+                imageContentHash = food.stringOrNull("imageAssetId")
+                    ?.let { imageHashes[idKey(it)] },
+                calories = nutrition.calories.roundToInt(),
+                proteinG = nutrition.proteinG,
+                fatG = nutrition.fatG,
+                carbG = nutrition.carbG,
+            )
+        }
+        .sortedWith(compareBy<DriveFood> { it.mealCategory }.thenBy { it.name }.thenBy { it.id })
+        .toList()
+
+    private fun foodMealCategory(food: JSONObject): Int {
+        val value = food.valueIgnoreCase("mealCategory")
+        val category = when (value) {
+            is Number -> value.toInt()
+            is String -> {
+                val normalized = value.lowercase(Locale.ROOT)
+                    .substringAfterLast('.')
+                    .replace("-", "")
+                    .replace("_", "")
+                value.toIntOrNull() ?: when (normalized) {
+                    "staple", "mainstaple", "主食" -> 0
+                    "sidedish", "副菜" -> 1
+                    "maindish", "主菜" -> 2
+                    "snack", "間食" -> 3
+                    "other", "その他" -> 4
+                    else -> 4
+                }
+            }
+            else -> 4
+        }
+        return category.takeIf { it in 0..4 } ?: 4
     }
 
     private fun buildExternalCards(
@@ -702,6 +783,9 @@ class DrivePlanSnapshotReader(
         }
         return if (unitName.isBlank()) value else "$value $unitName"
     }
+
+    private fun JSONObject.putNullable(key: String, value: String?): JSONObject =
+        put(key, value ?: JSONObject.NULL)
 
     private fun SnapshotRow.isEntity(simpleName: String): Boolean =
         entityType == simpleName || entityType.endsWith(".$simpleName")

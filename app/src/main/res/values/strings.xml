@@ -50,7 +50,16 @@
     <string name="quick_record_templates">テンプレート</string>
     <string name="quick_record_tab_manual">手入力</string>
     <string name="quick_record_tab_eating_out">外食</string>
+    <string name="quick_record_tab_food">食品</string>
     <string name="quick_record_no_eating_out_cards">外食カードがありません</string>
+    <string name="quick_record_no_foods">食品マスターがありません</string>
+    <string name="quick_record_food_category_main_dish">主菜</string>
+    <string name="quick_record_food_category_side_dish">副菜</string>
+    <string name="quick_record_food_category_staple">主食</string>
+    <string name="quick_record_food_category_snack">間食</string>
+    <string name="quick_record_food_category_other">その他</string>
+    <string name="quick_record_food_register_target">登録先</string>
+    <string name="quick_record_food_register">登録</string>
     <string name="quick_record_append_target">既存の食事へ追加</string>
     <string name="quick_record_append_target_description">昼食・夕食が登録済みなら、外食をそこへ追加できます</string>
     <string name="quick_record_new_eating_out">新しい外食として記録</string>

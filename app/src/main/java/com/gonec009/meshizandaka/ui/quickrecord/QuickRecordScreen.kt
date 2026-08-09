@@ -74,6 +74,7 @@ import kotlinx.coroutines.launch
 
 private const val MANUAL_TAB_INDEX = 0
 private const val EATING_OUT_TAB_INDEX = 1
+private const val FOOD_TAB_INDEX = 2
 
 @Composable
 fun QuickRecordRoute(
@@ -95,8 +96,10 @@ fun QuickRecordRoute(
         innerPadding = innerPadding,
         state = state,
         onManualTabSelected = viewModel::selectManualTab,
+        onFoodTabSelected = viewModel::selectFoodTab,
         onTemplateSelect = viewModel::selectTemplate,
         onDriveEatingOutCardSelect = viewModel::selectDriveEatingOutCard,
+        onFoodRegister = viewModel::registerFood,
         onTemplateNameChange = viewModel::setTemplateName,
         onMealTypeSelect = viewModel::selectMealType,
         onTotalCaloriesChange = viewModel::setTotalCalories,
@@ -116,8 +119,10 @@ private fun QuickRecordScreen(
     innerPadding: PaddingValues,
     state: QuickRecordUiState,
     onManualTabSelected: () -> Unit,
+    onFoodTabSelected: () -> Unit,
     onTemplateSelect: (MealTemplate) -> Unit,
     onDriveEatingOutCardSelect: (QuickRecordDriveCard) -> Unit,
+    onFoodRegister: (QuickRecordFood) -> Unit,
     onTemplateNameChange: (String) -> Unit,
     onMealTypeSelect: (MealType) -> Unit,
     onTotalCaloriesChange: (String) -> Unit,
@@ -133,6 +138,7 @@ private fun QuickRecordScreen(
     var mealTypeExpanded by remember { mutableStateOf(false) }
     var showDeletePhotoDialog by remember { mutableStateOf(false) }
     var selectedTabIndex by rememberSaveable { mutableStateOf(MANUAL_TAB_INDEX) }
+    var selectedFoodCategoryIndex by rememberSaveable { mutableStateOf(0) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -146,13 +152,15 @@ private fun QuickRecordScreen(
                 listOf(
                     stringResource(R.string.quick_record_tab_manual),
                     stringResource(R.string.quick_record_tab_eating_out),
+                    stringResource(R.string.quick_record_tab_food),
                 ).forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTabIndex == index,
                         onClick = {
                             selectedTabIndex = index
-                            if (index == MANUAL_TAB_INDEX) {
-                                onManualTabSelected()
+                            when (index) {
+                                MANUAL_TAB_INDEX -> onManualTabSelected()
+                                FOOD_TAB_INDEX -> onFoodTabSelected()
                             }
                         },
                         text = { Text(title) },
@@ -167,7 +175,52 @@ private fun QuickRecordScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 val isManualTab = selectedTabIndex == MANUAL_TAB_INDEX
-                if (isManualTab) {
+                val isEatingOutTab = selectedTabIndex == EATING_OUT_TAB_INDEX
+                val isFoodTab = selectedTabIndex == FOOD_TAB_INDEX
+                if (isFoodTab) {
+                    val selectedFoodCategory = quickRecordFoodCategoryTabs[
+                        selectedFoodCategoryIndex.coerceIn(0, quickRecordFoodCategoryTabs.lastIndex)
+                    ]
+                    item {
+                        FoodMealTypeSection(
+                            selectedMealType = mealTypeLabel(state.selectedMealType),
+                            expanded = mealTypeExpanded,
+                            onExpandedChange = { mealTypeExpanded = it },
+                            onMealTypeSelect = { mealType ->
+                                mealTypeExpanded = false
+                                onMealTypeSelect(mealType)
+                            },
+                        )
+                    }
+                    item {
+                        QuickRecordFoodCategoryTabRow(
+                            selectedIndex = selectedFoodCategoryIndex.coerceIn(
+                                0,
+                                quickRecordFoodCategoryTabs.lastIndex,
+                            ),
+                            onSelected = { selectedFoodCategoryIndex = it },
+                        )
+                    }
+                    val visibleFoods = state.foods.filter { food ->
+                        food.mealCategory == selectedFoodCategory.mealCategory
+                    }
+                    if (visibleFoods.isEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.quick_record_no_foods),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    } else {
+                        items(visibleFoods, key = { food -> food.id }) { food ->
+                            QuickRecordFoodRow(
+                                food = food,
+                                enabled = !state.isSaving,
+                                onRegister = { onFoodRegister(food) },
+                            )
+                        }
+                    }
+                } else if (isManualTab) {
                     val normalTemplates = state.availableTemplates.filter { it.mealType != MealType.EATING_OUT }
                     if (normalTemplates.isNotEmpty()) item {
                         TemplateSection(
@@ -177,7 +230,7 @@ private fun QuickRecordScreen(
                             onTemplateSelect = onTemplateSelect,
                         )
                     }
-                } else if (state.driveEatingOutCards.isNotEmpty()) {
+                } else if (isEatingOutTab && state.driveEatingOutCards.isNotEmpty()) {
                     item {
                         DriveEatingOutCardSection(
                             cards = state.driveEatingOutCards,
@@ -185,7 +238,7 @@ private fun QuickRecordScreen(
                             onCardSelect = onDriveEatingOutCardSelect,
                         )
                     }
-                } else {
+                } else if (isEatingOutTab) {
                     item {
                         Text(
                             text = stringResource(R.string.quick_record_no_eating_out_cards),
@@ -193,7 +246,7 @@ private fun QuickRecordScreen(
                         )
                     }
                 }
-                if (!isManualTab) {
+                if (isEatingOutTab) {
                     state.selectedDriveEatingOutCard
                         ?.takeIf { it.items.isNotEmpty() }
                         ?.let { card ->
@@ -204,7 +257,7 @@ private fun QuickRecordScreen(
                             }
                         }
                 }
-                if (isManualTab || state.selectedDriveEatingOutCard != null) {
+                if (isManualTab || (isEatingOutTab && state.selectedDriveEatingOutCard != null)) {
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -399,6 +452,56 @@ private fun TemplateSection(
                     onClick = { onTemplateSelect(template) },
                     label = { Text(template.name) },
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FoodMealTypeSection(
+    selectedMealType: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onMealTypeSelect: (MealType) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.quick_record_food_register_target),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = onExpandedChange,
+            ) {
+                LabeledMealSettingField(
+                    mealTypeLabel = stringResource(R.string.meal_type),
+                    selectedMealType = selectedMealType,
+                    expanded = expanded,
+                    mealFieldModifier = Modifier.menuAnchor(),
+                )
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { onExpandedChange(false) },
+                ) {
+                    MealType.entries
+                        .filterNot { mealType ->
+                            mealType == MealType.EATING_OUT || mealType == MealType.SNACK
+                        }
+                        .forEach { mealType ->
+                            DropdownMenuItem(
+                                text = { Text(mealTypeLabel(mealType)) },
+                                onClick = { onMealTypeSelect(mealType) },
+                            )
+                        }
+                }
             }
         }
     }

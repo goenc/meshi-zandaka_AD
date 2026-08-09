@@ -39,11 +39,24 @@ data class QuickRecordDriveItem(
     val carbG: Double,
 )
 
+data class QuickRecordFood(
+    val id: String,
+    val name: String,
+    val mealCategory: Int,
+    val amountLabel: String,
+    val imagePath: String?,
+    val calories: Int,
+    val proteinG: Double,
+    val fatG: Double,
+    val carbG: Double,
+)
+
 data class QuickRecordUiState(
     val availableTemplates: List<MealTemplate> = emptyList(),
     val selectedTemplate: MealTemplate? = null,
     val driveEatingOutCards: List<QuickRecordDriveCard> = emptyList(),
     val selectedDriveEatingOutCard: QuickRecordDriveCard? = null,
+    val foods: List<QuickRecordFood> = emptyList(),
     val templateName: String = "",
     val selectedMealType: MealType = MealType.LUNCH,
     val totalCalories: String = "",
@@ -128,6 +141,19 @@ class QuickRecordViewModel(
                         },
                     )
                 }
+                val foods = planState.foods.map { food ->
+                    QuickRecordFood(
+                        id = food.id,
+                        name = food.name,
+                        mealCategory = food.mealCategory,
+                        amountLabel = food.amountLabel,
+                        imagePath = food.imagePath,
+                        calories = food.calories,
+                        proteinG = food.proteinG,
+                        fatG = food.fatG,
+                        carbG = food.carbG,
+                    )
+                }
                 _uiState.update { state ->
                     val selectedCard = state.selectedDriveEatingOutCard?.let { current ->
                         cards.firstOrNull { card -> card.id == current.id }
@@ -135,6 +161,7 @@ class QuickRecordViewModel(
                     state.copy(
                         driveEatingOutCards = cards,
                         selectedDriveEatingOutCard = selectedCard,
+                        foods = foods,
                     )
                 }
             }
@@ -174,6 +201,10 @@ class QuickRecordViewModel(
                 } ?: clearedState
             }
         }
+    }
+
+    fun selectFoodTab() {
+        _uiState.update { it.copy(selectedDriveEatingOutCard = null) }
     }
 
     fun selectMealType(mealType: MealType) {
@@ -256,6 +287,43 @@ class QuickRecordViewModel(
         }
     }
 
+    fun registerFood(food: QuickRecordFood) {
+        val state = _uiState.value
+        val mealType = state.selectedMealType.takeUnless {
+            it == MealType.EATING_OUT || it == MealType.SNACK
+        } ?: MealType.LUNCH
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true) }
+            runCatching {
+                container.createQuickRecordUseCase(
+                    templateId = null,
+                    templateNameSnapshot = food.name,
+                    additionalOptions = listOf(food.toRecordOption()),
+                    totalCaloriesOverride = food.calories,
+                    proteinOverride = food.proteinG,
+                    fatOverride = food.fatG,
+                    carbOverride = food.carbG,
+                    isSpecialOverride = false,
+                    mealType = mealType,
+                )
+            }.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        message = "記録しました",
+                    )
+                }
+            }.onFailure { exception ->
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        message = exception.message ?: "記録に失敗しました",
+                    )
+                }
+            }
+        }
+    }
+
     fun consumeMessage() {
         _uiState.update { it.copy(message = null) }
     }
@@ -295,3 +363,12 @@ internal fun QuickRecordDriveCard.toRecordOptions(): List<MealRecordOption> {
         )
     }
 }
+
+private fun QuickRecordFood.toRecordOption(): MealRecordOption = MealRecordOption(
+    optionGroupNameSnapshot = "食品",
+    optionNameSnapshot = name,
+    calorieDelta = calories,
+    proteinDeltaG = proteinG,
+    fatDeltaG = fatG,
+    carbDeltaG = carbG,
+)

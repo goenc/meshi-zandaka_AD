@@ -51,7 +51,11 @@ class DriveAccessManager(
         _state.update { it.copy(phase = DriveConnectionPhase.CONNECTING) }
         val current = _planState.value
         _planState.value = if (current.plans.isEmpty()) {
-            DrivePlanState(phase = DrivePlanPhase.LOADING)
+            DrivePlanState(
+                phase = DrivePlanPhase.LOADING,
+                externalCards = current.externalCards,
+                foods = current.foods,
+            )
         } else {
             current.copy(errorMessage = null)
         }
@@ -67,6 +71,8 @@ class DriveAccessManager(
         _planState.value = if (current.plans.isEmpty()) {
             DrivePlanState(
                 phase = DrivePlanPhase.FAILED,
+                externalCards = current.externalCards,
+                foods = current.foods,
                 errorMessage = "Google Driveの認証に失敗しました。",
             )
         } else {
@@ -88,6 +94,7 @@ class DriveAccessManager(
             phase = DrivePlanPhase.READY,
             plans = cached.catalog.plans,
             externalCards = cached.catalog.externalCards,
+            foods = cached.catalog.foods,
             selectedPlanId = selectedPlanId,
         )
         selectedPlanId?.let { selectPlan(it) }
@@ -98,7 +105,11 @@ class DriveAccessManager(
         _state.value = DriveConnectionState(phase = DriveConnectionPhase.CONNECTING)
         val cachedState = _planState.value
         _planState.value = if (cachedState.plans.isEmpty()) {
-            DrivePlanState(phase = DrivePlanPhase.LOADING)
+            DrivePlanState(
+                phase = DrivePlanPhase.LOADING,
+                externalCards = cachedState.externalCards,
+                foods = cachedState.foods,
+            )
         } else {
             cachedState.copy(errorMessage = null)
         }
@@ -133,6 +144,8 @@ class DriveAccessManager(
             _planState.value = if (current.plans.isEmpty()) {
                 DrivePlanState(
                     phase = DrivePlanPhase.FAILED,
+                    externalCards = current.externalCards,
+                    foods = current.foods,
                     errorMessage = "Driveの食事プランを読み込めません。",
                 )
             } else {
@@ -154,6 +167,7 @@ class DriveAccessManager(
             phase = DrivePlanPhase.READY,
             plans = catalog.plans,
             externalCards = catalog.externalCards,
+            foods = catalog.foods,
             selectedPlanId = selectedPlanId,
             errorMessage = cacheSaveError?.let { "最新のDriveデータを端末へ保存できません。" },
         )
@@ -174,7 +188,14 @@ class DriveAccessManager(
 
         val selectedPlan = current.plans.first { it.id == planId }
         runCatching { shortcutSynchronizer.sync(selectedPlan) }
-        val imageResult = capture { loadImages(accessToken, selectedPlan, current.externalCards) }
+        val imageResult = capture {
+            loadImages(
+                token = accessToken,
+                plan = selectedPlan,
+                externalCards = current.externalCards,
+                foods = current.foods,
+            )
+        }
         val loaded = imageResult.getOrNull()
         val latest = _planState.value
         val updatedPlans = if (loaded == null) {
@@ -196,9 +217,17 @@ class DriveAccessManager(
                 )
             }
         }
+        val updatedFoods = if (loaded == null) {
+            latest.foods
+        } else {
+            latest.foods.map { food ->
+                food.copy(imagePath = food.imageContentHash?.let { loaded.paths[it.lowercase()] })
+            }
+        }
         _planState.value = latest.copy(
             plans = updatedPlans,
             externalCards = updatedExternalCards,
+            foods = updatedFoods,
             imageLoading = false,
             errorMessage = when {
                 imageResult.isFailure -> "Driveの画像情報を読み込めません。"
@@ -218,6 +247,7 @@ class DriveAccessManager(
         token: String?,
         plan: DrivePlan,
         externalCards: List<DriveExternalCard>,
+        foods: List<DriveFood>,
     ): ImageLoadResult {
         val hashes = plan.meals
             .flatMap { meal ->
@@ -234,6 +264,7 @@ class DriveAccessManager(
                     }
                 },
             )
+            .plus(foods.mapNotNull { it.imageContentHash })
             .distinctBy { it.lowercase() }
         if (hashes.isEmpty()) return ImageLoadResult(emptyMap(), failedCount = 0)
 

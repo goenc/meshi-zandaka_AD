@@ -62,6 +62,20 @@ class DrivePlanCacheCodecTest {
                     carbG = 44.3,
                 ),
             ),
+            foods = listOf(
+                DriveFood(
+                    id = "food-1",
+                    name = "鮭",
+                    mealCategory = 2,
+                    amountLabel = "80 g",
+                    imageContentHash = "food-master-image-hash",
+                    imagePath = "/data/user/0/com.gonec009.meshizandaka/files/food.jpg",
+                    calories = 110,
+                    proteinG = 17.5,
+                    fatG = 4.2,
+                    carbG = 0.0,
+                ),
+            ),
         )
 
         val restored = DrivePlanCacheCodec.decode(DrivePlanCacheCodec.encode(catalog))
