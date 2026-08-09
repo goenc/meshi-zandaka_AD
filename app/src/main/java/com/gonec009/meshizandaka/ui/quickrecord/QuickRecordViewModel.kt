@@ -57,13 +57,13 @@ data class QuickRecordUiState(
     val driveEatingOutCards: List<QuickRecordDriveCard> = emptyList(),
     val selectedDriveEatingOutCard: QuickRecordDriveCard? = null,
     val foods: List<QuickRecordFood> = emptyList(),
+    val isPhotoOnly: Boolean = false,
     val templateName: String = "",
     val selectedMealType: MealType = MealType.LUNCH,
     val totalCalories: String = "",
     val proteinG: String = "",
     val fatG: String = "",
     val carbG: String = "",
-    val memo: String = "",
     val photoUri: String? = null,
     val isSaving: Boolean = false,
     val message: String? = null,
@@ -84,12 +84,16 @@ class QuickRecordViewModel(
                 }
                 val currentSelection = _uiState.value.selectedTemplate
                 val currentDriveCard = _uiState.value.selectedDriveEatingOutCard
+                val currentPhotoOnly = _uiState.value.isPhotoOnly
                 val selectedTemplate = currentSelection?.let { selected ->
                     availableTemplates.firstOrNull { it.id == selected.id }
                 } ?: defaultTemplate(availableTemplates)
                 _uiState.update {
                     when {
                         currentDriveCard != null && currentSelection == null -> it.copy(
+                            availableTemplates = availableTemplates,
+                        )
+                        currentPhotoOnly -> it.copy(
                             availableTemplates = availableTemplates,
                         )
                         selectedTemplate == null -> it.copy(
@@ -172,11 +176,31 @@ class QuickRecordViewModel(
         _uiState.update { state -> applyTemplate(state, template).copy(selectedDriveEatingOutCard = null) }
     }
 
+    fun selectPhotoOnly() {
+        _uiState.update { state ->
+            state.copy(
+                selectedTemplate = null,
+                selectedDriveEatingOutCard = null,
+                isPhotoOnly = true,
+                templateName = "",
+                totalCalories = "",
+                proteinG = "",
+                fatG = "",
+                carbG = "",
+                photoUri = null,
+                selectedMealType = state.selectedMealType.takeUnless {
+                    it == MealType.EATING_OUT || it == MealType.SNACK
+                } ?: MealType.LUNCH,
+            )
+        }
+    }
+
     fun selectDriveEatingOutCard(card: QuickRecordDriveCard) {
         _uiState.update { state ->
             state.copy(
                 selectedTemplate = null,
                 selectedDriveEatingOutCard = card,
+                isPhotoOnly = false,
                 templateName = card.name,
                 selectedMealType = state.selectedMealType.takeUnless { it == MealType.EATING_OUT }
                     ?: MealType.LUNCH,
@@ -184,7 +208,6 @@ class QuickRecordViewModel(
                 proteinG = formatOneDecimal(card.proteinG),
                 fatG = formatOneDecimal(card.fatG),
                 carbG = formatOneDecimal(card.carbG),
-                memo = "",
                 photoUri = null,
             )
         }
@@ -193,7 +216,7 @@ class QuickRecordViewModel(
     fun selectManualTab() {
         _uiState.update { state ->
             val clearedState = state.copy(selectedDriveEatingOutCard = null)
-            if (clearedState.selectedTemplate != null) {
+            if (clearedState.isPhotoOnly || clearedState.selectedTemplate != null) {
                 clearedState
             } else {
                 defaultTemplate(clearedState.availableTemplates)?.let { template ->
@@ -231,13 +254,22 @@ class QuickRecordViewModel(
         _uiState.update { it.copy(carbG = sanitizeDecimalInput(value)) }
     }
 
-    fun setMemo(value: String) {
-        _uiState.update { it.copy(memo = value) }
-    }
-
     fun setPhotoUri(photoUri: String?) {
         _uiState.update {
             it.copy(
+                isPhotoOnly = if (photoUri != null &&
+                    it.selectedTemplate == null &&
+                    it.selectedDriveEatingOutCard == null &&
+                    it.templateName.isBlank() &&
+                    it.totalCalories.isBlank() &&
+                    it.proteinG.isBlank() &&
+                    it.fatG.isBlank() &&
+                    it.carbG.isBlank()
+                ) {
+                    true
+                } else {
+                    it.isPhotoOnly
+                },
                 photoUri = photoUri,
                 message = if (photoUri == null) "写真の撮影をキャンセルしました" else "写真を追加しました",
             )
@@ -257,14 +289,19 @@ class QuickRecordViewModel(
         val state = _uiState.value
         val driveCard = state.selectedDriveEatingOutCard
         val template = state.templateForSave()
-        if (template == null && driveCard == null) return
+        if (!state.canSave()) return
+        val mealType = state.recordableMealType()
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
             val additionalOptions = driveCard?.toRecordOptions().orEmpty()
             container.createQuickRecordUseCase(
-                templateId = template?.id,
-                templateNameSnapshot = state.templateName.ifBlank {
-                    template?.name ?: driveCard?.name.orEmpty()
+                templateId = template?.id.takeUnless { state.isPhotoOnly },
+                templateNameSnapshot = if (state.isPhotoOnly) {
+                    PhotoOnlyRecordName
+                } else {
+                    state.templateName.ifBlank {
+                        template?.name ?: driveCard?.name.orEmpty()
+                    }
                 },
                 additionalOptions = additionalOptions,
                 totalCaloriesOverride = state.totalCalories.toIntOrNull() ?: 0,
@@ -272,14 +309,13 @@ class QuickRecordViewModel(
                 fatOverride = state.fatG.toDoubleOrNull() ?: 0.0,
                 carbOverride = state.carbG.toDoubleOrNull() ?: 0.0,
                 isSpecialOverride = false,
-                memo = state.memo,
+                memo = "",
                 photoUri = state.photoUri,
-                mealType = state.selectedMealType,
+                mealType = mealType,
             )
             _uiState.update {
                 it.copy(
                     isSaving = false,
-                    memo = "",
                     photoUri = null,
                     message = "記録しました",
                 )
@@ -341,7 +377,7 @@ class QuickRecordViewModel(
             proteinG = formatOneDecimal(template.proteinG),
             fatG = formatOneDecimal(template.fatG),
             carbG = formatOneDecimal(template.carbG),
-            memo = template.memo,
+            isPhotoOnly = false,
             photoUri = template.photoUri,
         )
     }
@@ -349,6 +385,20 @@ class QuickRecordViewModel(
 
 internal fun QuickRecordUiState.templateForSave(): MealTemplate? {
     return selectedTemplate.takeUnless { selectedDriveEatingOutCard != null }
+}
+
+internal fun QuickRecordUiState.recordableMealType(): MealType {
+    return selectedMealType.takeUnless {
+        it == MealType.EATING_OUT || it == MealType.SNACK
+    } ?: MealType.LUNCH
+}
+
+internal fun QuickRecordUiState.canSave(): Boolean {
+    return if (isPhotoOnly) {
+        !photoUri.isNullOrBlank()
+    } else {
+        templateForSave() != null || selectedDriveEatingOutCard != null
+    }
 }
 
 internal fun QuickRecordDriveCard.toRecordOptions(): List<MealRecordOption> {
@@ -363,6 +413,8 @@ internal fun QuickRecordDriveCard.toRecordOptions(): List<MealRecordOption> {
         )
     }
 }
+
+private const val PhotoOnlyRecordName = "写真"
 
 private fun QuickRecordFood.toRecordOption(): MealRecordOption = MealRecordOption(
     optionGroupNameSnapshot = "食品",

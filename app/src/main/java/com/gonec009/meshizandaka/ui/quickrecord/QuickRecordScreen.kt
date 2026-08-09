@@ -98,6 +98,7 @@ fun QuickRecordRoute(
         onManualTabSelected = viewModel::selectManualTab,
         onFoodTabSelected = viewModel::selectFoodTab,
         onTemplateSelect = viewModel::selectTemplate,
+        onPhotoOnlySelect = viewModel::selectPhotoOnly,
         onDriveEatingOutCardSelect = viewModel::selectDriveEatingOutCard,
         onFoodRegister = viewModel::registerFood,
         onTemplateNameChange = viewModel::setTemplateName,
@@ -106,7 +107,6 @@ fun QuickRecordRoute(
         onProteinChange = viewModel::setProtein,
         onFatChange = viewModel::setFat,
         onCarbChange = viewModel::setCarb,
-        onMemoChange = viewModel::setMemo,
         onPhotoCaptured = viewModel::setPhotoUri,
         onPhotoRemoved = viewModel::clearPhoto,
         onSaveClick = viewModel::saveRecord,
@@ -121,6 +121,7 @@ private fun QuickRecordScreen(
     onManualTabSelected: () -> Unit,
     onFoodTabSelected: () -> Unit,
     onTemplateSelect: (MealTemplate) -> Unit,
+    onPhotoOnlySelect: () -> Unit,
     onDriveEatingOutCardSelect: (QuickRecordDriveCard) -> Unit,
     onFoodRegister: (QuickRecordFood) -> Unit,
     onTemplateNameChange: (String) -> Unit,
@@ -129,7 +130,6 @@ private fun QuickRecordScreen(
     onProteinChange: (String) -> Unit,
     onFatChange: (String) -> Unit,
     onCarbChange: (String) -> Unit,
-    onMemoChange: (String) -> Unit,
     onPhotoCaptured: (String?) -> Unit,
     onPhotoRemoved: () -> Unit,
     onSaveClick: () -> Unit,
@@ -230,6 +230,13 @@ private fun QuickRecordScreen(
                             onTemplateSelect = onTemplateSelect,
                         )
                     }
+                    item {
+                        FilterChip(
+                            selected = state.isPhotoOnly,
+                            onClick = onPhotoOnlySelect,
+                            label = { Text(stringResource(R.string.quick_record_photo_only)) },
+                        )
+                    }
                 } else if (isEatingOutTab && state.driveEatingOutCards.isNotEmpty()) {
                     item {
                         DriveEatingOutCardSection(
@@ -268,7 +275,7 @@ private fun QuickRecordScreen(
                                     .padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
-                                if (state.selectedDriveEatingOutCard == null) {
+                                if (state.selectedDriveEatingOutCard == null && !state.isPhotoOnly) {
                                     CompactOutlinedField(
                                         value = state.templateName,
                                         onValueChange = onTemplateNameChange,
@@ -307,7 +314,7 @@ private fun QuickRecordScreen(
                                             }
                                     }
                                 }
-                                if (state.selectedDriveEatingOutCard == null) {
+                                if (state.selectedDriveEatingOutCard == null && !state.isPhotoOnly) {
                                     CompactOutlinedField(
                                         value = state.totalCalories,
                                         onValueChange = onTotalCaloriesChange,
@@ -339,20 +346,10 @@ private fun QuickRecordScreen(
                                             modifier = Modifier.weight(1f),
                                         )
                                     }
-                                    CompactOutlinedField(
-                                        value = state.memo,
-                                        onValueChange = onMemoChange,
-                                        label = { Text(stringResource(R.string.memo)) },
-                                        modifier = compactFieldModifier(),
-                                        textStyle = compactFieldTextStyle(),
-                                        minLines = 4,
-                                        maxLines = 6,
-                                    )
                                 }
                                 Button(
                                     onClick = onSaveClick,
-                                    enabled = (state.selectedTemplate != null ||
-                                        state.selectedDriveEatingOutCard != null) && !state.isSaving,
+                                    enabled = state.canSave() && !state.isSaving,
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     Text(stringResource(R.string.record_now))

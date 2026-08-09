@@ -102,4 +102,19 @@ class QuickRecordViewModelTest {
         assertEquals(listOf(180, 420), options.map { it.calorieDelta })
         assertEquals(listOf("サムライマック", "サムライマック"), options.map { it.optionGroupNameSnapshot })
     }
+
+    @Test
+    fun 写真のみは写真がある場合だけ保存可能() {
+        assertEquals(
+            false,
+            QuickRecordUiState(isPhotoOnly = true).canSave(),
+        )
+        assertEquals(
+            true,
+            QuickRecordUiState(
+                isPhotoOnly = true,
+                photoUri = "content://quick-record/photo",
+            ).canSave(),
+        )
+    }
 }
