@@ -175,6 +175,57 @@ private fun QuickRecordScreen(
                 val isManualTab = selectedTabIndex == MANUAL_TAB_INDEX
                 val isEatingOutTab = selectedTabIndex == EATING_OUT_TAB_INDEX
                 val isFoodTab = selectedTabIndex == FOOD_TAB_INDEX
+                if (isEatingOutTab) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                ExposedDropdownMenuBox(
+                                    expanded = mealTypeExpanded,
+                                    onExpandedChange = { mealTypeExpanded = it },
+                                ) {
+                                    LabeledMealSettingField(
+                                        mealTypeLabel = stringResource(R.string.meal_type),
+                                        selectedMealType = mealTypeLabel(state.selectedMealType),
+                                        expanded = mealTypeExpanded,
+                                        mealFieldModifier = Modifier.menuAnchor(),
+                                    )
+                                    DropdownMenu(
+                                        expanded = mealTypeExpanded,
+                                        onDismissRequest = { mealTypeExpanded = false },
+                                    ) {
+                                        MealType.entries
+                                            .filterNot {
+                                                it == MealType.EATING_OUT || it == MealType.SNACK
+                                            }
+                                            .forEach { mealType ->
+                                                DropdownMenuItem(
+                                                    text = { Text(mealTypeLabel(mealType)) },
+                                                    onClick = {
+                                                        mealTypeExpanded = false
+                                                        onMealTypeSelect(mealType)
+                                                    },
+                                                )
+                                            }
+                                    }
+                                }
+                                Button(
+                                    onClick = onSaveClick,
+                                    enabled = state.canSave() && !state.isSaving,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(stringResource(R.string.record_now))
+                                }
+                            }
+                        }
+                    }
+                }
                 if (isFoodTab) {
                     val selectedFoodCategory = quickRecordFoodCategoryTabs[
                         selectedFoodCategoryIndex.coerceIn(0, quickRecordFoodCategoryTabs.lastIndex)
@@ -255,7 +306,7 @@ private fun QuickRecordScreen(
                             }
                         }
                 }
-                if (isManualTab || (isEatingOutTab && state.selectedDriveEatingOutCard != null)) {
+                if (isManualTab) {
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
