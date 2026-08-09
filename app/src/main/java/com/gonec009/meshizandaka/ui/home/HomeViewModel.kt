@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.data.drive.DrivePlanItem
+import com.gonec009.meshizandaka.data.drive.recordKey
 import com.gonec009.meshizandaka.domain.model.AppSettings
 import com.gonec009.meshizandaka.domain.model.DashboardSummary
 import com.gonec009.meshizandaka.domain.model.MealType
@@ -54,27 +55,27 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun recordBreakfast() {
-        recordTemplate(resolveTemplateId(TemplateShortcutRole.BREAKFAST), "朝セットを記録しました")
+        recordTemplate(TemplateShortcutRole.BREAKFAST, "朝セットを記録しました")
     }
 
     fun recordMorningSnack() {
-        recordTemplate(resolveTemplateId(TemplateShortcutRole.MORNING_SNACK), "間朝セットを記録しました")
+        recordTemplate(TemplateShortcutRole.MORNING_SNACK, "間朝セットを記録しました")
     }
 
     fun recordLunch() {
-        recordTemplate(resolveTemplateId(TemplateShortcutRole.LUNCH), "昼セットを記録しました")
+        recordTemplate(TemplateShortcutRole.LUNCH, "昼セットを記録しました")
     }
 
     fun recordDinner() {
-        recordTemplate(resolveTemplateId(TemplateShortcutRole.DINNER), "夕セットを記録しました")
+        recordTemplate(TemplateShortcutRole.DINNER, "夕セットを記録しました")
     }
 
     fun recordDaytimeSnack() {
-        recordTemplate(resolveTemplateId(TemplateShortcutRole.DAYTIME_SNACK), "間昼セットを記録しました")
+        recordTemplate(TemplateShortcutRole.DAYTIME_SNACK, "間昼セットを記録しました")
     }
 
     fun recordFreeSnack() {
-        recordTemplate(resolveTemplateId(TemplateShortcutRole.FREE_SNACK), "間全セットを記録しました")
+        recordTemplate(TemplateShortcutRole.FREE_SNACK, "間全セットを記録しました")
     }
 
     fun consumeMessage() {
@@ -119,11 +120,34 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    private fun recordTemplate(templateId: Long?, successMessage: String) {
+    fun selectDrivePlanMainDish(
+        recordId: Long,
+        currentItem: DrivePlanItem?,
+        selectedItem: DrivePlanItem,
+        selectedItemKey: String,
+        onComplete: () -> Unit,
+    ) {
+        viewModelScope.launch {
+            val changed = container.mealRecordRepository.selectDrivePlanMainDish(
+                recordId = recordId,
+                currentItem = currentItem,
+                selectedItem = selectedItem,
+                selectedItemKey = selectedItemKey,
+            )
+            if (changed) {
+                _uiState.update { it.copy(message = "${selectedItem.name}を主菜に切り替えました") }
+            }
+            onComplete()
+        }
+    }
+
+    private fun recordTemplate(role: TemplateShortcutRole, successMessage: String) {
+        val templateId = resolveTemplateId(role)
         if (templateId == null) {
             _uiState.update { it.copy(message = "設定でテンプレートを選んでください") }
             return
         }
+        val selectedDrivePlanMainDishItemKey = resolveDrivePlanMainDishItemKey(templateId, role)
         viewModelScope.launch {
             try {
                 val zoneId = ZoneId.systemDefault()
@@ -137,6 +161,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                     templateId = templateId,
                     selectedOptionIds = emptyList(),
                     isSetRegistration = true,
+                    selectedDrivePlanMainDishItemKey = selectedDrivePlanMainDishItemKey,
                     nowMillis = recordMillis,
                     zoneId = zoneId,
                 )
@@ -162,6 +187,32 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 TemplateShortcutRole.FREE_SNACK -> resolveNormalTemplateId(MealType.FREE_SNACK, MealType.SNACK)
                 TemplateShortcutRole.NONE -> null
             }
+    }
+
+    private fun resolveDrivePlanMainDishItemKey(
+        templateId: Long,
+        role: TemplateShortcutRole,
+    ): String? {
+        val template = _uiState.value.templates.firstOrNull { it.id == templateId }
+        if (template?.shortcutRole != role) return null
+        val slot = role.drivePlanSlot() ?: return null
+        return container.driveAccessManager.planState.value.selectedPlan
+            ?.meals
+            ?.firstOrNull { it.slot == slot }
+            ?.items
+            ?.mapIndexed { index, item -> item to index }
+            ?.firstOrNull { (item, _) -> item.isMainDish }
+            ?.let { (item, index) -> item.recordKey(index) }
+    }
+
+    private fun TemplateShortcutRole.drivePlanSlot(): Int? = when (this) {
+        TemplateShortcutRole.BREAKFAST -> 0
+        TemplateShortcutRole.MORNING_SNACK -> 1
+        TemplateShortcutRole.LUNCH -> 2
+        TemplateShortcutRole.DINNER -> 3
+        TemplateShortcutRole.DAYTIME_SNACK -> 4
+        TemplateShortcutRole.FREE_SNACK -> 5
+        TemplateShortcutRole.NONE -> null
     }
 
     private fun resolveNormalTemplateId(vararg mealTypes: MealType): Long? {

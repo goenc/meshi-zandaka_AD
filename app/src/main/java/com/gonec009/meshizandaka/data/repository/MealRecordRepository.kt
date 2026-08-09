@@ -2,6 +2,7 @@ package com.gonec009.meshizandaka.data.repository
 
 import android.content.Context
 import android.net.Uri
+import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.local.dao.MealRecordDao
 import com.gonec009.meshizandaka.data.local.entity.MealRecordEntity
 import com.gonec009.meshizandaka.data.local.entity.MealRecordOptionEntity
@@ -56,6 +57,7 @@ class MealRecordRepository(
                 memo = record.memo,
                 photoUri = record.photoUri,
                 excludedDrivePlanItemKeysJson = encodeExcludedDrivePlanItemKeys(record.excludedDrivePlanItemKeys),
+                selectedDrivePlanMainDishItemKey = record.selectedDrivePlanMainDishItemKey,
             ),
         )
         if (record.selectedOptions.isNotEmpty()) {
@@ -94,6 +96,7 @@ class MealRecordRepository(
                 sourceType = record.sourceType.name,
                 photoUri = record.photoUri,
                 excludedDrivePlanItemKeysJson = encodeExcludedDrivePlanItemKeys(record.excludedDrivePlanItemKeys),
+                selectedDrivePlanMainDishItemKey = record.selectedDrivePlanMainDishItemKey,
             ),
         )
         dao.deleteOptionsForRecord(record.id)
@@ -137,6 +140,8 @@ class MealRecordRepository(
                 memo = combinedMemo,
                 photoUri = current.photoUri ?: addition.photoUri,
                 selectedOptions = current.selectedOptions + addition.selectedOptions,
+                selectedDrivePlanMainDishItemKey = current.selectedDrivePlanMainDishItemKey
+                    ?: addition.selectedDrivePlanMainDishItemKey,
             ),
         )
         return true
@@ -166,6 +171,38 @@ class MealRecordRepository(
                     current.specialDeltaCalories
                 },
                 excludedDrivePlanItemKeys = current.excludedDrivePlanItemKeys + itemKey,
+                selectedDrivePlanMainDishItemKey = current.selectedDrivePlanMainDishItemKey
+                    .takeUnless { it == itemKey },
+            ),
+        )
+        return true
+    }
+
+    suspend fun selectDrivePlanMainDish(
+        recordId: Long,
+        currentItem: DrivePlanItem?,
+        selectedItem: DrivePlanItem,
+        selectedItemKey: String,
+    ): Boolean {
+        if (selectedItemKey.isBlank()) return false
+        val current = getRecord(recordId) ?: return false
+        if (current.selectedDrivePlanMainDishItemKey == selectedItemKey) return false
+        val calorieDelta = selectedItem.calories - (currentItem?.calories ?: 0)
+        val proteinDelta = selectedItem.proteinG - (currentItem?.proteinG ?: 0.0)
+        val fatDelta = selectedItem.fatG - (currentItem?.fatG ?: 0.0)
+        val carbDelta = selectedItem.carbG - (currentItem?.carbG ?: 0.0)
+        updateRecord(
+            current.copy(
+                totalCalories = (current.totalCalories + calorieDelta).coerceAtLeast(0),
+                proteinG = (current.proteinG + proteinDelta).coerceAtLeast(0.0),
+                fatG = (current.fatG + fatDelta).coerceAtLeast(0.0),
+                carbG = (current.carbG + carbDelta).coerceAtLeast(0.0),
+                specialDeltaCalories = if (current.isSpecial) {
+                    current.specialDeltaCalories + calorieDelta
+                } else {
+                    current.specialDeltaCalories
+                },
+                selectedDrivePlanMainDishItemKey = selectedItemKey,
             ),
         )
         return true
@@ -207,6 +244,7 @@ class MealRecordRepository(
             excludedDrivePlanItemKeys = decodeExcludedDrivePlanItemKeys(
                 item.record.excludedDrivePlanItemKeysJson,
             ),
+            selectedDrivePlanMainDishItemKey = item.record.selectedDrivePlanMainDishItemKey,
             selectedOptions = item.selectedOptions.map { option ->
                 MealRecordOption(
                     id = option.id,

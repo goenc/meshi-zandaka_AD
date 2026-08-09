@@ -11,6 +11,7 @@ data class DrivePlanItem(
     val name: String,
     val amountLabel: String,
     val isMainDish: Boolean,
+    val isMainDishCandidate: Boolean = false,
     val imageContentHash: String? = null,
     val imagePath: String? = null,
     val calories: Int = 0,
@@ -77,6 +78,15 @@ data class DrivePlanState(
 ) {
     val selectedPlan: DrivePlan?
         get() = plans.firstOrNull { plan -> plan.id == selectedPlanId }
+}
+
+fun DrivePlanItem.recordKey(index: Int): String {
+    return id?.takeIf { it.isNotBlank() }
+        ?: "${name}\u001F${amountLabel}\u001F$index"
+}
+
+internal fun DrivePlanItem.isIncludedInMealNutrition(): Boolean {
+    return !isMainDishCandidate || isMainDish
 }
 
 fun drivePlanMealLabel(slot: Int): String = when (slot) {

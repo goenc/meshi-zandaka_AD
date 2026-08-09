@@ -45,6 +45,7 @@ internal object DrivePlanCacheCodec {
                             .put("name", item.name)
                             .put("amountLabel", item.amountLabel)
                             .put("isMainDish", item.isMainDish)
+                            .put("isMainDishCandidate", item.isMainDishCandidate)
                             .putNullable("imageContentHash", item.imageContentHash)
                             .put("calories", item.calories)
                             .put("proteinG", item.proteinG)
@@ -94,11 +95,13 @@ internal object DrivePlanCacheCodec {
                         val items = buildList {
                             for (itemIndex in 0 until itemsJson.length()) {
                                 val itemJson = itemsJson.optJSONObject(itemIndex) ?: continue
+                                val isMainDish = itemJson.optBoolean("isMainDish", false)
                                 add(
                                     DrivePlanItem(
                                         name = itemJson.stringOrNull("name").orEmpty().ifBlank { "食品" },
                                         amountLabel = itemJson.stringOrNull("amountLabel").orEmpty(),
-                                        isMainDish = itemJson.optBoolean("isMainDish", false),
+                                        isMainDish = isMainDish,
+                                        isMainDishCandidate = itemJson.optBoolean("isMainDishCandidate", false) || isMainDish,
                                         imageContentHash = itemJson.stringOrNull("imageContentHash"),
                                         calories = itemJson.optInt("calories", 0),
                                         proteinG = itemJson.optDouble("proteinG", 0.0),

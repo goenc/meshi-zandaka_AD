@@ -372,25 +372,29 @@ class DrivePlanSnapshotReader(
                     )
                 }
                 val imageAssetId = child?.stringOrNull("imageAssetId")
-                BuiltItem(
-                    item = DrivePlanItem(
-                        name = child?.stringOrNull("name")
-                            ?: child?.stringOrNull("foodName")
-                            ?: if (componentType == 1) "レシピ" else "食品",
-                        amountLabel = formatStoredAmount(
-                            amount = item.optLongIgnoreCase("standardAmount", 0L),
-                            unit = item.optIntIgnoreCase("standardUnit", -1),
-                            customUnitName = item.stringOrNull("standardCustomUnitName"),
-                        ),
-                        isMainDish = idKey(itemId) == idKey(selectedMainDishItemId),
-                        imageContentHash = imageAssetId?.let { imageHashes[idKey(it)] },
-                        calories = nutrition.calories.roundToInt(),
-                        proteinG = nutrition.proteinG,
-                        fatG = nutrition.fatG,
-                        carbG = nutrition.carbG,
-                        id = itemId,
+                val isMainDish = idKey(itemId) == idKey(selectedMainDishItemId)
+                val isMainDishCandidate = item.optBooleanIgnoreCase("isMainDishCandidate", false) || isMainDish
+                val driveItem = DrivePlanItem(
+                    name = child?.stringOrNull("name")
+                        ?: child?.stringOrNull("foodName")
+                        ?: if (componentType == 1) "レシピ" else "食品",
+                    amountLabel = formatStoredAmount(
+                        amount = item.optLongIgnoreCase("standardAmount", 0L),
+                        unit = item.optIntIgnoreCase("standardUnit", -1),
+                        customUnitName = item.stringOrNull("standardCustomUnitName"),
                     ),
-                    nutrition = nutrition,
+                    isMainDish = isMainDish,
+                    isMainDishCandidate = isMainDishCandidate,
+                    imageContentHash = imageAssetId?.let { imageHashes[idKey(it)] },
+                    calories = nutrition.calories.roundToInt(),
+                    proteinG = nutrition.proteinG,
+                    fatG = nutrition.fatG,
+                    carbG = nutrition.carbG,
+                    id = itemId,
+                )
+                BuiltItem(
+                    item = driveItem,
+                    nutrition = if (driveItem.isIncludedInMealNutrition()) nutrition else NutritionTotals(),
                 )
             }
             .toList()

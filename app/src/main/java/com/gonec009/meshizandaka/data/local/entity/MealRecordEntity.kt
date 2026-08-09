@@ -21,4 +21,5 @@ data class MealRecordEntity(
     val memo: String,
     val photoUri: String? = null,
     @ColumnInfo(defaultValue = "'[]'") val excludedDrivePlanItemKeysJson: String = "[]",
+    @ColumnInfo(defaultValue = "NULL") val selectedDrivePlanMainDishItemKey: String? = null,
 )

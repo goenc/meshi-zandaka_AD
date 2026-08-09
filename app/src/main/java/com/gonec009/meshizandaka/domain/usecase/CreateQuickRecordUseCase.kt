@@ -25,6 +25,7 @@ class CreateQuickRecordUseCase(
         isSpecialOverride: Boolean? = null,
         memo: String = "",
         photoUri: String? = null,
+        selectedDrivePlanMainDishItemKey: String? = null,
         mealType: MealType? = null,
         appendToRecordId: Long? = null,
         isSetRegistration: Boolean = false,
@@ -94,6 +95,7 @@ class CreateQuickRecordUseCase(
             memo = memo,
             photoUri = photoUri,
             selectedOptions = selectedOptions,
+            selectedDrivePlanMainDishItemKey = selectedDrivePlanMainDishItemKey,
         )
         return if (appendTarget != null) {
             if (!recordRepository.appendToRecord(appendTarget.id, record)) {

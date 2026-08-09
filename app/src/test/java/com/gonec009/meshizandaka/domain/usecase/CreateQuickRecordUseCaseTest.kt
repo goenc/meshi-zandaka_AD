@@ -10,6 +10,7 @@ import com.gonec009.meshizandaka.data.local.entity.MealTemplateWithRelations
 import com.gonec009.meshizandaka.data.local.entity.TemplateOptionEntity
 import com.gonec009.meshizandaka.data.local.entity.TemplateOptionGroupEntity
 import com.gonec009.meshizandaka.data.local.entity.TemplateOptionGroupWithOptions
+import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.repository.MealRecordRepository
 import com.gonec009.meshizandaka.data.repository.MealTemplateRepository
 import com.gonec009.meshizandaka.domain.model.MealType
@@ -186,9 +187,12 @@ class CreateQuickRecordUseCaseTest {
         val recordId = useCase(
             templateId = 4,
             isSetRegistration = true,
+            selectedDrivePlanMainDishItemKey = "main-dish",
             nowMillis = 1780916400000,
             zoneId = zoneId,
         )
+
+        assertEquals("main-dish", recordDao.records.single().record.selectedDrivePlanMainDishItemKey)
 
         recordDao.updateRecord(
             recordDao.records.single().record.copy(
@@ -324,6 +328,68 @@ class CreateQuickRecordUseCaseTest {
         assertEquals(511, record.totalCalories)
         assertEquals("EATING_OUT", record.mealType)
         assertEquals(511, record.specialDeltaCalories)
+    }
+
+    @Test
+    fun 主菜切替で記録の合計を新しい主菜へ更新する() = runTest {
+        val recordDao = FakeMealRecordDao(
+            existingRecords = mutableListOf(
+                MealRecordWithRelations(
+                    record = MealRecordEntity(
+                        id = 1,
+                        eatenAt = 1780880400000,
+                        mealType = "DINNER",
+                        templateId = -1003,
+                        templateNameSnapshot = "夕食",
+                        totalCalories = 500,
+                        proteinG = 20.0,
+                        fatG = 10.0,
+                        carbG = 40.0,
+                        isSpecial = false,
+                        specialDeltaCalories = 0,
+                        sourceType = "QUICK_BUTTON",
+                        memo = "",
+                        selectedDrivePlanMainDishItemKey = "old-main",
+                    ),
+                    selectedOptions = emptyList(),
+                ),
+            ),
+        )
+        val repository = MealRecordRepository(recordDao)
+        val changed = repository.selectDrivePlanMainDish(
+            recordId = 1,
+            currentItem = DrivePlanItem(
+                name = "旧主菜",
+                amountLabel = "100 g",
+                isMainDish = true,
+                isMainDishCandidate = true,
+                calories = 300,
+                proteinG = 12.0,
+                fatG = 4.0,
+                carbG = 20.0,
+                id = "old-main",
+            ),
+            selectedItem = DrivePlanItem(
+                name = "新主菜",
+                amountLabel = "100 g",
+                isMainDish = false,
+                isMainDishCandidate = true,
+                calories = 500,
+                proteinG = 22.0,
+                fatG = 8.0,
+                carbG = 35.0,
+                id = "new-main",
+            ),
+            selectedItemKey = "new-main",
+        )
+
+        val updated = recordDao.records.single().record
+        assertEquals(true, changed)
+        assertEquals(700, updated.totalCalories)
+        assertEquals(30.0, updated.proteinG, 0.0)
+        assertEquals(14.0, updated.fatG, 0.0)
+        assertEquals(55.0, updated.carbG, 0.0)
+        assertEquals("new-main", updated.selectedDrivePlanMainDishItemKey)
     }
 }
 

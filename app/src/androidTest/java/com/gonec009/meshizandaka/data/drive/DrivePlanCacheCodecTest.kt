@@ -33,6 +33,7 @@ class DrivePlanCacheCodecTest {
                                     name = "白米",
                                     amountLabel = "110 g",
                                     isMainDish = false,
+                                    isMainDishCandidate = true,
                                     imageContentHash = "food-hash",
                                     calories = 172,
                                     proteinG = 2.8,
