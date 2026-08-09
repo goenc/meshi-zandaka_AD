@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -170,14 +171,16 @@ private fun QuickRecordScreen(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        CompactOutlinedField(
-                            value = state.templateName,
-                            onValueChange = onTemplateNameChange,
-                            label = { Text(stringResource(R.string.template_name)) },
-                            modifier = compactFieldModifier(),
-                            textStyle = compactFieldTextStyle(),
-                            singleLine = true,
-                        )
+                        if (state.selectedDriveEatingOutCard == null) {
+                            CompactOutlinedField(
+                                value = state.templateName,
+                                onValueChange = onTemplateNameChange,
+                                label = { Text(stringResource(R.string.template_name)) },
+                                modifier = compactFieldModifier(),
+                                textStyle = compactFieldTextStyle(),
+                                singleLine = true,
+                            )
+                        }
                         ExposedDropdownMenuBox(
                             expanded = mealTypeExpanded,
                             onExpandedChange = { mealTypeExpanded = it },
@@ -207,46 +210,48 @@ private fun QuickRecordScreen(
                                     }
                             }
                         }
-                        CompactOutlinedField(
-                            value = state.totalCalories,
-                            onValueChange = onTotalCaloriesChange,
-                            label = { Text(stringResource(R.string.base_calories)) },
-                            modifier = compactFieldModifier(),
-                            textStyle = compactFieldTextStyle(),
-                            singleLine = true,
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            CompactMacroField(
-                                label = stringResource(R.string.protein_short),
-                                value = state.proteinG,
-                                onValueChange = onProteinChange,
-                                modifier = Modifier.weight(1f),
+                        if (state.selectedDriveEatingOutCard == null) {
+                            CompactOutlinedField(
+                                value = state.totalCalories,
+                                onValueChange = onTotalCaloriesChange,
+                                label = { Text(stringResource(R.string.base_calories)) },
+                                modifier = compactFieldModifier(),
+                                textStyle = compactFieldTextStyle(),
+                                singleLine = true,
                             )
-                            CompactMacroField(
-                                label = stringResource(R.string.fat_short),
-                                value = state.fatG,
-                                onValueChange = onFatChange,
-                                modifier = Modifier.weight(1f),
-                            )
-                            CompactMacroField(
-                                label = stringResource(R.string.carb_short),
-                                value = state.carbG,
-                                onValueChange = onCarbChange,
-                                modifier = Modifier.weight(1f),
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                CompactMacroField(
+                                    label = stringResource(R.string.protein_short),
+                                    value = state.proteinG,
+                                    onValueChange = onProteinChange,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                CompactMacroField(
+                                    label = stringResource(R.string.fat_short),
+                                    value = state.fatG,
+                                    onValueChange = onFatChange,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                CompactMacroField(
+                                    label = stringResource(R.string.carb_short),
+                                    value = state.carbG,
+                                    onValueChange = onCarbChange,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            CompactOutlinedField(
+                                value = state.memo,
+                                onValueChange = onMemoChange,
+                                label = { Text(stringResource(R.string.memo)) },
+                                modifier = compactFieldModifier(),
+                                textStyle = compactFieldTextStyle(),
+                                minLines = 4,
+                                maxLines = 6,
                             )
                         }
-                        CompactOutlinedField(
-                            value = state.memo,
-                            onValueChange = onMemoChange,
-                            label = { Text(stringResource(R.string.memo)) },
-                            modifier = compactFieldModifier(),
-                            textStyle = compactFieldTextStyle(),
-                            minLines = 4,
-                            maxLines = 6,
-                        )
                         Button(
                             onClick = onSaveClick,
                             enabled = (state.selectedTemplate != null ||
@@ -255,36 +260,38 @@ private fun QuickRecordScreen(
                         ) {
                             Text(stringResource(R.string.record_now))
                         }
-                        Button(
-                            onClick = { showCamera = true },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(stringResource(R.string.take_meal_photo))
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        ) {
-                            Text(
-                                text = if (state.photoUri == null) {
-                                    stringResource(R.string.meal_photo_not_added)
-                                } else {
-                                    stringResource(R.string.meal_photo_added)
-                                },
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        if (state.selectedDriveEatingOutCard == null) {
+                            Button(
+                                onClick = { showCamera = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.take_meal_photo))
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                            ) {
+                                Text(
+                                    text = if (state.photoUri == null) {
+                                        stringResource(R.string.meal_photo_not_added)
+                                    } else {
+                                        stringResource(R.string.meal_photo_added)
+                                    },
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            MealPhotoWithDeleteAction(
+                                uriString = state.photoUri,
+                                contentDescription = stringResource(R.string.meal_photo_added),
+                                onDeleteClick = { showDeletePhotoDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(16f / 9f)
+                                    .clip(RoundedCornerShape(8.dp)),
                             )
                         }
-                        MealPhotoWithDeleteAction(
-                            uriString = state.photoUri,
-                            contentDescription = stringResource(R.string.meal_photo_added),
-                            onDeleteClick = { showDeletePhotoDialog = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(16f / 9f)
-                                .clip(RoundedCornerShape(8.dp)),
-                        )
                     }
                 }
             }
@@ -447,15 +454,28 @@ private fun DriveEatingOutItemSection(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = item.name,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            text = stringResource(R.string.kcal_format, item.calories),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        item.imagePath?.let { imagePath ->
+                            DriveCachedImage(
+                                path = imagePath,
+                                contentDescription = item.name,
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(item.name, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                text = item.amountLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = stringResource(R.string.kcal_format, item.calories),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }

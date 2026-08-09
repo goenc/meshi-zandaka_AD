@@ -83,6 +83,7 @@ internal object DrivePlanCacheCodec {
                                     .put("isMainDish", item.isMainDish)
                                     .put("isMainDishCandidate", item.isMainDishCandidate)
                                     .putNullable("imageContentHash", item.imageContentHash)
+                                    .putNullable("imagePath", item.imagePath)
                                     .put("calories", item.calories)
                                     .put("proteinG", item.proteinG)
                                     .put("fatG", item.fatG)
@@ -176,6 +177,7 @@ internal object DrivePlanCacheCodec {
                                 isMainDish = isMainDish,
                                 isMainDishCandidate = itemJson.optBoolean("isMainDishCandidate", false) || isMainDish,
                                 imageContentHash = itemJson.stringOrNull("imageContentHash"),
+                                imagePath = itemJson.stringOrNull("imagePath"),
                                 calories = itemJson.optInt("calories", 0),
                                 proteinG = itemJson.optDouble("proteinG", 0.0),
                                 fatG = itemJson.optDouble("fatG", 0.0),

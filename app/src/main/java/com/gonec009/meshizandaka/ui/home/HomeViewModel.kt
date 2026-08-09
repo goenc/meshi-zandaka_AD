@@ -7,6 +7,7 @@ import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.drive.recordKey
 import com.gonec009.meshizandaka.domain.model.AppSettings
 import com.gonec009.meshizandaka.domain.model.DashboardSummary
+import com.gonec009.meshizandaka.domain.model.MealRecordOption
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.TemplateShortcutRole
 import com.gonec009.meshizandaka.domain.model.WeeklyMealChart
@@ -127,6 +128,20 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
             )
             if (deleted) {
                 _uiState.update { it.copy(message = "${item.name}をこの日の記録から削除しました") }
+            }
+            onComplete()
+        }
+    }
+
+    fun deleteRecordOption(
+        recordId: Long,
+        option: MealRecordOption,
+        onComplete: () -> Unit,
+    ) {
+        viewModelScope.launch {
+            val deleted = container.mealRecordRepository.deleteRecordOption(recordId, option)
+            if (deleted) {
+                _uiState.update { it.copy(message = "${option.optionNameSnapshot}をこの日の記録から削除しました") }
             }
             onComplete()
         }

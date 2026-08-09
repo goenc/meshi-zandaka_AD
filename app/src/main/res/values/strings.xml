@@ -61,7 +61,7 @@
     <string name="take_meal_photo">食事の写真を撮る</string>
     <string name="meal_photo_added">写真を追加済み</string>
     <string name="meal_photo_not_added">写真なし</string>
-    <string name="record_now">この内容で記録する</string>
+    <string name="record_now">この記録内容で保存する</string>
     <string name="take_template_photo">テンプレートの写真を撮る</string>
     <string name="camera_capture_title">写真を撮る</string>
     <string name="camera_capture_hint">横長の枠に料理を合わせる</string>

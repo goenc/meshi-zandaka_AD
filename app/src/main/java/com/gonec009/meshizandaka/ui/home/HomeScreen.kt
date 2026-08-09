@@ -127,6 +127,11 @@ private data class PendingDeleteDrivePlanItem(
     val itemKey: String,
 )
 
+private data class PendingDeleteRecordOption(
+    val record: MealRecord,
+    val option: MealRecordOption,
+)
+
 private data class NutritionTotals(
     val proteinG: Double,
     val fatG: Double,
@@ -242,6 +247,7 @@ fun HomeRoute(
         onDeleteRecord = viewModel::deleteRecord,
         onDeleteRecordPhoto = viewModel::deleteRecordPhoto,
         onDeleteDrivePlanItem = viewModel::deleteDrivePlanItem,
+        onDeleteRecordOption = viewModel::deleteRecordOption,
         onSelectDrivePlanMainDish = viewModel::selectDrivePlanMainDish,
     )
 }
@@ -265,12 +271,14 @@ private fun HomeScreen(
     onDeleteRecord: (Long, () -> Unit) -> Unit,
     onDeleteRecordPhoto: (Long, () -> Unit) -> Unit,
     onDeleteDrivePlanItem: (Long, String, DrivePlanItem, () -> Unit) -> Unit,
+    onDeleteRecordOption: (Long, MealRecordOption, () -> Unit) -> Unit,
     onSelectDrivePlanMainDish: (Long, DrivePlanItem?, DrivePlanItem, String, () -> Unit) -> Unit,
 ) {
     var isDatePickerVisible by remember { mutableStateOf(false) }
     var pendingDeleteRecord by remember { mutableStateOf<PendingDeleteRecord?>(null) }
     var pendingDeleteRecordPhoto by remember { mutableStateOf<PendingDeleteRecordPhoto?>(null) }
     var pendingDeleteDrivePlanItem by remember { mutableStateOf<PendingDeleteDrivePlanItem?>(null) }
+    var pendingDeleteRecordOption by remember { mutableStateOf<PendingDeleteRecordOption?>(null) }
     val burnedCaloriesTitle = when {
         calorieSummary?.todayKcal == null -> stringResource(R.string.today_burned_calories)
         calorieSummary.calorieDate == LocalDate.now() -> stringResource(R.string.today_burned_calories)
@@ -366,6 +374,12 @@ private fun HomeScreen(
                         record = record,
                         item = item,
                         itemKey = itemKey,
+                    )
+                },
+                onDeleteRecordOptionRequest = { _, record, option ->
+                    pendingDeleteRecordOption = PendingDeleteRecordOption(
+                        record = record,
+                        option = option,
                     )
                 },
                 onDeleteRecordPhotoRequest = { _, record ->
@@ -487,6 +501,39 @@ private fun HomeScreen(
             },
         )
     }
+    pendingDeleteRecordOption?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteRecordOption = null },
+            title = { Text(stringResource(R.string.delete)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.delete_meal_item_confirm_message,
+                        pending.option.optionNameSnapshot,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteRecordOption(
+                            pending.record.id,
+                            pending.option,
+                        ) {
+                            pendingDeleteRecordOption = null
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteRecordOption = null }) {
+                    Text(stringResource(R.string.no))
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -544,6 +591,7 @@ private fun WeeklyChartCard(
     modifier: Modifier = Modifier,
     onDeleteRecordRequest: (ChartMealDialogState, MealRecord) -> Unit,
     onDeleteDrivePlanItemRequest: (ChartMealDialogState, MealRecord, DrivePlanItem, String) -> Unit,
+    onDeleteRecordOptionRequest: (ChartMealDialogState, MealRecord, MealRecordOption) -> Unit,
     onDeleteRecordPhotoRequest: (ChartMealDialogState, MealRecord) -> Unit,
     onSelectDrivePlanMainDish: (Long, DrivePlanItem?, DrivePlanItem, String, () -> Unit) -> Unit,
 ) {
@@ -610,6 +658,10 @@ private fun WeeklyChartCard(
             },
             onDeleteDrivePlanItemClick = { record, item, itemKey ->
                 onDeleteDrivePlanItemRequest(detail, record, item, itemKey)
+                dialogState = null
+            },
+            onDeleteRecordOptionClick = { record, option ->
+                onDeleteRecordOptionRequest(detail, record, option)
                 dialogState = null
             },
             onDeleteRecordPhotoClick = { record ->
@@ -783,6 +835,7 @@ private fun ChartMealDetailDialog(
     onDismiss: () -> Unit,
     onDeleteClick: (MealRecord) -> Unit,
     onDeleteDrivePlanItemClick: (MealRecord, DrivePlanItem, String) -> Unit,
+    onDeleteRecordOptionClick: (MealRecord, MealRecordOption) -> Unit,
     onDeleteRecordPhotoClick: (MealRecord) -> Unit,
     onSelectDrivePlanMainDish: (Long, DrivePlanItem?, DrivePlanItem, String, () -> Unit) -> Unit,
 ) {
@@ -794,9 +847,10 @@ private fun ChartMealDetailDialog(
             record.photoUri?.takeIf { it.isNotBlank() }
         }.distinct()
     }
-    val detailImagePaths = remember(records, selectedDrivePlan) {
+    val detailImagePaths = remember(records, selectedDrivePlan, externalCards) {
         records.flatMap { record ->
-            selectedDrivePlan?.mealForRecord(record)?.imagePaths().orEmpty()
+            selectedDrivePlan?.mealForRecord(record)?.imagePaths().orEmpty() +
+                record.externalCard(externalCards)?.items.orEmpty().mapNotNull { item -> item.imagePath }
         }.distinct()
     }
     var detailsReady by remember(detailImagePaths, detailPhotoUris) {
@@ -853,7 +907,6 @@ private fun ChartMealDetailDialog(
             ) {
                 MealRecordSection(
                     records = records,
-                    externalCards = externalCards,
                     total = records.pfcTotals(),
                     detailsReady = detailsReady,
                     onRecordClick = { selectedRecord = it },
@@ -885,6 +938,7 @@ private fun ChartMealDetailDialog(
             externalCards = externalCards,
             onDismiss = { selectedRecord = null },
             onDeleteDrivePlanItemClick = onDeleteDrivePlanItemClick,
+            onDeleteRecordOptionClick = onDeleteRecordOptionClick,
             onDeleteRecordPhotoClick = onDeleteRecordPhotoClick,
             onSelectMainDishClick = { currentItem, selectedItem, selectedItemKey ->
                 onSelectDrivePlanMainDish(
@@ -901,7 +955,6 @@ private fun ChartMealDetailDialog(
 @Composable
 private fun MealRecordSection(
     records: List<MealRecord>,
-    externalCards: List<DriveExternalCard>,
     total: NutritionTotals,
     detailsReady: Boolean,
     onRecordClick: (MealRecord) -> Unit,
@@ -955,10 +1008,6 @@ private fun MealRecordSection(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        val displayOptions = record.displayOptions(externalCards)
-                        if (displayOptions.isNotEmpty()) {
-                            MealRecordOptionRows(displayOptions)
-                        }
                     }
                     IconButton(onClick = { onDeleteClick(record) }) {
                         Icon(
@@ -981,12 +1030,22 @@ private fun MealRecordContentDialog(
     externalCards: List<DriveExternalCard>,
     onDismiss: () -> Unit,
     onDeleteDrivePlanItemClick: (MealRecord, DrivePlanItem, String) -> Unit,
+    onDeleteRecordOptionClick: (MealRecord, MealRecordOption) -> Unit,
     onDeleteRecordPhotoClick: (MealRecord) -> Unit,
     onSelectMainDishClick: (DrivePlanItem?, DrivePlanItem, String) -> Unit,
 ) {
     val timeFormatter = remember { SimpleDateFormat("yyyy/M/d HH:mm", Locale.JAPAN) }
     val planMeal = selectedDrivePlan?.mealForRecord(record)
     val displayOptions = record.displayOptions(externalCards)
+    val externalCard = record.externalCard(externalCards)
+    val externalOptions = externalCard?.let { card ->
+        displayOptions.filter { option -> option.optionGroupNameSnapshot == card.name }
+    }.orEmpty()
+    val otherOptions = if (externalCard == null) {
+        displayOptions
+    } else {
+        displayOptions.filterNot { option -> option.optionGroupNameSnapshot == externalCard.name }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
@@ -1034,6 +1093,23 @@ private fun MealRecordContentDialog(
                         },
                         onSelectMainDishClick = onSelectMainDishClick,
                     )
+                    if (externalCard != null && externalOptions.isNotEmpty()) {
+                        DriveExternalCardContent(
+                            card = externalCard,
+                            options = externalOptions,
+                            onDeleteOptionClick = { option ->
+                                onDeleteRecordOptionClick(record, option)
+                            },
+                        )
+                    }
+                } else if (externalCard != null && externalOptions.isNotEmpty()) {
+                    DriveExternalCardContent(
+                        card = externalCard,
+                        options = externalOptions,
+                        onDeleteOptionClick = { option ->
+                            onDeleteRecordOptionClick(record, option)
+                        },
+                    )
                 } else if (recordPhotoUri != null) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
@@ -1055,12 +1131,73 @@ private fun MealRecordContentDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (displayOptions.isNotEmpty()) {
-                    MealRecordOptionRows(displayOptions)
+                if (otherOptions.isNotEmpty()) {
+                    MealRecordOptionRows(otherOptions)
                 }
             }
         },
     )
+}
+
+@Composable
+private fun DriveExternalCardContent(
+    card: DriveExternalCard,
+    options: List<MealRecordOption>,
+    onDeleteOptionClick: (MealRecordOption) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.meal_detail_contents),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        options.forEach { option ->
+            val driveItem = card.items.firstOrNull { item -> item.name == option.optionNameSnapshot }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                driveItem?.imagePath?.let { imagePath ->
+                    DriveCachedImage(
+                        path = imagePath,
+                        contentDescription = option.optionNameSnapshot,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(option.optionNameSnapshot, fontWeight = FontWeight.SemiBold)
+                    driveItem?.amountLabel?.takeIf { it.isNotBlank() }?.let { amountLabel ->
+                        Text(
+                            text = amountLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.kcal_format, option.calorieDelta),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (option.id > 0L) {
+                    IconButton(onClick = { onDeleteOptionClick(option) }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_delete),
+                            contentDescription = stringResource(R.string.delete_meal_item),
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -1250,9 +1387,14 @@ internal fun recordPhotoLabel(templateNameSnapshot: String): String? {
         .takeIf { it.isNotBlank() }
 }
 
+private fun MealRecord.externalCard(externalCards: List<DriveExternalCard>): DriveExternalCard? {
+    val externalCardName = recordPhotoLabel(templateNameSnapshot) ?: return null
+    return externalCards.firstOrNull { card -> card.name == externalCardName }
+}
+
 private fun MealRecord.displayOptions(externalCards: List<DriveExternalCard>): List<MealRecordOption> {
-    val externalCardName = recordPhotoLabel(templateNameSnapshot) ?: return selectedOptions
-    val externalCard = externalCards.firstOrNull { card -> card.name == externalCardName }
+    if (recordPhotoLabel(templateNameSnapshot) == null) return selectedOptions
+    val externalCard = externalCard(externalCards)
         ?.takeIf { card -> card.items.isNotEmpty() }
         ?: return selectedOptions
     if (selectedOptions.any { option -> option.optionGroupNameSnapshot == externalCard.name }) {

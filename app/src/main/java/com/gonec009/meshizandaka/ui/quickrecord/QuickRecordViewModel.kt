@@ -32,6 +32,7 @@ data class QuickRecordDriveItem(
     val id: String,
     val name: String,
     val amountLabel: String,
+    val imagePath: String? = null,
     val calories: Int,
     val proteinG: Double,
     val fatG: Double,
@@ -118,6 +119,7 @@ class QuickRecordViewModel(
                                 id = item.id ?: "${card.id}:${item.name}",
                                 name = item.name,
                                 amountLabel = item.amountLabel,
+                                imagePath = item.imagePath,
                                 calories = item.calories,
                                 proteinG = item.proteinG,
                                 fatG = item.fatG,
@@ -155,8 +157,8 @@ class QuickRecordViewModel(
                 proteinG = formatOneDecimal(card.proteinG),
                 fatG = formatOneDecimal(card.fatG),
                 carbG = formatOneDecimal(card.carbG),
-                memo = card.amountLabel,
-                photoUri = card.imagePath,
+                memo = "",
+                photoUri = null,
             )
         }
     }

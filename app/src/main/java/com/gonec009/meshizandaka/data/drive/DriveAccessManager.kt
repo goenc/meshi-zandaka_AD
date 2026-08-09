@@ -188,7 +188,12 @@ class DriveAccessManager(
             latest.externalCards
         } else {
             latest.externalCards.map { card ->
-                card.copy(imagePath = card.imageContentHash?.let { loaded.paths[it.lowercase()] })
+                card.copy(
+                    imagePath = card.imageContentHash?.let { loaded.paths[it.lowercase()] },
+                    items = card.items.map { item ->
+                        item.copy(imagePath = item.imageContentHash?.let { loaded.paths[it.lowercase()] })
+                    },
+                )
             }
         }
         _planState.value = latest.copy(
@@ -221,7 +226,14 @@ class DriveAccessManager(
                     meal.items.mapNotNull { it.imageContentHash }.forEach(::add)
                 }
             }
-            .plus(externalCards.mapNotNull { it.imageContentHash })
+            .plus(
+                externalCards.flatMap { card ->
+                    buildList {
+                        card.imageContentHash?.let(::add)
+                        card.items.mapNotNull { it.imageContentHash }.forEach(::add)
+                    }
+                },
+            )
             .distinctBy { it.lowercase() }
         if (hashes.isEmpty()) return ImageLoadResult(emptyMap(), failedCount = 0)
 

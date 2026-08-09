@@ -208,6 +208,27 @@ class MealRecordRepository(
         return true
     }
 
+    suspend fun deleteRecordOption(recordId: Long, option: MealRecordOption): Boolean {
+        if (option.id <= 0L) return false
+        val current = getRecord(recordId) ?: return false
+        val storedOption = current.selectedOptions.firstOrNull { it.id == option.id } ?: return false
+        updateRecord(
+            current.copy(
+                totalCalories = (current.totalCalories - storedOption.calorieDelta).coerceAtLeast(0),
+                proteinG = (current.proteinG - storedOption.proteinDeltaG).coerceAtLeast(0.0),
+                fatG = (current.fatG - storedOption.fatDeltaG).coerceAtLeast(0.0),
+                carbG = (current.carbG - storedOption.carbDeltaG).coerceAtLeast(0.0),
+                specialDeltaCalories = if (current.isSpecial) {
+                    current.specialDeltaCalories - storedOption.calorieDelta
+                } else {
+                    current.specialDeltaCalories
+                },
+                selectedOptions = current.selectedOptions.filterNot { it.id == storedOption.id },
+            ),
+        )
+        return true
+    }
+
     suspend fun deleteRecord(recordId: Long) {
         val photoUri = dao.getRecord(recordId)?.photoUri
         dao.deleteRecord(recordId)
