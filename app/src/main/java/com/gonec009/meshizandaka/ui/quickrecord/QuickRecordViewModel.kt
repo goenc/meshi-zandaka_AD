@@ -186,8 +186,8 @@ class QuickRecordViewModel(
 
     fun saveRecord() {
         val state = _uiState.value
-        val template = state.selectedTemplate
         val driveCard = state.selectedDriveEatingOutCard
+        val template = state.templateForSave()
         if (template == null && driveCard == null) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
@@ -237,4 +237,8 @@ class QuickRecordViewModel(
             photoUri = template.photoUri,
         )
     }
+}
+
+internal fun QuickRecordUiState.templateForSave(): MealTemplate? {
+    return selectedTemplate.takeUnless { selectedDriveEatingOutCard != null }
 }
