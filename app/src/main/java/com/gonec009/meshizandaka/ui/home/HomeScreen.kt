@@ -70,6 +70,7 @@ import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.data.drive.DriveCalorieSummary
 import com.gonec009.meshizandaka.data.drive.DriveExternalCard
+import com.gonec009.meshizandaka.data.drive.DriveFood
 import com.gonec009.meshizandaka.data.drive.DrivePlan
 import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
@@ -141,6 +142,7 @@ private data class NutritionTotals(
 private val ChartBarWidth = 39.dp
 private val ChartBarHeight = 96.dp
 private const val ChartSectionCount = 6
+private const val FoodOptionGroupName = "食品"
 
 private fun formatChartCalories(calories: Int): String {
     return "${calories}K"
@@ -234,6 +236,7 @@ fun HomeRoute(
         state = state,
         selectedDrivePlan = drivePlanState.selectedPlan,
         externalCards = drivePlanState.externalCards,
+        foods = drivePlanState.foods,
         calorieSummary = calorieSummary,
         onQuickRecordClick = onQuickRecordClick,
         onMoveSelectedDate = viewModel::moveSelectedRecordDate,
@@ -258,6 +261,7 @@ private fun HomeScreen(
     state: HomeUiState,
     selectedDrivePlan: DrivePlan?,
     externalCards: List<DriveExternalCard>,
+    foods: List<DriveFood>,
     calorieSummary: DriveCalorieSummary?,
     onQuickRecordClick: () -> Unit,
     onMoveSelectedDate: (Long) -> Unit,
@@ -363,6 +367,7 @@ private fun HomeScreen(
                 maxCalories = state.weeklyChart.maxTotalCalories,
                 selectedDrivePlan = selectedDrivePlan,
                 externalCards = externalCards,
+                foods = foods,
                 modifier = Modifier.testTag("weekly_chart_card"),
                 onDeleteRecordRequest = { _, record ->
                     pendingDeleteRecord = PendingDeleteRecord(
@@ -588,6 +593,7 @@ private fun WeeklyChartCard(
     maxCalories: Int,
     selectedDrivePlan: DrivePlan?,
     externalCards: List<DriveExternalCard>,
+    foods: List<DriveFood>,
     modifier: Modifier = Modifier,
     onDeleteRecordRequest: (ChartMealDialogState, MealRecord) -> Unit,
     onDeleteDrivePlanItemRequest: (ChartMealDialogState, MealRecord, DrivePlanItem, String) -> Unit,
@@ -651,6 +657,7 @@ private fun WeeklyChartCard(
             state = detail,
             selectedDrivePlan = selectedDrivePlan,
             externalCards = externalCards,
+            foods = foods,
             onDismiss = { dialogState = null },
             onDeleteClick = { record ->
                 onDeleteRecordRequest(detail, record)
@@ -832,6 +839,7 @@ private fun ChartMealDetailDialog(
     state: ChartMealDialogState,
     selectedDrivePlan: DrivePlan?,
     externalCards: List<DriveExternalCard>,
+    foods: List<DriveFood>,
     onDismiss: () -> Unit,
     onDeleteClick: (MealRecord) -> Unit,
     onDeleteDrivePlanItemClick: (MealRecord, DrivePlanItem, String) -> Unit,
@@ -847,10 +855,13 @@ private fun ChartMealDetailDialog(
             record.photoUri?.takeIf { it.isNotBlank() }
         }.distinct()
     }
-    val detailImagePaths = remember(records, selectedDrivePlan, externalCards) {
+    val detailImagePaths = remember(records, selectedDrivePlan, externalCards, foods) {
         records.flatMap { record ->
             selectedDrivePlan?.mealForRecord(record)?.imagePaths().orEmpty() +
-                record.externalCard(externalCards)?.items.orEmpty().mapNotNull { item -> item.imagePath }
+                record.externalCard(externalCards)?.items.orEmpty().mapNotNull { item -> item.imagePath } +
+                record.selectedOptions.mapNotNull { option ->
+                    foodForRecordOption(option, foods)?.imagePath
+                }
         }.distinct()
     }
     var detailsReady by remember(detailImagePaths, detailPhotoUris) {
@@ -936,6 +947,7 @@ private fun ChartMealDetailDialog(
             record = record,
             selectedDrivePlan = selectedDrivePlan,
             externalCards = externalCards,
+            foods = foods,
             onDismiss = { selectedRecord = null },
             onDeleteDrivePlanItemClick = onDeleteDrivePlanItemClick,
             onDeleteRecordOptionClick = onDeleteRecordOptionClick,
@@ -1028,6 +1040,7 @@ private fun MealRecordContentDialog(
     record: MealRecord,
     selectedDrivePlan: DrivePlan?,
     externalCards: List<DriveExternalCard>,
+    foods: List<DriveFood>,
     onDismiss: () -> Unit,
     onDeleteDrivePlanItemClick: (MealRecord, DrivePlanItem, String) -> Unit,
     onDeleteRecordOptionClick: (MealRecord, MealRecordOption) -> Unit,
@@ -1045,6 +1058,12 @@ private fun MealRecordContentDialog(
         displayOptions
     } else {
         displayOptions.filterNot { option -> option.optionGroupNameSnapshot == externalCard.name }
+    }
+    val foodOptions = otherOptions.filter { option ->
+        option.optionGroupNameSnapshot == FoodOptionGroupName
+    }
+    val nonFoodOptions = otherOptions.filterNot { option ->
+        option.optionGroupNameSnapshot == FoodOptionGroupName
     }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1124,15 +1143,25 @@ private fun MealRecordContentDialog(
                             onDeleteClick = { onDeleteRecordPhotoClick(record) },
                         )
                     }
-                } else {
+                } else if (foodOptions.isEmpty() && nonFoodOptions.isEmpty()) {
                     Text(
                         text = stringResource(R.string.meal_detail_drive_content_unavailable),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (otherOptions.isNotEmpty()) {
-                    MealRecordOptionRows(otherOptions)
+                if (foodOptions.isNotEmpty()) {
+                    MealRecordFoodContent(
+                        foods = foods,
+                        options = foodOptions,
+                        showTitle = planMeal == null && externalOptions.isEmpty() && recordPhotoUri == null,
+                        onDeleteOptionClick = { option ->
+                            onDeleteRecordOptionClick(record, option)
+                        },
+                    )
+                }
+                if (nonFoodOptions.isNotEmpty()) {
+                    MealRecordOptionRows(nonFoodOptions)
                 }
             }
         },
@@ -1173,6 +1202,70 @@ private fun DriveExternalCardContent(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(option.optionNameSnapshot, fontWeight = FontWeight.SemiBold)
                     driveItem?.amountLabel?.takeIf { it.isNotBlank() }?.let { amountLabel ->
+                        Text(
+                            text = amountLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.kcal_format, option.calorieDelta),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (option.id > 0L) {
+                    IconButton(onClick = { onDeleteOptionClick(option) }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_delete),
+                            contentDescription = stringResource(R.string.delete_meal_item),
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MealRecordFoodContent(
+    foods: List<DriveFood>,
+    options: List<MealRecordOption>,
+    showTitle: Boolean,
+    onDeleteOptionClick: (MealRecordOption) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (showTitle) {
+            Text(
+                text = stringResource(R.string.meal_detail_contents),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        options.forEach { option ->
+            val food = foodForRecordOption(option, foods)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                food?.imagePath?.let { imagePath ->
+                    DriveCachedImage(
+                        path = imagePath,
+                        contentDescription = option.optionNameSnapshot,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(option.optionNameSnapshot, fontWeight = FontWeight.SemiBold)
+                    food?.amountLabel?.takeIf { it.isNotBlank() }?.let { amountLabel ->
                         Text(
                             text = amountLabel,
                             style = MaterialTheme.typography.bodySmall,
@@ -1393,6 +1486,14 @@ internal fun MealRecord.externalCard(externalCards: List<DriveExternalCard>): Dr
         .map(String::trim)
         .filter(String::isNotBlank)
     return externalCards.firstOrNull { card -> card.name in recordedNames }
+}
+
+internal fun foodForRecordOption(
+    option: MealRecordOption,
+    foods: List<DriveFood>,
+): DriveFood? {
+    if (option.optionGroupNameSnapshot != FoodOptionGroupName) return null
+    return foods.firstOrNull { food -> food.name == option.optionNameSnapshot }
 }
 
 private fun MealRecord.displayOptions(externalCards: List<DriveExternalCard>): List<MealRecordOption> {

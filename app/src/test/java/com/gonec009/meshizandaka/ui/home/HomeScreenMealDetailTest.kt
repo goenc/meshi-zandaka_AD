@@ -1,10 +1,12 @@
 package com.gonec009.meshizandaka.ui.home
 
 import com.gonec009.meshizandaka.data.drive.DriveExternalCard
+import com.gonec009.meshizandaka.data.drive.DriveFood
 import com.gonec009.meshizandaka.data.drive.DrivePlan
 import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
 import com.gonec009.meshizandaka.domain.model.MealRecord
+import com.gonec009.meshizandaka.domain.model.MealRecordOption
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.SourceType
 import org.junit.Assert.assertEquals
@@ -127,5 +129,27 @@ class HomeScreenMealDetailTest {
         )
 
         assertEquals(card, record.externalCard(listOf(card)))
+    }
+
+    @Test
+    fun 食品記録から食品マスターの画像情報を解決する() {
+        val food = DriveFood(
+            id = "saba",
+            name = "サバ",
+            mealCategory = 0,
+            amountLabel = "100 g",
+            imagePath = "/cache/saba.jpg",
+        )
+        val option = MealRecordOption(
+            id = 10L,
+            optionGroupNameSnapshot = "食品",
+            optionNameSnapshot = "サバ",
+            calorieDelta = 158,
+            proteinDeltaG = 20.0,
+            fatDeltaG = 8.0,
+            carbDeltaG = 0.0,
+        )
+
+        assertEquals(food, foodForRecordOption(option, listOf(food)))
     }
 }
