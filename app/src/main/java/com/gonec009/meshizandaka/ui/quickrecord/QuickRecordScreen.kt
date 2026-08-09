@@ -179,6 +179,15 @@ private fun QuickRecordScreen(
                         .padding(top = 16.dp, start = 16.dp, end = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
+                    FoodMealTypeSection(
+                        selectedMealType = mealTypeLabel(state.selectedMealType),
+                        expanded = mealTypeExpanded,
+                        onExpandedChange = { mealTypeExpanded = it },
+                        onMealTypeSelect = { mealType ->
+                            mealTypeExpanded = false
+                            onMealTypeSelect(mealType)
+                        },
+                    )
                     QuickRecordFoodCategoryTabRow(
                         selectedIndex = selectedFoodCategoryIndex.coerceIn(
                             0,
@@ -496,6 +505,50 @@ private fun TemplateSection(
                     onClick = { onTemplateSelect(template) },
                     label = { Text(template.name) },
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FoodMealTypeSection(
+    selectedMealType: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onMealTypeSelect: (MealType) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = onExpandedChange,
+            ) {
+                LabeledMealSettingField(
+                    mealTypeLabel = stringResource(R.string.meal_type),
+                    selectedMealType = selectedMealType,
+                    expanded = expanded,
+                    mealFieldModifier = Modifier.menuAnchor(),
+                )
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { onExpandedChange(false) },
+                ) {
+                    MealType.entries
+                        .filterNot { mealType ->
+                            mealType == MealType.EATING_OUT || mealType == MealType.SNACK
+                        }
+                        .forEach { mealType ->
+                            DropdownMenuItem(
+                                text = { Text(mealTypeLabel(mealType)) },
+                                onClick = { onMealTypeSelect(mealType) },
+                            )
+                        }
+                }
             }
         }
     }
