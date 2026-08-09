@@ -54,6 +54,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -418,7 +419,7 @@ private fun DriveEatingOutCardSection(
             items(cards, key = { it.id }) { card ->
                 Card(
                     modifier = Modifier
-                        .width(180.dp)
+                        .width(132.dp)
                         .clickable { onCardSelect(card) },
                     border = if (selectedCardId == card.id) {
                         BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
@@ -427,7 +428,7 @@ private fun DriveEatingOutCardSection(
                     },
                 ) {
                     Column(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         card.imagePath?.let { imagePath ->
@@ -436,7 +437,7 @@ private fun DriveEatingOutCardSection(
                                 contentDescription = card.name,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(96.dp)
+                                    .height(64.dp)
                                     .clip(RoundedCornerShape(8.dp)),
                             )
                         }
@@ -444,26 +445,21 @@ private fun DriveEatingOutCardSection(
                             text = card.name,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
-                        Text(
-                            text = card.mealLabel,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = card.amountLabel,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.template_management_meal_nutrition,
-                                card.calories,
-                                formatOneDecimal(card.proteinG),
-                                formatOneDecimal(card.fatG),
-                                formatOneDecimal(card.carbG),
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                        if (selectedCardId == card.id) {
+                            Text(
+                                text = stringResource(R.string.kcal_format, card.calories),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = "P ${formatOneDecimal(card.proteinG)}g / F ${formatOneDecimal(card.fatG)}g / C ${formatOneDecimal(card.carbG)}g",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
