@@ -31,6 +31,7 @@ import com.gonec009.meshizandaka.R
 import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
 import com.gonec009.meshizandaka.ui.common.MealPhotoWithDeleteAction
+import com.gonec009.meshizandaka.ui.registeredMealLabel
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 @Composable
@@ -82,7 +83,9 @@ private fun RecordEditScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(text = state.record?.templateNameSnapshot ?: stringResource(R.string.no_records))
+        state.record?.let { record ->
+            Text(text = registeredMealLabel(record.mealType))
+        } ?: Text(stringResource(R.string.no_records))
         OutlinedTextField(
             value = state.calories,
             onValueChange = onCaloriesChange,

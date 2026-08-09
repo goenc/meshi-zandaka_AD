@@ -74,10 +74,10 @@
     <string name="meal_type_breakfast">朝食</string>
     <string name="meal_type_lunch">昼食</string>
     <string name="meal_type_dinner">夕食</string>
-    <string name="meal_type_morning_snack">間朝</string>
-    <string name="meal_type_daytime_snack">間昼</string>
-    <string name="meal_type_free_snack">間全</string>
-    <string name="meal_type_snack">間全</string>
+    <string name="meal_type_morning_snack">朝間食</string>
+    <string name="meal_type_daytime_snack">昼間食</string>
+    <string name="meal_type_free_snack">フリー間食</string>
+    <string name="meal_type_snack">フリー間食</string>
     <string name="meal_type_eating_out">外食</string>
     <string name="base_calories">カロリー</string>
     <string name="total_calories">合計カロリー</string>

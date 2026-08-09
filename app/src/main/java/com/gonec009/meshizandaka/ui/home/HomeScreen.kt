@@ -81,6 +81,7 @@ import com.gonec009.meshizandaka.ui.common.DriveCachedImage
 import com.gonec009.meshizandaka.ui.common.DriveImageMemoryCache
 import com.gonec009.meshizandaka.ui.common.MealPhoto
 import com.gonec009.meshizandaka.ui.common.MealPhotoMemoryCache
+import com.gonec009.meshizandaka.ui.registeredMealLabel
 import com.gonec009.meshizandaka.util.formatOneDecimal
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
@@ -907,7 +908,7 @@ private fun MealRecordSection(
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
-                            text = record.templateNameSnapshot,
+                            text = registeredMealLabel(record.mealType),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -968,7 +969,7 @@ private fun MealRecordContentDialog(
             }
         },
         title = {
-            Text(record.templateNameSnapshot)
+            Text(registeredMealLabel(record.mealType))
         },
         text = {
             Column(

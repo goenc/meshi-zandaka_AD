@@ -11,13 +11,13 @@ class RecordAppendTargetException : IllegalStateException("追加先の食事記
 private fun mealTypeLabel(mealType: MealType): String {
     return when (mealType) {
         MealType.BREAKFAST -> "朝食"
-        MealType.MORNING_SNACK -> "間朝"
+        MealType.MORNING_SNACK -> "朝間食"
         MealType.LUNCH -> "昼食"
         MealType.DINNER -> "夕食"
-        MealType.DAYTIME_SNACK -> "間昼"
+        MealType.DAYTIME_SNACK -> "昼間食"
         MealType.FREE_SNACK,
         MealType.SNACK,
-        -> "間全"
+        -> "フリー間食"
         MealType.EATING_OUT -> "外食"
     }
 }

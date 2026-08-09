@@ -22,6 +22,11 @@ fun mealTypeLabel(mealType: MealType): String = stringResource(
 )
 
 @Composable
+fun registeredMealLabel(mealType: MealType): String = mealTypeLabel(
+    mealType.takeUnless { it == MealType.EATING_OUT } ?: MealType.FREE_SNACK,
+)
+
+@Composable
 fun weekStartDayLabel(weekStartDay: WeekStartDay): String = stringResource(
     when (weekStartDay) {
         WeekStartDay.MONDAY -> R.string.week_start_monday
