@@ -738,7 +738,27 @@ private fun ChartMealDetailDialog(
             }
         },
         title = {
-            Text(titleDateFormatter.format(state.date))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = titleDateFormatter.format(state.date),
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.daily_total_calories,
+                        state.stack.totalCalories,
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+            }
         },
         text = {
             Column(
