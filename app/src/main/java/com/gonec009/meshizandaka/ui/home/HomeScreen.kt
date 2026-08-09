@@ -1015,6 +1015,7 @@ private fun MealRecordContentDialog(
                         )
                         MealRecordPhotoRow(
                             uriString = recordPhotoUri,
+                            label = recordPhotoLabel(record.templateNameSnapshot),
                             onDeleteClick = { onDeleteRecordPhotoClick(record) },
                         )
                     }
@@ -1098,6 +1099,7 @@ private fun DrivePlanMealContent(
         recordPhotoUri?.let { uriString ->
             MealRecordPhotoRow(
                 uriString = uriString,
+                label = recordPhotoLabel(record.templateNameSnapshot),
                 onDeleteClick = onDeleteRecordPhotoClick,
             )
         }
@@ -1174,6 +1176,7 @@ private fun DrivePlanMealContent(
 @Composable
 private fun MealRecordPhotoRow(
     uriString: String,
+    label: String?,
     onDeleteClick: () -> Unit,
 ) {
     Row(
@@ -1193,7 +1196,7 @@ private fun MealRecordPhotoRow(
             maxSizePx = 160,
         )
         Text(
-            text = stringResource(R.string.meal_detail_record_photo),
+            text = label ?: stringResource(R.string.meal_detail_record_photo),
             modifier = Modifier.weight(1f),
             fontWeight = FontWeight.SemiBold,
         )
@@ -1206,6 +1209,13 @@ private fun MealRecordPhotoRow(
             )
         }
     }
+}
+
+internal fun recordPhotoLabel(templateNameSnapshot: String): String? {
+    return templateNameSnapshot
+        .substringAfterLast(" / ")
+        .trim()
+        .takeIf { it.isNotBlank() }
 }
 
 internal fun orderDrivePlanMealItems(

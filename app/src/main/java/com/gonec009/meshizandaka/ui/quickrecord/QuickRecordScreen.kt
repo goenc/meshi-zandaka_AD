@@ -238,6 +238,14 @@ private fun QuickRecordScreen(
                             maxLines = 6,
                         )
                         Button(
+                            onClick = onSaveClick,
+                            enabled = (state.selectedTemplate != null ||
+                                state.selectedDriveEatingOutCard != null) && !state.isSaving,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.record_now))
+                        }
+                        Button(
                             onClick = { showCamera = true },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -267,14 +275,6 @@ private fun QuickRecordScreen(
                                 .aspectRatio(16f / 9f)
                                 .clip(RoundedCornerShape(8.dp)),
                         )
-                        Button(
-                            onClick = onSaveClick,
-                            enabled = (state.selectedTemplate != null ||
-                                state.selectedDriveEatingOutCard != null) && !state.isSaving,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(stringResource(R.string.record_now))
-                        }
                     }
                 }
             }

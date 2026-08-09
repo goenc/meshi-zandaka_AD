@@ -67,4 +67,9 @@ class HomeScreenMealDetailTest {
 
         assertEquals("昼食S", lunchPlan.mealForRecord(record)?.name)
     }
+
+    @Test
+    fun 連結された写真の表示名は最後に追加されたクイック記録名にする() {
+        assertEquals("サムライマック", recordPhotoLabel("昼食S / サムライマック"))
+    }
 }
