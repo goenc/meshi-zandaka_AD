@@ -928,13 +928,6 @@ private fun MealRecordSection(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        if (record.memo.isNotBlank()) {
-                            Text(
-                                text = record.memo,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
                     }
                     IconButton(onClick = { onDeleteClick(record) }) {
                         Icon(
@@ -994,12 +987,14 @@ private fun MealRecordContentDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 val recordPhotoUri = record.photoUri?.takeIf { it.isNotBlank() }
+                val recordPhotoCalories = quickRecordCalories(record, planMeal)
                 if (planMeal != null) {
                     DrivePlanMealContent(
                         meal = planMeal,
                         excludedItemKeys = record.excludedDrivePlanItemKeys,
                         record = record,
                         recordPhotoUri = recordPhotoUri,
+                        recordPhotoCalories = recordPhotoCalories,
                         onDeleteRecordPhotoClick = { onDeleteRecordPhotoClick(record) },
                         onDeleteItemClick = { item, itemKey ->
                             onDeleteDrivePlanItemClick(record, item, itemKey)
@@ -1016,6 +1011,7 @@ private fun MealRecordContentDialog(
                         MealRecordPhotoRow(
                             uriString = recordPhotoUri,
                             label = recordPhotoLabel(record.templateNameSnapshot),
+                            calories = recordPhotoCalories,
                             onDeleteClick = { onDeleteRecordPhotoClick(record) },
                         )
                     }
@@ -1032,13 +1028,6 @@ private fun MealRecordContentDialog(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                if (record.memo.isNotBlank()) {
-                    Text(
-                        text = record.memo,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
         },
     )
@@ -1050,6 +1039,7 @@ private fun DrivePlanMealContent(
     excludedItemKeys: Set<String>,
     record: MealRecord,
     recordPhotoUri: String?,
+    recordPhotoCalories: Int?,
     onDeleteRecordPhotoClick: () -> Unit,
     onDeleteItemClick: (DrivePlanItem, String) -> Unit,
     onSelectMainDishClick: (DrivePlanItem?, DrivePlanItem, String) -> Unit,
@@ -1100,6 +1090,7 @@ private fun DrivePlanMealContent(
             MealRecordPhotoRow(
                 uriString = uriString,
                 label = recordPhotoLabel(record.templateNameSnapshot),
+                calories = recordPhotoCalories,
                 onDeleteClick = onDeleteRecordPhotoClick,
             )
         }
@@ -1177,6 +1168,7 @@ private fun DrivePlanMealContent(
 private fun MealRecordPhotoRow(
     uriString: String,
     label: String?,
+    calories: Int?,
     onDeleteClick: () -> Unit,
 ) {
     Row(
@@ -1195,11 +1187,21 @@ private fun MealRecordPhotoRow(
                 .clip(RoundedCornerShape(8.dp)),
             maxSizePx = 160,
         )
-        Text(
-            text = label ?: stringResource(R.string.meal_detail_record_photo),
+        Column(
             modifier = Modifier.weight(1f),
-            fontWeight = FontWeight.SemiBold,
-        )
+        ) {
+            Text(
+                text = label ?: stringResource(R.string.meal_detail_record_photo),
+                fontWeight = FontWeight.SemiBold,
+            )
+            calories?.let { value ->
+                Text(
+                    text = stringResource(R.string.kcal_format, value),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         IconButton(onClick = onDeleteClick) {
             Icon(
                 painter = painterResource(R.drawable.ic_delete),
@@ -1216,6 +1218,20 @@ internal fun recordPhotoLabel(templateNameSnapshot: String): String? {
         .substringAfterLast(" / ")
         .trim()
         .takeIf { it.isNotBlank() }
+}
+
+internal fun quickRecordCalories(record: MealRecord, planMeal: DrivePlanMeal?): Int? {
+    if (planMeal == null || !record.templateNameSnapshot.contains(" / ")) {
+        return record.totalCalories
+    }
+    val itemEntries = planMeal.items.mapIndexed { index, item -> item to item.recordKey(index) }
+    val selectedMainDishKey = record.selectedDrivePlanMainDishItemKey
+        ?: itemEntries.firstOrNull { (item, _) -> item.isMainDish }?.second
+    val mealCalories = itemEntries
+        .filterNot { (_, itemKey) -> itemKey in record.excludedDrivePlanItemKeys }
+        .filter { (item, itemKey) -> !item.isMainDishCandidate || itemKey == selectedMainDishKey }
+        .sumOf { (item, _) -> item.calories }
+    return (record.totalCalories - mealCalories).coerceAtLeast(0)
 }
 
 internal fun orderDrivePlanMealItems(

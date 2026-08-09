@@ -1,6 +1,7 @@
 package com.gonec009.meshizandaka.ui.home
 
 import com.gonec009.meshizandaka.data.drive.DrivePlan
+import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
 import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealType
@@ -71,5 +72,35 @@ class HomeScreenMealDetailTest {
     @Test
     fun 連結された写真の表示名は最後に追加されたクイック記録名にする() {
         assertEquals("サムライマック", recordPhotoLabel("昼食S / サムライマック"))
+    }
+
+    @Test
+    fun 連結されたクイック記録の写真カロリーは食事本体を除いた値にする() {
+        val meal = lunchPlan.meals.single().copy(
+            items = listOf(
+                DrivePlanItem(
+                    name = "昼食",
+                    amountLabel = "100 g",
+                    isMainDish = true,
+                    calories = 700,
+                ),
+            ),
+        )
+        val record = MealRecord(
+            eatenAt = 0L,
+            mealType = MealType.LUNCH,
+            templateId = -1002L,
+            templateNameSnapshot = "昼食S / サムライマック",
+            totalCalories = 1300,
+            proteinG = 25.0,
+            fatG = 20.0,
+            carbG = 70.0,
+            isSpecial = false,
+            specialDeltaCalories = 0,
+            sourceType = SourceType.QUICK_BUTTON,
+            memo = "1 個",
+        )
+
+        assertEquals(600, quickRecordCalories(record, meal))
     }
 }
