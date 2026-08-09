@@ -57,8 +57,7 @@
     <string name="quick_record_food_category_side_dish">副菜</string>
     <string name="quick_record_food_category_staple">主食</string>
     <string name="quick_record_food_category_snack">間食</string>
-    <string name="quick_record_food_category_other">その他</string>
-    <string name="quick_record_food_register_target">登録先</string>
+    <string name="quick_record_food_category_other">他</string>
     <string name="quick_record_food_register">登録</string>
     <string name="quick_record_append_target">既存の食事へ追加</string>
     <string name="quick_record_append_target_description">昼食・夕食が登録済みなら、外食をそこへ追加できます</string>
