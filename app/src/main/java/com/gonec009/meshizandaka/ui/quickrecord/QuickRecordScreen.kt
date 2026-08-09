@@ -165,16 +165,72 @@ private fun QuickRecordScreen(
                     )
                 }
             }
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                val isManualTab = selectedTabIndex == MANUAL_TAB_INDEX
-                val isEatingOutTab = selectedTabIndex == EATING_OUT_TAB_INDEX
-                val isFoodTab = selectedTabIndex == FOOD_TAB_INDEX
+            val isManualTab = selectedTabIndex == MANUAL_TAB_INDEX
+            val isEatingOutTab = selectedTabIndex == EATING_OUT_TAB_INDEX
+            val isFoodTab = selectedTabIndex == FOOD_TAB_INDEX
+            if (isFoodTab) {
+                val selectedFoodCategory = quickRecordFoodCategoryTabs[
+                    selectedFoodCategoryIndex.coerceIn(0, quickRecordFoodCategoryTabs.lastIndex)
+                ]
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(top = 16.dp, start = 16.dp, end = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    FoodMealTypeSection(
+                        selectedMealType = mealTypeLabel(state.selectedMealType),
+                        expanded = mealTypeExpanded,
+                        onExpandedChange = { mealTypeExpanded = it },
+                        onMealTypeSelect = { mealType ->
+                            mealTypeExpanded = false
+                            onMealTypeSelect(mealType)
+                        },
+                    )
+                    QuickRecordFoodCategoryTabRow(
+                        selectedIndex = selectedFoodCategoryIndex.coerceIn(
+                            0,
+                            quickRecordFoodCategoryTabs.lastIndex,
+                        ),
+                        onSelected = { selectedFoodCategoryIndex = it },
+                    )
+                    val visibleFoods = state.foods.filter { food ->
+                        food.mealCategory == selectedFoodCategory.mealCategory
+                    }
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentPadding = PaddingValues(bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        if (visibleFoods.isEmpty()) {
+                            item {
+                                Text(
+                                    text = stringResource(R.string.quick_record_no_foods),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            items(visibleFoods, key = { food -> food.id }) { food ->
+                                QuickRecordFoodRow(
+                                    food = food,
+                                    enabled = !state.isSaving,
+                                    onRegister = { onFoodRegister(food) },
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
                 if (isEatingOutTab) {
                     item {
                         Card(
@@ -226,50 +282,7 @@ private fun QuickRecordScreen(
                         }
                     }
                 }
-                if (isFoodTab) {
-                    val selectedFoodCategory = quickRecordFoodCategoryTabs[
-                        selectedFoodCategoryIndex.coerceIn(0, quickRecordFoodCategoryTabs.lastIndex)
-                    ]
-                    item {
-                        FoodMealTypeSection(
-                            selectedMealType = mealTypeLabel(state.selectedMealType),
-                            expanded = mealTypeExpanded,
-                            onExpandedChange = { mealTypeExpanded = it },
-                            onMealTypeSelect = { mealType ->
-                                mealTypeExpanded = false
-                                onMealTypeSelect(mealType)
-                            },
-                        )
-                    }
-                    item {
-                        QuickRecordFoodCategoryTabRow(
-                            selectedIndex = selectedFoodCategoryIndex.coerceIn(
-                                0,
-                                quickRecordFoodCategoryTabs.lastIndex,
-                            ),
-                            onSelected = { selectedFoodCategoryIndex = it },
-                        )
-                    }
-                    val visibleFoods = state.foods.filter { food ->
-                        food.mealCategory == selectedFoodCategory.mealCategory
-                    }
-                    if (visibleFoods.isEmpty()) {
-                        item {
-                            Text(
-                                text = stringResource(R.string.quick_record_no_foods),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    } else {
-                        items(visibleFoods, key = { food -> food.id }) { food ->
-                            QuickRecordFoodRow(
-                                food = food,
-                                enabled = !state.isSaving,
-                                onRegister = { onFoodRegister(food) },
-                            )
-                        }
-                    }
-                } else if (isManualTab) {
+                if (isManualTab) {
                     val normalTemplates = state.availableTemplates.filter { it.mealType != MealType.EATING_OUT }
                     if (normalTemplates.isNotEmpty()) item {
                         TemplateSection(
@@ -431,6 +444,7 @@ private fun QuickRecordScreen(
                             }
                         }
                     }
+                }
                 }
             }
         }
