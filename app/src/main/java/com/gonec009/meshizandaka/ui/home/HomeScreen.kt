@@ -1387,9 +1387,12 @@ internal fun recordPhotoLabel(templateNameSnapshot: String): String? {
         .takeIf { it.isNotBlank() }
 }
 
-private fun MealRecord.externalCard(externalCards: List<DriveExternalCard>): DriveExternalCard? {
-    val externalCardName = recordPhotoLabel(templateNameSnapshot) ?: return null
-    return externalCards.firstOrNull { card -> card.name == externalCardName }
+internal fun MealRecord.externalCard(externalCards: List<DriveExternalCard>): DriveExternalCard? {
+    val recordedNames = templateNameSnapshot
+        .split(" / ")
+        .map(String::trim)
+        .filter(String::isNotBlank)
+    return externalCards.firstOrNull { card -> card.name in recordedNames }
 }
 
 private fun MealRecord.displayOptions(externalCards: List<DriveExternalCard>): List<MealRecordOption> {

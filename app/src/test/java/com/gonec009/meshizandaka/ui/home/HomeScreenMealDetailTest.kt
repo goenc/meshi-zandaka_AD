@@ -1,5 +1,6 @@
 package com.gonec009.meshizandaka.ui.home
 
+import com.gonec009.meshizandaka.data.drive.DriveExternalCard
 import com.gonec009.meshizandaka.data.drive.DrivePlan
 import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
@@ -102,5 +103,29 @@ class HomeScreenMealDetailTest {
         )
 
         assertEquals(600, quickRecordCalories(record, meal))
+    }
+
+    @Test
+    fun 外食カードに食品を追加した記録でも外食カードを判定する() {
+        val card = DriveExternalCard(
+            id = "samurai-mac",
+            name = "サムライマック",
+        )
+        val record = MealRecord(
+            eatenAt = 0L,
+            mealType = MealType.LUNCH,
+            templateId = null,
+            templateNameSnapshot = "サムライマック / サバ",
+            totalCalories = 675,
+            proteinG = 50.0,
+            fatG = 70.0,
+            carbG = 80.0,
+            isSpecial = false,
+            specialDeltaCalories = 0,
+            sourceType = SourceType.QUICK_BUTTON,
+            memo = "",
+        )
+
+        assertEquals(card, record.externalCard(listOf(card)))
     }
 }
