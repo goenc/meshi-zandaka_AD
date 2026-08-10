@@ -43,6 +43,7 @@
     <string name="no_records">記録がまだありません</string>
     <string name="kcal_format">%1$d kcal</string>
     <string name="kcal_format_signed">%1$+d kcal</string>
+    <string name="kcal_balance_format">%1$d/%2$d kcal</string>
     <string name="count_format">%1$d回</string>
     <string name="standard_meal">いつものメシ</string>
     <string name="special_meal">特別メシ</string>

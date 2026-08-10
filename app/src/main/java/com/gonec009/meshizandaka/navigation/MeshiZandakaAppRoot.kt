@@ -66,7 +66,13 @@ fun MeshiZandakaAppRoot(
                                 verticalAlignment = Alignment.Bottom,
                             ) {
                                 Text(stringResource(currentDestination.titleResId))
-                                Text(stringResource(R.string.kcal_format, dashboard.summary.todayBalanceCalories))
+                                Text(
+                                    stringResource(
+                                        R.string.kcal_balance_format,
+                                        dashboard.summary.todayBalanceCalories,
+                                        dashboard.summary.todayConsumedCalories + dashboard.summary.todayBalanceCalories,
+                                    ),
+                                )
                             }
                         } else if (currentDestination != AppDestination.Templates) {
                             Text(stringResource(currentDestination.titleResId))
