@@ -76,7 +76,7 @@ fun MeshiZandakaAppRoot(
                                     buildAnnotatedString {
                                         withStyle(
                                             SpanStyle(
-                                                fontSize = (titleFontSize + 1f).sp,
+                                                fontSize = (titleFontSize + 2f).sp,
                                             ),
                                         ) {
                                             append(dashboard.summary.todayBalanceCalories.toString())
@@ -84,7 +84,7 @@ fun MeshiZandakaAppRoot(
                                         append("/")
                                         withStyle(
                                             SpanStyle(
-                                                fontSize = (titleFontSize - 1f).sp,
+                                                fontSize = (titleFontSize - 2f).sp,
                                             ),
                                         ) {
                                             append(
