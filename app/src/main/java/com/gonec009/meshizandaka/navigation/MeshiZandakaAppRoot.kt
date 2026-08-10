@@ -1,6 +1,7 @@
 package com.gonec009.meshizandaka.navigation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -68,33 +69,45 @@ fun MeshiZandakaAppRoot(
                     title = {
                         if (currentDestination == AppDestination.Home) {
                             val titleFontSize = MaterialTheme.typography.titleLarge.fontSize.value
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.Bottom,
-                            ) {
-                                Text(stringResource(currentDestination.titleResId))
+                            Column {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.Bottom,
+                                ) {
+                                    Text(stringResource(currentDestination.titleResId))
+                                    Text(
+                                        buildAnnotatedString {
+                                            withStyle(
+                                                SpanStyle(
+                                                    fontSize = (titleFontSize + 2f).sp,
+                                                ),
+                                            ) {
+                                                append(dashboard.summary.todayBalanceCalories.toString())
+                                            }
+                                            append("/")
+                                            withStyle(
+                                                SpanStyle(
+                                                    fontSize = (titleFontSize - 2f).sp,
+                                                ),
+                                            ) {
+                                                append(
+                                                    (dashboard.summary.todayConsumedCalories + dashboard.summary.todayBalanceCalories)
+                                                        .toString(),
+                                                )
+                                                append(" kcal")
+                                            }
+                                        },
+                                    )
+                                }
                                 Text(
-                                    buildAnnotatedString {
-                                        withStyle(
-                                            SpanStyle(
-                                                fontSize = (titleFontSize + 2f).sp,
-                                            ),
-                                        ) {
-                                            append(dashboard.summary.todayBalanceCalories.toString())
-                                        }
-                                        append("/")
-                                        withStyle(
-                                            SpanStyle(
-                                                fontSize = (titleFontSize - 2f).sp,
-                                            ),
-                                        ) {
-                                            append(
-                                                (dashboard.summary.todayConsumedCalories + dashboard.summary.todayBalanceCalories)
-                                                    .toString(),
-                                            )
-                                            append(" kcal")
-                                        }
-                                    },
+                                    text = stringResource(
+                                        R.string.today_pfc_calories,
+                                        dashboard.summary.todayProteinCalories,
+                                        dashboard.summary.todayFatCalories,
+                                        dashboard.summary.todayCarbCalories,
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         } else if (currentDestination != AppDestination.Templates) {

@@ -45,6 +45,46 @@ class BudgetCalculatorTest {
     }
 
     @Test
+    fun 当日摂取PFCをカロリー換算する() {
+        val records = listOf(
+            recordAt(
+                2026,
+                6,
+                8,
+                12,
+                0,
+                650,
+                proteinG = 30.0,
+                fatG = 10.0,
+                carbG = 50.0,
+            ),
+            recordAt(
+                2026,
+                6,
+                7,
+                19,
+                0,
+                900,
+                proteinG = 100.0,
+                fatG = 100.0,
+                carbG = 100.0,
+            ),
+        )
+
+        val summary = calculator.buildSummary(
+            records = records,
+            settings = AppSettings(),
+            zoneId = zoneId,
+            nowMillis = nowMillis,
+        )
+
+        assertEquals(650, summary.todayConsumedCalories)
+        assertEquals(120, summary.todayProteinCalories)
+        assertEquals(90, summary.todayFatCalories)
+        assertEquals(200, summary.todayCarbCalories)
+    }
+
+    @Test
     fun 週開始曜日が日曜なら前日を同一週として扱う() {
         val records = listOf(
             recordAt(2026, 6, 7, 10, 0, 1000, false, 0),
@@ -185,6 +225,9 @@ class BudgetCalculatorTest {
         isSpecial: Boolean = false,
         specialDelta: Int = 0,
         mealType: MealType = MealType.DINNER,
+        proteinG: Double = 0.0,
+        fatG: Double = 0.0,
+        carbG: Double = 0.0,
     ): MealRecord {
         return MealRecord(
             eatenAt = LocalDateTime.of(year, month, day, hour, minute)
@@ -195,9 +238,9 @@ class BudgetCalculatorTest {
             templateId = null,
             templateNameSnapshot = "テスト",
             totalCalories = calories,
-            proteinG = 0.0,
-            fatG = 0.0,
-            carbG = 0.0,
+            proteinG = proteinG,
+            fatG = fatG,
+            carbG = carbG,
             isSpecial = isSpecial,
             specialDeltaCalories = specialDelta,
             sourceType = SourceType.QUICK_BUTTON,
