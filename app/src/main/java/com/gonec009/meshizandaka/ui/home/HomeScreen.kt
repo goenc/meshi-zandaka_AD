@@ -222,6 +222,7 @@ fun HomeRoute(
     container: AppContainer,
     innerPadding: PaddingValues,
     snackbarHostState: SnackbarHostState,
+    onReady: () -> Unit,
     onQuickRecordClick: () -> Unit,
     onTemplateManagementClick: () -> Unit,
 ) {
@@ -229,6 +230,9 @@ fun HomeRoute(
     val state by viewModel.uiState.collectAsState()
     val drivePlanState by container.driveAccessManager.planState.collectAsState()
     val calorieSummary by container.driveAccessManager.calorieSummary.collectAsState()
+    LaunchedEffect(state.isInitialized) {
+        if (state.isInitialized) onReady()
+    }
     LaunchedEffect(state.message) {
         state.message?.let {
             snackbarHostState.showSnackbar(it)

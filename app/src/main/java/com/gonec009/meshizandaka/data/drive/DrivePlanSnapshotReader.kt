@@ -5,9 +5,16 @@ import java.nio.charset.StandardCharsets
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+
+private const val MAX_CONCURRENT_BATCH_DOWNLOADS = 4
 
 /**
  * Windows版がappDataFolderへ書き出した同期ログを、Android表示用の計画へ復元する読込層。
@@ -26,9 +33,18 @@ class DrivePlanSnapshotReader(
                     .thenBy { it.id },
             )
 
-        batches.forEach { descriptor ->
-            val content = client.downloadFile(accessToken, descriptor.id)
-                .toString(StandardCharsets.UTF_8)
+        val contents = coroutineScope {
+            val semaphore = Semaphore(MAX_CONCURRENT_BATCH_DOWNLOADS)
+            batches.map { descriptor ->
+                async {
+                    semaphore.withPermit {
+                        client.downloadFile(accessToken, descriptor.id)
+                            .toString(StandardCharsets.UTF_8)
+                    }
+                }
+            }.awaitAll()
+        }
+        contents.forEach { content ->
             applyBatch(JSONObject(content), rows)
         }
         buildCatalog(rows.values)

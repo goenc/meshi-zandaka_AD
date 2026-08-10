@@ -45,6 +45,7 @@ import com.gonec009.meshizandaka.ui.template.TemplateManagementRoute
 fun MeshiZandakaAppRoot(
     container: AppContainer,
     onDriveConnect: () -> Unit,
+    onHomeReady: () -> Unit,
 ) {
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -132,6 +133,7 @@ fun MeshiZandakaAppRoot(
                     container = container,
                     innerPadding = innerPadding,
                     snackbarHostState = snackbarHostState,
+                    onReady = onHomeReady,
                     onQuickRecordClick = { navController.navigate(AppDestination.QuickRecord.route) },
                     onTemplateManagementClick = { navController.navigate(AppDestination.Templates.route) },
                 )

@@ -22,6 +22,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 
 data class HomeUiState(
+    val isInitialized: Boolean = false,
     val summary: DashboardSummary = DashboardSummary(),
     val weeklyChart: WeeklyMealChart = WeeklyMealChart(),
     val settings: AppSettings = AppSettings(),
@@ -44,6 +45,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 .collect { (settings, templates, dashboard) ->
                     _uiState.update {
                         it.copy(
+                            isInitialized = true,
                             summary = dashboard.summary,
                             weeklyChart = dashboard.weeklyChart,
                             settings = settings,

@@ -8,7 +8,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
@@ -19,12 +22,16 @@ import com.gonec009.meshizandaka.data.drive.DriveConnectionPhase
 import com.gonec009.meshizandaka.navigation.MeshiZandakaAppRoot
 import com.gonec009.meshizandaka.ui.startup.StartupLoadingScreen
 import com.gonec009.meshizandaka.ui.theme.MeshiZandakaTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var appContainer: AppContainer
     private lateinit var authorizationLauncher: ActivityResultLauncher<IntentSenderRequest>
     private val startupLoading = mutableStateOf(true)
+    private var homeScreenReady = false
+    private var calorieSummaryReady = false
+    private var authorizationStartedForStartup = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +42,7 @@ class MainActivity : ComponentActivity() {
         ) { result ->
             if (result.resultCode != Activity.RESULT_OK) {
                 appContainer.driveAccessManager.markAuthorizationFailed()
-                finishStartupLoading()
+                markCalorieSummaryReady()
                 return@registerForActivityResult
             }
             val authorizationResult = runCatching {
@@ -44,7 +51,7 @@ class MainActivity : ComponentActivity() {
             }.getOrNull()
             if (authorizationResult == null) {
                 appContainer.driveAccessManager.markAuthorizationFailed()
-                finishStartupLoading()
+                markCalorieSummaryReady()
             } else {
                 handleAuthorizationResult(authorizationResult)
             }
@@ -52,25 +59,40 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MeshiZandakaTheme {
-                if (startupLoading.value) {
-                    StartupLoadingScreen()
-                } else {
+                Box(modifier = Modifier.fillMaxSize()) {
                     MeshiZandakaAppRoot(
                         container = app.container,
                         onDriveConnect = ::requestDriveAccess,
+                        onHomeReady = ::markHomeScreenReady,
                     )
+                    if (startupLoading.value) {
+                        StartupLoadingScreen()
+                    }
                 }
             }
         }
         lifecycleScope.launch {
+            delay(STARTUP_LOADING_TIMEOUT_MS)
+            finishStartupLoading()
+        }
+        lifecycleScope.launch {
             app.container.ensureSeedDataUseCase()
             app.container.driveAccessManager.restoreCachedPlans()
-            requestDriveAccess()
+            requestStartupDriveAccess()
         }
     }
 
     private fun requestDriveAccess() {
+        beginDriveAccess(forStartup = false)
+    }
+
+    private fun requestStartupDriveAccess() {
+        beginDriveAccess(forStartup = true)
+    }
+
+    private fun beginDriveAccess(forStartup: Boolean) {
         if (appContainer.driveAccessManager.state.value.phase == DriveConnectionPhase.CONNECTING) return
+        authorizationStartedForStartup = forStartup
         appContainer.driveAccessManager.markAuthorizationStarted()
         val request = AuthorizationRequest.builder()
             .setRequestedScopes(DriveAccessManager.authorizationScopes)
@@ -80,7 +102,7 @@ class MainActivity : ComponentActivity() {
             .addOnSuccessListener(::handleAuthorizationResult)
             .addOnFailureListener {
                 appContainer.driveAccessManager.markAuthorizationFailed()
-                finishStartupLoading()
+                markCalorieSummaryReady()
             }
     }
 
@@ -89,7 +111,7 @@ class MainActivity : ComponentActivity() {
             val pendingIntent = result.pendingIntent
             if (pendingIntent == null) {
                 appContainer.driveAccessManager.markAuthorizationFailed()
-                finishStartupLoading()
+                markCalorieSummaryReady()
             } else {
                 authorizationLauncher.launch(
                     IntentSenderRequest.Builder(pendingIntent.intentSender).build(),
@@ -100,19 +122,46 @@ class MainActivity : ComponentActivity() {
         val token = result.accessToken
         if (token.isNullOrBlank()) {
             appContainer.driveAccessManager.markAuthorizationFailed()
-            finishStartupLoading()
+            markCalorieSummaryReady()
             return
         }
+        val isStartupRequest = authorizationStartedForStartup
         lifecycleScope.launch {
-            try {
-                appContainer.driveAccessManager.connect(token)
-            } finally {
-                finishStartupLoading()
+            val calorieSummary = appContainer.driveAccessManager.fetchCalorieSummary(token)
+            if (!isStartupRequest || startupLoading.value) {
+                appContainer.driveAccessManager.publishCalorieSummary(calorieSummary)
             }
+            if (isStartupRequest) markCalorieSummaryReady()
+            appContainer.driveAccessManager.connect(token)
+        }
+    }
+
+    private fun markHomeScreenReady() {
+        homeScreenReady = true
+        finishStartupLoadingIfReady()
+    }
+
+    private fun markCalorieSummaryReady() {
+        if (calorieSummaryReady) return
+        lifecycleScope.launch {
+            delay(HOME_STABILIZATION_DELAY_MS)
+            calorieSummaryReady = true
+            finishStartupLoadingIfReady()
+        }
+    }
+
+    private fun finishStartupLoadingIfReady() {
+        if (homeScreenReady && calorieSummaryReady) {
+            finishStartupLoading()
         }
     }
 
     private fun finishStartupLoading() {
         startupLoading.value = false
+    }
+
+    companion object {
+        private const val STARTUP_LOADING_TIMEOUT_MS = 10_000L
+        private const val HOME_STABILIZATION_DELAY_MS = 100L
     }
 }

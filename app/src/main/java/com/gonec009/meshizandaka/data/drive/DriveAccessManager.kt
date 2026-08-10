@@ -4,6 +4,8 @@ import android.content.Context
 import com.google.android.gms.common.api.Scope
 import com.gonec009.meshizandaka.data.repository.DrivePlanCacheRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -101,6 +103,16 @@ class DriveAccessManager(
         selectedPlanId?.let { selectPlan(it) }
     }
 
+    suspend fun fetchCalorieSummary(token: String): DriveCalorieSummary? {
+        require(token.isNotBlank()) { "Googleアクセストークンが空です。" }
+        accessToken = token
+        return capture { client.readEstimatedCalorieSummary(token) }.getOrNull()
+    }
+
+    fun publishCalorieSummary(summary: DriveCalorieSummary?) {
+        _calorieSummary.value = summary
+    }
+
     suspend fun connect(token: String) {
         require(token.isNotBlank()) { "Googleアクセストークンが空です。" }
         _state.value = DriveConnectionState(phase = DriveConnectionPhase.CONNECTING)
@@ -115,13 +127,22 @@ class DriveAccessManager(
             cachedState.copy(errorMessage = null)
         }
         accessToken = token
-        _calorieSummary.value = capture { client.readEstimatedCalorieSummary(token) }.getOrNull()
         imageMetadata = emptyMap()
         imageMetadataLoaded = false
 
-        val appDataResult = capture { client.inspectAppData(token) }
-        val backupResult = capture { client.inspectBackupFolder(token) }
-        val planResult = capture { planReader.load(token) }
+        val loadResults = coroutineScope {
+            val appData = async { capture { client.inspectAppData(token) } }
+            val backup = async { capture { client.inspectBackupFolder(token) } }
+            val plan = async { capture { planReader.load(token) } }
+            DriveStartupLoadResults(
+                appData = appData.await(),
+                backup = backup.await(),
+                plan = plan.await(),
+            )
+        }
+        val appDataResult = loadResults.appData
+        val backupResult = loadResults.backup
+        val planResult = loadResults.plan
         val appData = appDataResult.getOrNull()
         val backup = backupResult.getOrNull()
         val phase = when {
@@ -347,5 +368,11 @@ class DriveAccessManager(
     private data class ImageLoadResult(
         val paths: Map<String, String>,
         val failedCount: Int,
+    )
+
+    private data class DriveStartupLoadResults(
+        val appData: Result<DriveAppDataSummary>,
+        val backup: Result<DriveBackupSummary>,
+        val plan: Result<DrivePlanCatalog>,
     )
 }
