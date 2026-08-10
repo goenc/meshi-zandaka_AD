@@ -37,9 +37,10 @@ class DriveAccessManager(
 ) {
     private val planReader = DrivePlanSnapshotReader(client)
     private val imageCache = DriveImageCache(context)
+    private val calorieSummaryCache = DriveCalorieSummaryCache(context)
     private val _state = MutableStateFlow(DriveConnectionState())
     private val _planState = MutableStateFlow(DrivePlanState())
-    private val _calorieSummary = MutableStateFlow<DriveCalorieSummary?>(null)
+    private val _calorieSummary = MutableStateFlow(calorieSummaryCache.load())
     private var accessToken: String? = null
     private var imageMetadata: Map<String, DriveImageMetadata> = emptyMap()
     private var imageMetadataLoaded = false
@@ -49,7 +50,6 @@ class DriveAccessManager(
     val calorieSummary: StateFlow<DriveCalorieSummary?> = _calorieSummary.asStateFlow()
 
     fun markAuthorizationStarted() {
-        _calorieSummary.value = null
         _state.update { it.copy(phase = DriveConnectionPhase.CONNECTING) }
         val current = _planState.value
         _planState.value = if (current.plans.isEmpty()) {
@@ -65,7 +65,6 @@ class DriveAccessManager(
 
     fun markAuthorizationFailed() {
         accessToken = null
-        _calorieSummary.value = null
         imageMetadata = emptyMap()
         imageMetadataLoaded = false
         _state.value = DriveConnectionState(phase = DriveConnectionPhase.FAILED)
@@ -81,6 +80,27 @@ class DriveAccessManager(
             current.copy(
                 phase = DrivePlanPhase.READY,
                 errorMessage = "Driveを更新できないため、保存済みデータを表示しています。",
+            )
+        }
+    }
+
+    fun markOffline() {
+        accessToken = null
+        imageMetadata = emptyMap()
+        imageMetadataLoaded = false
+        _state.value = DriveConnectionState(phase = DriveConnectionPhase.FAILED)
+        val current = _planState.value
+        _planState.value = if (current.plans.isEmpty()) {
+            DrivePlanState(
+                phase = DrivePlanPhase.FAILED,
+                externalCards = current.externalCards,
+                foods = current.foods,
+                errorMessage = "オフラインのため、保存済みデータのみ利用できます。",
+            )
+        } else {
+            current.copy(
+                phase = DrivePlanPhase.READY,
+                errorMessage = "オフラインのため、保存済みデータを表示しています。",
             )
         }
     }
@@ -109,8 +129,15 @@ class DriveAccessManager(
         return capture { client.readEstimatedCalorieSummary(token) }.getOrNull()
     }
 
-    fun publishCalorieSummary(summary: DriveCalorieSummary?) {
-        _calorieSummary.value = summary
+    fun publishCalorieSummary(
+        summary: DriveCalorieSummary?,
+        updateVisibleValue: Boolean = true,
+    ) {
+        if (summary?.hasData != true) return
+        calorieSummaryCache.save(summary)
+        if (updateVisibleValue) {
+            _calorieSummary.value = summary
+        }
     }
 
     suspend fun connect(token: String) {

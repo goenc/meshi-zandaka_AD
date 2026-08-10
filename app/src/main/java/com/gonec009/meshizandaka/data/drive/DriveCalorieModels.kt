@@ -10,6 +10,9 @@ data class DriveCalorieSummary(
     val caloriesByDate: Map<LocalDate, Int> = emptyMap(),
 )
 
+internal val DriveCalorieSummary.hasData: Boolean
+    get() = todayKcal != null || averageKcal != null || calorieDate != null || caloriesByDate.isNotEmpty()
+
 internal fun buildDriveCalorieSummary(
     rows: List<List<Any?>>,
     today: LocalDate,

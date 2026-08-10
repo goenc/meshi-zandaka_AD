@@ -1,6 +1,8 @@
 package com.gonec009.meshizandaka
 
 import android.app.Activity
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -101,6 +103,11 @@ class MainActivity : ComponentActivity() {
 
     private fun beginDriveAccess(forStartup: Boolean) {
         if (appContainer.driveAccessManager.state.value.phase == DriveConnectionPhase.CONNECTING) return
+        if (!isNetworkAvailable()) {
+            appContainer.driveAccessManager.markOffline()
+            if (forStartup) markCalorieSummaryReady()
+            return
+        }
         authorizationStartedForStartup = forStartup
         appContainer.driveAccessManager.markAuthorizationStarted()
         val request = AuthorizationRequest.builder()
@@ -137,12 +144,20 @@ class MainActivity : ComponentActivity() {
         val isStartupRequest = authorizationStartedForStartup
         lifecycleScope.launch {
             val calorieSummary = appContainer.driveAccessManager.fetchCalorieSummary(token)
-            if (!isStartupRequest || startupLoading.value) {
-                appContainer.driveAccessManager.publishCalorieSummary(calorieSummary)
-            }
+            appContainer.driveAccessManager.publishCalorieSummary(
+                summary = calorieSummary,
+                updateVisibleValue = !isStartupRequest || startupLoading.value,
+            )
             if (isStartupRequest) markCalorieSummaryReady()
             appContainer.driveAccessManager.connect(token)
         }
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        val connectivityManager = getSystemService(ConnectivityManager::class.java)
+        val activeNetwork = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     private fun markHomeScreenReady() {

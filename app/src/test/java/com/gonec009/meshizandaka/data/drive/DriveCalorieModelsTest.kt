@@ -2,9 +2,17 @@ package com.gonec009.meshizandaka.data.drive
 
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DriveCalorieModelsTest {
+    @Test
+    fun 保存対象になる消費カロリーデータを判定する() {
+        assertFalse(DriveCalorieSummary().hasData)
+        assertTrue(DriveCalorieSummary(averageKcal = 2_200).hasData)
+    }
+
     @Test
     fun 今日の値と登録済み日次データの平均を計算する() {
         val summary = buildDriveCalorieSummary(
