@@ -309,5 +309,5 @@ internal fun MealRecord.withoutOption(option: MealRecordOption): MealRecord = co
 )
 
 internal fun MealRecord.shouldDeleteAfterItemRemoval(): Boolean {
-    return totalCalories <= 0 && selectedOptions.isEmpty()
+    return totalCalories <= 0
 }

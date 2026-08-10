@@ -40,8 +40,9 @@ class MealRecordRepositoryTest {
     }
 
     @Test
-    fun 全明細削除後にゼロカロリーなら食事記録を削除対象にする() {
+    fun 項目削除後にゼロカロリーなら残存選択肢を確認せず削除対象にする() {
         val option = option(id = 10L, name = "外食メニュー", calories = 600)
+        val zeroCalorieOption = option(id = 11L, name = "ゼロカロリーメニュー", calories = 0)
         val record = MealRecord(
             id = 1L,
             eatenAt = 0L,
@@ -56,12 +57,13 @@ class MealRecordRepositoryTest {
             specialDeltaCalories = 0,
             sourceType = SourceType.QUICK_BUTTON,
             memo = "",
-            selectedOptions = listOf(option),
+            selectedOptions = listOf(option, zeroCalorieOption),
         )
 
         val updated = record.withoutOption(option)
 
         assertEquals(0, updated.totalCalories)
+        assertEquals(listOf(zeroCalorieOption), updated.selectedOptions)
         assertTrue(updated.shouldDeleteAfterItemRemoval())
     }
 
