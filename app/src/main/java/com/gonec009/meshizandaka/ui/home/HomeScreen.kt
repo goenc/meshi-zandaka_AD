@@ -404,7 +404,10 @@ private fun HomeScreen(
         }
         item {
             Button(onClick = onTemplateManagementClick, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.go_to_template_management))
+                Text(
+                    selectedDrivePlan?.name?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.go_to_template_management),
+                )
             }
         }
     }
