@@ -179,19 +179,24 @@ class DriveAccessManager(
             return
         }
 
-        val selectedPlanId = catalog.preferredPlanId
+        val previousSelectedPlanId = _planState.value.selectedPlanId
+        val selectedPlanId = previousSelectedPlanId
+            ?.takeIf { previousId -> catalog.plans.any { plan -> plan.id == previousId } }
+            ?: catalog.preferredPlanId
             ?: catalog.plans.firstOrNull { it.isFavorite }?.id
             ?: catalog.plans.firstOrNull()?.id
         val displayCatalog = catalog.preserveImagePathsFrom(_planState.value)
         val cacheSaveError = runCatching {
             cacheRepository.save(catalog, selectedPlanId)
         }.exceptionOrNull()
+        val visibleSelectedPlanId = _planState.value.selectedPlanId
+            ?.takeIf { previousId -> displayCatalog.plans.any { plan -> plan.id == previousId } }
         _planState.value = DrivePlanState(
             phase = DrivePlanPhase.READY,
             plans = displayCatalog.plans,
             externalCards = displayCatalog.externalCards,
             foods = displayCatalog.foods,
-            selectedPlanId = selectedPlanId,
+            selectedPlanId = visibleSelectedPlanId,
             errorMessage = cacheSaveError?.let { "最新のDriveデータを端末へ保存できません。" },
         )
         selectedPlanId?.let { selectPlan(it) }
@@ -203,14 +208,14 @@ class DriveAccessManager(
     suspend fun selectPlan(planId: String) {
         val current = _planState.value
         require(current.plans.any { it.id == planId }) { "指定されたDriveプランが見つかりません。" }
+        val selectedPlan = current.plans.first { it.id == planId }
+        runCatching { shortcutSynchronizer.sync(selectedPlan) }
+        runCatching { cacheRepository.saveSelectedPlanId(planId) }
         _planState.value = current.copy(
             selectedPlanId = planId,
             imageLoading = true,
             errorMessage = null,
         )
-
-        val selectedPlan = current.plans.first { it.id == planId }
-        runCatching { shortcutSynchronizer.sync(selectedPlan) }
         val imageResult = capture {
             loadImages(
                 token = accessToken,
@@ -268,7 +273,6 @@ class DriveAccessManager(
                 else -> null
             },
         )
-        runCatching { cacheRepository.saveSelectedPlanId(planId) }
     }
 
     suspend fun downloadFile(fileId: String): ByteArray {
