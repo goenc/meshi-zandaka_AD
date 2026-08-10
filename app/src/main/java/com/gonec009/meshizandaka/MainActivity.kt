@@ -10,7 +10,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
@@ -59,12 +61,19 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MeshiZandakaTheme {
+                val mainContentStarted = remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    delay(MAIN_CONTENT_PRECOMPOSE_DELAY_MS)
+                    mainContentStarted.value = true
+                }
                 Box(modifier = Modifier.fillMaxSize()) {
-                    MeshiZandakaAppRoot(
-                        container = app.container,
-                        onDriveConnect = ::requestDriveAccess,
-                        onHomeReady = ::markHomeScreenReady,
-                    )
+                    if (mainContentStarted.value) {
+                        MeshiZandakaAppRoot(
+                            container = app.container,
+                            onDriveConnect = ::requestDriveAccess,
+                            onHomeReady = ::markHomeScreenReady,
+                        )
+                    }
                     if (startupLoading.value) {
                         StartupLoadingScreen()
                     }
@@ -163,5 +172,6 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val STARTUP_LOADING_TIMEOUT_MS = 10_000L
         private const val HOME_STABILIZATION_DELAY_MS = 100L
+        private const val MAIN_CONTENT_PRECOMPOSE_DELAY_MS = 50L
     }
 }
