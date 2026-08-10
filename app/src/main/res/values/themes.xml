@@ -4,6 +4,6 @@
     <style name="Theme.MeshiZandaka" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@drawable/startup_window_background</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:statusBarColor">@color/startup_splash_background</item>
+        <item name="android:statusBarColor">@color/white</item>
     </style>
 </resources>

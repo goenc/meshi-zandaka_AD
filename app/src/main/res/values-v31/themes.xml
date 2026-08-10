@@ -3,11 +3,11 @@
 
     <style name="Theme.MeshiZandaka" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@drawable/startup_window_background</item>
-        <item name="android:windowSplashScreenBackground">@color/startup_splash_background</item>
+        <item name="android:windowSplashScreenBackground">@color/white</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/startup_splash_icon</item>
-        <item name="android:windowSplashScreenIconBackgroundColor">@color/startup_splash_background</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/white</item>
         <item name="android:windowSplashScreenAnimationDuration">0</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:statusBarColor">@color/startup_splash_background</item>
+        <item name="android:statusBarColor">@color/white</item>
     </style>
 </resources>
