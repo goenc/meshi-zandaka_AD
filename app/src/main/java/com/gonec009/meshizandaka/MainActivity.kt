@@ -8,6 +8,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.mutableStateOf
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
@@ -16,12 +17,14 @@ import com.gonec009.meshizandaka.data.AppContainer
 import com.gonec009.meshizandaka.data.drive.DriveAccessManager
 import com.gonec009.meshizandaka.data.drive.DriveConnectionPhase
 import com.gonec009.meshizandaka.navigation.MeshiZandakaAppRoot
+import com.gonec009.meshizandaka.ui.startup.StartupLoadingScreen
 import com.gonec009.meshizandaka.ui.theme.MeshiZandakaTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var appContainer: AppContainer
     private lateinit var authorizationLauncher: ActivityResultLauncher<IntentSenderRequest>
+    private val startupLoading = mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +35,7 @@ class MainActivity : ComponentActivity() {
         ) { result ->
             if (result.resultCode != Activity.RESULT_OK) {
                 appContainer.driveAccessManager.markAuthorizationFailed()
+                finishStartupLoading()
                 return@registerForActivityResult
             }
             val authorizationResult = runCatching {
@@ -40,6 +44,7 @@ class MainActivity : ComponentActivity() {
             }.getOrNull()
             if (authorizationResult == null) {
                 appContainer.driveAccessManager.markAuthorizationFailed()
+                finishStartupLoading()
             } else {
                 handleAuthorizationResult(authorizationResult)
             }
@@ -47,10 +52,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MeshiZandakaTheme {
-                MeshiZandakaAppRoot(
-                    container = app.container,
-                    onDriveConnect = ::requestDriveAccess,
-                )
+                if (startupLoading.value) {
+                    StartupLoadingScreen()
+                } else {
+                    MeshiZandakaAppRoot(
+                        container = app.container,
+                        onDriveConnect = ::requestDriveAccess,
+                    )
+                }
             }
         }
         lifecycleScope.launch {
@@ -71,6 +80,7 @@ class MainActivity : ComponentActivity() {
             .addOnSuccessListener(::handleAuthorizationResult)
             .addOnFailureListener {
                 appContainer.driveAccessManager.markAuthorizationFailed()
+                finishStartupLoading()
             }
     }
 
@@ -79,6 +89,7 @@ class MainActivity : ComponentActivity() {
             val pendingIntent = result.pendingIntent
             if (pendingIntent == null) {
                 appContainer.driveAccessManager.markAuthorizationFailed()
+                finishStartupLoading()
             } else {
                 authorizationLauncher.launch(
                     IntentSenderRequest.Builder(pendingIntent.intentSender).build(),
@@ -89,10 +100,19 @@ class MainActivity : ComponentActivity() {
         val token = result.accessToken
         if (token.isNullOrBlank()) {
             appContainer.driveAccessManager.markAuthorizationFailed()
+            finishStartupLoading()
             return
         }
         lifecycleScope.launch {
-            appContainer.driveAccessManager.connect(token)
+            try {
+                appContainer.driveAccessManager.connect(token)
+            } finally {
+                finishStartupLoading()
+            }
         }
+    }
+
+    private fun finishStartupLoading() {
+        startupLoading.value = false
     }
 }
