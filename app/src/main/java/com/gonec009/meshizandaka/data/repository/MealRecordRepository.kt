@@ -1,7 +1,7 @@
 package com.gonec009.meshizandaka.data.repository
 
 import android.content.Context
-import android.net.Uri
+import androidx.core.net.toUri
 import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.local.dao.MealRecordDao
 import com.gonec009.meshizandaka.data.local.entity.MealRecordEntity
@@ -61,19 +61,7 @@ class MealRecordRepository(
             ),
         )
         if (record.selectedOptions.isNotEmpty()) {
-            dao.insertRecordOptions(
-                record.selectedOptions.map { option ->
-                    MealRecordOptionEntity(
-                        mealRecordId = recordId,
-                        optionGroupNameSnapshot = option.optionGroupNameSnapshot,
-                        optionNameSnapshot = option.optionNameSnapshot,
-                        calorieDelta = option.calorieDelta,
-                        proteinDeltaG = option.proteinDeltaG,
-                        fatDeltaG = option.fatDeltaG,
-                        carbDeltaG = option.carbDeltaG,
-                    )
-                },
-            )
+            dao.insertRecordOptions(record.selectedOptions.toEntities(recordId))
         }
         return recordId
     }
@@ -101,19 +89,7 @@ class MealRecordRepository(
         )
         dao.deleteOptionsForRecord(record.id)
         if (record.selectedOptions.isNotEmpty()) {
-            dao.insertRecordOptions(
-                record.selectedOptions.map { option ->
-                    MealRecordOptionEntity(
-                        mealRecordId = record.id,
-                        optionGroupNameSnapshot = option.optionGroupNameSnapshot,
-                        optionNameSnapshot = option.optionNameSnapshot,
-                        calorieDelta = option.calorieDelta,
-                        proteinDeltaG = option.proteinDeltaG,
-                        fatDeltaG = option.fatDeltaG,
-                        carbDeltaG = option.carbDeltaG,
-                    )
-                },
-            )
+            dao.insertRecordOptions(record.selectedOptions.toEntities(record.id))
         }
         if (current.photoUri != record.photoUri) {
             deletePhoto(current.photoUri)
@@ -238,10 +214,10 @@ class MealRecordRepository(
     private suspend fun deletePhoto(photoUri: String?) {
         val appContext = context ?: return
         if (photoUri.isNullOrBlank()) return
-        if (runCatching { Uri.parse(photoUri) }.getOrNull()?.path?.contains("/template_photos/") == true) return
+        if (runCatching { photoUri.toUri() }.getOrNull()?.path?.contains("/template_photos/") == true) return
         withContext(Dispatchers.IO) {
             runCatching {
-                appContext.contentResolver.delete(Uri.parse(photoUri), null, null)
+                appContext.contentResolver.delete(photoUri.toUri(), null, null)
             }
         }
     }
@@ -280,6 +256,19 @@ class MealRecordRepository(
             },
         )
     }
+
+    private fun List<MealRecordOption>.toEntities(recordId: Long): List<MealRecordOptionEntity> =
+        map { option ->
+            MealRecordOptionEntity(
+                mealRecordId = recordId,
+                optionGroupNameSnapshot = option.optionGroupNameSnapshot,
+                optionNameSnapshot = option.optionNameSnapshot,
+                calorieDelta = option.calorieDelta,
+                proteinDeltaG = option.proteinDeltaG,
+                fatDeltaG = option.fatDeltaG,
+                carbDeltaG = option.carbDeltaG,
+            )
+        }
 
     private fun encodeExcludedDrivePlanItemKeys(keys: Set<String>): String {
         val nonBlankKeys = keys.filter { it.isNotBlank() }

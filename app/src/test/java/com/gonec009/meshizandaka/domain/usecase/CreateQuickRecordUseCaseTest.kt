@@ -398,8 +398,6 @@ private class FakeMealTemplateDao(
 ) : MealTemplateDao {
     override fun observeActiveTemplates(): Flow<List<MealTemplateWithRelations>> = emptyFlow()
 
-    override fun observeNormalTemplates(): Flow<List<MealTemplateEntity>> = emptyFlow()
-
     override suspend fun getTemplate(templateId: Long): MealTemplateWithRelations? = template.takeIf { it.template.id == templateId }
 
     override suspend fun countTemplates(): Int = 1
@@ -411,10 +409,6 @@ private class FakeMealTemplateDao(
     override suspend fun insertOptionGroups(groups: List<TemplateOptionGroupEntity>): List<Long> = groups.map { it.id }
 
     override suspend fun insertOptions(options: List<TemplateOptionEntity>) = Unit
-
-    override suspend fun updateTemplate(template: MealTemplateEntity) = Unit
-
-    override suspend fun deactivateTemplate(templateId: Long) = Unit
 
     override suspend fun deactivateActiveTemplatesByShortcutRole(shortcutRole: String) = Unit
 }

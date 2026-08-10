@@ -28,9 +28,6 @@ object TimeRangeUtils {
         return dateRange(start, end, zoneId)
     }
 
-    fun daysInCurrentMonth(nowMillis: Long, zoneId: ZoneId): Int =
-        Instant.ofEpochMilli(nowMillis).atZone(zoneId).toLocalDate().lengthOfMonth()
-
     private fun dateRange(date: LocalDate, zoneId: ZoneId): Pair<Long, Long> =
         dateRange(date, date, zoneId)
 

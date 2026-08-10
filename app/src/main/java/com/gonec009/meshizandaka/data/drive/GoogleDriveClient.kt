@@ -1,6 +1,7 @@
 package com.gonec009.meshizandaka.data.drive
 
 import android.net.Uri
+import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -123,7 +124,7 @@ class GoogleDriveClient {
 
     suspend fun downloadFile(accessToken: String, fileId: String): ByteArray = withContext(Dispatchers.IO) {
         require(fileId.isNotBlank()) { "DriveファイルIDが空です。" }
-        val url = Uri.parse("$DRIVE_API_BASE/files/${Uri.encode(fileId)}")
+        val url = "$DRIVE_API_BASE/files/${Uri.encode(fileId)}".toUri()
             .buildUpon()
             .appendQueryParameter("alt", "media")
             .build()
@@ -135,15 +136,14 @@ class GoogleDriveClient {
         accessToken: String,
         today: LocalDate = LocalDate.now(),
     ): DriveCalorieSummary = withContext(Dispatchers.IO) {
-        val url = Uri.parse(
-            "$SHEETS_API_BASE/spreadsheets/${Uri.encode(BODY_DATA_SPREADSHEET_ID)}/values/" +
-                Uri.encode(BODY_DATA_RANGE),
-        ).buildUpon()
+        val url = "$SHEETS_API_BASE/spreadsheets/${Uri.encode(BODY_DATA_SPREADSHEET_ID)}/values/" +
+            Uri.encode(BODY_DATA_RANGE)
+        val requestUrl = url.toUri().buildUpon()
             .appendQueryParameter("majorDimension", "ROWS")
             .appendQueryParameter("valueRenderOption", "UNFORMATTED_VALUE")
             .build()
             .toString()
-        val root = JSONObject(executeText(accessToken, url, "Google Sheets API"))
+        val root = JSONObject(executeText(accessToken, requestUrl, "Google Sheets API"))
         val values = root.optJSONArray("values") ?: JSONArray()
         val rows = (0 until values.length()).map { rowIndex ->
             val row = values.optJSONArray(rowIndex) ?: JSONArray()
@@ -185,7 +185,7 @@ class GoogleDriveClient {
         val result = mutableListOf<DriveFileMetadata>()
         var pageToken: String? = null
         do {
-            val builder = Uri.parse("$DRIVE_API_BASE/files")
+            val builder = "$DRIVE_API_BASE/files".toUri()
                 .buildUpon()
                 .appendQueryParameter("q", query)
                 .appendQueryParameter("pageSize", PAGE_SIZE.toString())

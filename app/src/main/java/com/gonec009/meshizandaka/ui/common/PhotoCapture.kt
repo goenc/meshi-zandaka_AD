@@ -8,6 +8,8 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.os.Environment
 import androidx.core.content.FileProvider
+import androidx.core.graphics.scale
+import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -26,7 +28,7 @@ suspend fun optimizeCapturedPhoto(context: Context, photoUri: Uri): String? = wi
     runCatching {
         val oriented = decodeOrientedBitmap(context, photoUri) ?: return@runCatching photoUri.toString()
         val cropped = cropToLandscape(oriented)
-        val scaled = Bitmap.createScaledBitmap(cropped, TARGET_WIDTH, TARGET_HEIGHT, true)
+        val scaled = cropped.scale(TARGET_WIDTH, TARGET_HEIGHT)
         context.contentResolver.openOutputStream(photoUri, "w")?.use { output ->
             scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
         }
@@ -47,22 +49,14 @@ suspend fun discardCapturedPhoto(context: Context, photoUri: Uri?) {
 }
 
 suspend fun discardCapturedPhoto(context: Context, photoUriString: String?) {
-    val uri = photoUriString?.takeIf { it.isNotBlank() }?.let { runCatching { Uri.parse(it) }.getOrNull() }
+    val uri = photoUriString?.takeIf { it.isNotBlank() }?.let { runCatching { it.toUri() }.getOrNull() }
     discardCapturedPhoto(context, uri)
 }
 
 fun isManagedPhotoInFolder(photoUriString: String?, folderName: String): Boolean {
     if (photoUriString.isNullOrBlank()) return false
     val normalizedFolder = "/$folderName/"
-    return runCatching { Uri.parse(photoUriString) }.getOrNull()?.path?.contains(normalizedFolder) == true
-}
-
-fun createManagedPhotoUri(
-    context: Context,
-    folderName: String,
-    filePrefix: String,
-): Uri {
-    return createManagedPhotoTarget(context, folderName, filePrefix).uri
+    return runCatching { photoUriString.toUri() }.getOrNull()?.path?.contains(normalizedFolder) == true
 }
 
 fun createManagedPhotoTarget(

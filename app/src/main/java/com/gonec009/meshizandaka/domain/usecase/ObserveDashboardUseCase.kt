@@ -27,16 +27,16 @@ class ObserveDashboardUseCase(
             recordRepository.observeRecordsBetween(observeStart, observeEnd),
             caloriesByDateFlow,
             averageBurnedCaloriesFlow,
-        ) { settings, monthRecords, caloriesByDate, averageBurnedCalories ->
+        ) { settings, records, caloriesByDate, averageBurnedCalories ->
             HomeDashboardData(
                 summary = budgetCalculator.buildSummary(
-                    records = monthRecords,
+                    records = records,
                     settings = settings,
                     caloriesByDate = caloriesByDate,
                     averageBurnedCalories = averageBurnedCalories,
                     zoneId = zoneId,
                 ),
-                weeklyChart = budgetCalculator.buildWeeklyChart(monthRecords, zoneId),
+                weeklyChart = budgetCalculator.buildWeeklyChart(records, zoneId),
             )
         }
     }
