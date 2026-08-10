@@ -137,8 +137,9 @@ class MealRecordRepository(
         val current = getRecord(recordId) ?: return false
         if (itemKey in current.excludedDrivePlanItemKeys) return false
 
-        updateRecord(
-            current.copy(
+        saveAfterItemRemoval(
+            recordId = recordId,
+            updated = current.copy(
                 totalCalories = (current.totalCalories - calories).coerceAtLeast(0),
                 proteinG = (current.proteinG - proteinG).coerceAtLeast(0.0),
                 fatG = (current.fatG - fatG).coerceAtLeast(0.0),
@@ -190,8 +191,19 @@ class MealRecordRepository(
         if (option.id <= 0L) return false
         val current = getRecord(recordId) ?: return false
         val storedOption = current.selectedOptions.firstOrNull { it.id == option.id } ?: return false
-        updateRecord(current.withoutOption(storedOption))
+        saveAfterItemRemoval(
+            recordId = recordId,
+            updated = current.withoutOption(storedOption),
+        )
         return true
+    }
+
+    private suspend fun saveAfterItemRemoval(recordId: Long, updated: MealRecord) {
+        if (updated.shouldDeleteAfterItemRemoval()) {
+            deleteRecord(recordId)
+        } else {
+            updateRecord(updated)
+        }
     }
 
     suspend fun deleteRecord(recordId: Long) {
@@ -295,3 +307,7 @@ internal fun MealRecord.withoutOption(option: MealRecordOption): MealRecord = co
     selectedOptions = selectedOptions.filterNot { it.id == option.id },
     editedOptionGroupNames = editedOptionGroupNames + option.optionGroupNameSnapshot,
 )
+
+internal fun MealRecord.shouldDeleteAfterItemRemoval(): Boolean {
+    return totalCalories <= 0 && selectedOptions.isEmpty()
+}

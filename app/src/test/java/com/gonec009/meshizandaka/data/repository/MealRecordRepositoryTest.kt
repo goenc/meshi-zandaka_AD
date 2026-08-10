@@ -5,6 +5,8 @@ import com.gonec009.meshizandaka.domain.model.MealRecordOption
 import com.gonec009.meshizandaka.domain.model.MealType
 import com.gonec009.meshizandaka.domain.model.SourceType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MealRecordRepositoryTest {
@@ -34,6 +36,33 @@ class MealRecordRepositoryTest {
         assertEquals(emptyList<MealRecordOption>(), updated.selectedOptions)
         assertEquals(setOf("外食カード"), updated.editedOptionGroupNames)
         assertEquals(300, updated.totalCalories)
+        assertFalse(updated.shouldDeleteAfterItemRemoval())
+    }
+
+    @Test
+    fun 全明細削除後にゼロカロリーなら食事記録を削除対象にする() {
+        val option = option(id = 10L, name = "外食メニュー", calories = 600)
+        val record = MealRecord(
+            id = 1L,
+            eatenAt = 0L,
+            mealType = MealType.FREE_SNACK,
+            templateId = null,
+            templateNameSnapshot = "外食メニュー",
+            totalCalories = 600,
+            proteinG = 20.0,
+            fatG = 10.0,
+            carbG = 50.0,
+            isSpecial = false,
+            specialDeltaCalories = 0,
+            sourceType = SourceType.QUICK_BUTTON,
+            memo = "",
+            selectedOptions = listOf(option),
+        )
+
+        val updated = record.withoutOption(option)
+
+        assertEquals(0, updated.totalCalories)
+        assertTrue(updated.shouldDeleteAfterItemRemoval())
     }
 
     private fun option(id: Long, name: String, calories: Int): MealRecordOption = MealRecordOption(
