@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -19,7 +20,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -61,17 +66,34 @@ fun MeshiZandakaAppRoot(
                 TopAppBar(
                     title = {
                         if (currentDestination == AppDestination.Home) {
+                            val titleFontSize = MaterialTheme.typography.titleLarge.fontSize.value
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalAlignment = Alignment.Bottom,
                             ) {
                                 Text(stringResource(currentDestination.titleResId))
                                 Text(
-                                    stringResource(
-                                        R.string.kcal_balance_format,
-                                        dashboard.summary.todayBalanceCalories,
-                                        dashboard.summary.todayConsumedCalories + dashboard.summary.todayBalanceCalories,
-                                    ),
+                                    buildAnnotatedString {
+                                        withStyle(
+                                            SpanStyle(
+                                                fontSize = (titleFontSize + 1f).sp,
+                                            ),
+                                        ) {
+                                            append(dashboard.summary.todayBalanceCalories.toString())
+                                        }
+                                        append("/")
+                                        withStyle(
+                                            SpanStyle(
+                                                fontSize = (titleFontSize - 1f).sp,
+                                            ),
+                                        ) {
+                                            append(
+                                                (dashboard.summary.todayConsumedCalories + dashboard.summary.todayBalanceCalories)
+                                                    .toString(),
+                                            )
+                                            append(" kcal")
+                                        }
+                                    },
                                 )
                             }
                         } else if (currentDestination != AppDestination.Templates) {
