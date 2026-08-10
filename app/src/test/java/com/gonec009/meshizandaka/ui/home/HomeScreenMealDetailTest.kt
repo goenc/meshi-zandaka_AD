@@ -3,6 +3,7 @@ package com.gonec009.meshizandaka.ui.home
 import com.gonec009.meshizandaka.data.drive.DriveExternalCard
 import com.gonec009.meshizandaka.data.drive.DriveFood
 import com.gonec009.meshizandaka.data.drive.DrivePlan
+import com.gonec009.meshizandaka.data.drive.DrivePlanItem
 import com.gonec009.meshizandaka.data.drive.DrivePlanMeal
 import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealRecordOption
@@ -121,4 +122,52 @@ class HomeScreenMealDetailTest {
 
         assertEquals(food, foodForRecordOption(option, listOf(food)))
     }
+
+    @Test
+    fun 旧形式の外食カード明細はDrive定義から補完する() {
+        val card = externalCardWithItem()
+        val record = externalCardRecord()
+
+        assertEquals(listOf("ポテト"), record.displayOptions(listOf(card)).map { it.optionNameSnapshot })
+    }
+
+    @Test
+    fun 全件削除した外食カード明細はDrive定義から復活させない() {
+        val card = externalCardWithItem()
+        val record = externalCardRecord(
+            editedOptionGroupNames = setOf(card.name),
+        )
+
+        assertEquals(emptyList<MealRecordOption>(), record.displayOptions(listOf(card)))
+    }
+
+    private fun externalCardWithItem(): DriveExternalCard = DriveExternalCard(
+        id = "samurai-mac",
+        name = "サムライマック",
+        items = listOf(
+            DrivePlanItem(
+                name = "ポテト",
+                amountLabel = "1 個",
+                isMainDish = false,
+            ),
+        ),
+    )
+
+    private fun externalCardRecord(
+        editedOptionGroupNames: Set<String> = emptySet(),
+    ): MealRecord = MealRecord(
+        eatenAt = 0L,
+        mealType = MealType.LUNCH,
+        templateId = null,
+        templateNameSnapshot = "昼食 / サムライマック",
+        totalCalories = 500,
+        proteinG = 20.0,
+        fatG = 10.0,
+        carbG = 50.0,
+        isSpecial = false,
+        specialDeltaCalories = 0,
+        sourceType = SourceType.QUICK_BUTTON,
+        memo = "",
+        editedOptionGroupNames = editedOptionGroupNames,
+    )
 }

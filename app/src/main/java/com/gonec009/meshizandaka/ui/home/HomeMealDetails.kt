@@ -607,12 +607,15 @@ internal fun foodForRecordOption(
     return foods.firstOrNull { food -> food.name == option.optionNameSnapshot }
 }
 
-private fun MealRecord.displayOptions(externalCards: List<DriveExternalCard>): List<MealRecordOption> {
+internal fun MealRecord.displayOptions(externalCards: List<DriveExternalCard>): List<MealRecordOption> {
     if (recordPhotoLabel(templateNameSnapshot) == null) return selectedOptions
     val externalCard = externalCard(externalCards)
         ?.takeIf { card -> card.items.isNotEmpty() }
         ?: return selectedOptions
-    if (selectedOptions.any { option -> option.optionGroupNameSnapshot == externalCard.name }) {
+    if (
+        externalCard.name in editedOptionGroupNames ||
+        selectedOptions.any { option -> option.optionGroupNameSnapshot == externalCard.name }
+    ) {
         return selectedOptions
     }
     return selectedOptions + externalCard.items.map { item ->

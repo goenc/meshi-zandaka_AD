@@ -56,7 +56,8 @@ class MealRecordRepository(
                 sourceType = record.sourceType.name,
                 memo = record.memo,
                 photoUri = record.photoUri,
-                excludedDrivePlanItemKeysJson = encodeExcludedDrivePlanItemKeys(record.excludedDrivePlanItemKeys),
+                editedOptionGroupNamesJson = encodeStringSet(record.editedOptionGroupNames),
+                excludedDrivePlanItemKeysJson = encodeStringSet(record.excludedDrivePlanItemKeys),
                 selectedDrivePlanMainDishItemKey = record.selectedDrivePlanMainDishItemKey,
             ),
         )
@@ -83,7 +84,8 @@ class MealRecordRepository(
                 memo = record.memo,
                 sourceType = record.sourceType.name,
                 photoUri = record.photoUri,
-                excludedDrivePlanItemKeysJson = encodeExcludedDrivePlanItemKeys(record.excludedDrivePlanItemKeys),
+                editedOptionGroupNamesJson = encodeStringSet(record.editedOptionGroupNames),
+                excludedDrivePlanItemKeysJson = encodeStringSet(record.excludedDrivePlanItemKeys),
                 selectedDrivePlanMainDishItemKey = record.selectedDrivePlanMainDishItemKey,
             ),
         )
@@ -188,20 +190,7 @@ class MealRecordRepository(
         if (option.id <= 0L) return false
         val current = getRecord(recordId) ?: return false
         val storedOption = current.selectedOptions.firstOrNull { it.id == option.id } ?: return false
-        updateRecord(
-            current.copy(
-                totalCalories = (current.totalCalories - storedOption.calorieDelta).coerceAtLeast(0),
-                proteinG = (current.proteinG - storedOption.proteinDeltaG).coerceAtLeast(0.0),
-                fatG = (current.fatG - storedOption.fatDeltaG).coerceAtLeast(0.0),
-                carbG = (current.carbG - storedOption.carbDeltaG).coerceAtLeast(0.0),
-                specialDeltaCalories = if (current.isSpecial) {
-                    current.specialDeltaCalories - storedOption.calorieDelta
-                } else {
-                    current.specialDeltaCalories
-                },
-                selectedOptions = current.selectedOptions.filterNot { it.id == storedOption.id },
-            ),
-        )
+        updateRecord(current.withoutOption(storedOption))
         return true
     }
 
@@ -238,7 +227,10 @@ class MealRecordRepository(
             sourceType = SourceType.valueOf(item.record.sourceType),
             memo = item.record.memo,
             photoUri = item.record.photoUri,
-            excludedDrivePlanItemKeys = decodeExcludedDrivePlanItemKeys(
+            editedOptionGroupNames = decodeStringSet(
+                item.record.editedOptionGroupNamesJson,
+            ),
+            excludedDrivePlanItemKeys = decodeStringSet(
                 item.record.excludedDrivePlanItemKeysJson,
             ),
             selectedDrivePlanMainDishItemKey = item.record.selectedDrivePlanMainDishItemKey,
@@ -270,15 +262,15 @@ class MealRecordRepository(
             )
         }
 
-    private fun encodeExcludedDrivePlanItemKeys(keys: Set<String>): String {
-        val nonBlankKeys = keys.filter { it.isNotBlank() }
-        if (nonBlankKeys.isEmpty()) return "[]"
+    private fun encodeStringSet(values: Set<String>): String {
+        val nonBlankValues = values.filter { it.isNotBlank() }
+        if (nonBlankValues.isEmpty()) return "[]"
         return JSONArray().apply {
-            nonBlankKeys.forEach { put(it) }
+            nonBlankValues.forEach { put(it) }
         }.toString()
     }
 
-    private fun decodeExcludedDrivePlanItemKeys(value: String): Set<String> {
+    private fun decodeStringSet(value: String): Set<String> {
         return runCatching {
             val array = JSONArray(value)
             buildSet {
@@ -289,3 +281,17 @@ class MealRecordRepository(
         }.getOrDefault(emptySet())
     }
 }
+
+internal fun MealRecord.withoutOption(option: MealRecordOption): MealRecord = copy(
+    totalCalories = (totalCalories - option.calorieDelta).coerceAtLeast(0),
+    proteinG = (proteinG - option.proteinDeltaG).coerceAtLeast(0.0),
+    fatG = (fatG - option.fatDeltaG).coerceAtLeast(0.0),
+    carbG = (carbG - option.carbDeltaG).coerceAtLeast(0.0),
+    specialDeltaCalories = if (isSpecial) {
+        specialDeltaCalories - option.calorieDelta
+    } else {
+        specialDeltaCalories
+    },
+    selectedOptions = selectedOptions.filterNot { it.id == option.id },
+    editedOptionGroupNames = editedOptionGroupNames + option.optionGroupNameSnapshot,
+)

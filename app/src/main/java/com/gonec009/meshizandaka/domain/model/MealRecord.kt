@@ -16,6 +16,7 @@ data class MealRecord(
     val memo: String,
     val photoUri: String? = null,
     val selectedOptions: List<MealRecordOption> = emptyList(),
+    val editedOptionGroupNames: Set<String> = emptySet(),
     val excludedDrivePlanItemKeys: Set<String> = emptySet(),
     val selectedDrivePlanMainDishItemKey: String? = null,
 )
