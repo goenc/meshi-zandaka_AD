@@ -45,7 +45,7 @@ class BudgetCalculatorTest {
     }
 
     @Test
-    fun 当日摂取PFCをカロリー換算する() {
+    fun 当日摂取PFCをグラム集計する() {
         val records = listOf(
             recordAt(
                 2026,
@@ -79,9 +79,9 @@ class BudgetCalculatorTest {
         )
 
         assertEquals(650, summary.todayConsumedCalories)
-        assertEquals(120, summary.todayProteinCalories)
-        assertEquals(90, summary.todayFatCalories)
-        assertEquals(200, summary.todayCarbCalories)
+        assertEquals(30.0, summary.todayProteinGrams, 0.0)
+        assertEquals(10.0, summary.todayFatGrams, 0.0)
+        assertEquals(50.0, summary.todayCarbGrams, 0.0)
     }
 
     @Test

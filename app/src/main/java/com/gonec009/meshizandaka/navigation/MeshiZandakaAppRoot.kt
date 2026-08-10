@@ -40,6 +40,7 @@ import com.gonec009.meshizandaka.ui.quickrecord.QuickRecordRoute
 import com.gonec009.meshizandaka.ui.recordedit.RecordEditRoute
 import com.gonec009.meshizandaka.ui.settings.SettingsRoute
 import com.gonec009.meshizandaka.ui.template.TemplateManagementRoute
+import com.gonec009.meshizandaka.util.formatOneDecimal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,10 +102,10 @@ fun MeshiZandakaAppRoot(
                                 }
                                 Text(
                                     text = stringResource(
-                                        R.string.today_pfc_calories,
-                                        dashboard.summary.todayProteinCalories,
-                                        dashboard.summary.todayFatCalories,
-                                        dashboard.summary.todayCarbCalories,
+                                        R.string.today_pfc_grams,
+                                        formatOneDecimal(dashboard.summary.todayProteinGrams),
+                                        formatOneDecimal(dashboard.summary.todayFatGrams),
+                                        formatOneDecimal(dashboard.summary.todayCarbGrams),
                                     ),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,

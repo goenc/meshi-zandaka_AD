@@ -20,7 +20,7 @@
     <string name="go_to_template_management">テンプレート管理</string>
     <string name="go_to_settings">設定</string>
     <string name="today_consumed">今日の摂取カロリー</string>
-    <string name="today_pfc_calories">P %1$d kcal / F %2$d kcal / C %3$d kcal</string>
+    <string name="today_pfc_grams">P %1$sg / F %2$sg / C %3$sg</string>
     <string name="today_balance">今日の残高</string>
     <string name="week_balance">今週の残高</string>
     <string name="month_balance">今月の残高</string>

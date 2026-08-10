@@ -10,11 +10,6 @@ import com.gonec009.meshizandaka.util.TimeRangeUtils
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import kotlin.math.roundToInt
-
-private const val PROTEIN_KCAL_PER_GRAM = 4.0
-private const val FAT_KCAL_PER_GRAM = 9.0
-private const val CARB_KCAL_PER_GRAM = 4.0
 
 class BudgetCalculator {
     fun buildSummary(
@@ -45,9 +40,9 @@ class BudgetCalculator {
 
         return DashboardSummary(
             todayConsumedCalories = todayConsumed,
-            todayProteinCalories = (todayRecords.sumOf(MealRecord::proteinG) * PROTEIN_KCAL_PER_GRAM).roundToInt(),
-            todayFatCalories = (todayRecords.sumOf(MealRecord::fatG) * FAT_KCAL_PER_GRAM).roundToInt(),
-            todayCarbCalories = (todayRecords.sumOf(MealRecord::carbG) * CARB_KCAL_PER_GRAM).roundToInt(),
+            todayProteinGrams = todayRecords.sumOf(MealRecord::proteinG),
+            todayFatGrams = todayRecords.sumOf(MealRecord::fatG),
+            todayCarbGrams = todayRecords.sumOf(MealRecord::carbG),
             todayBalanceCalories = burnedCaloriesBetween(
                 startDate = today,
                 endDate = today,
