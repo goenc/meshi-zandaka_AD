@@ -1,21 +1,14 @@
 package com.gonec009.meshizandaka.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,31 +28,9 @@ import com.gonec009.meshizandaka.data.drive.DriveExternalCard
 import com.gonec009.meshizandaka.data.drive.DriveFood
 import com.gonec009.meshizandaka.data.drive.DrivePlan
 import com.gonec009.meshizandaka.data.drive.DrivePlanItem
-import com.gonec009.meshizandaka.domain.model.MealRecord
 import com.gonec009.meshizandaka.domain.model.MealRecordOption
 import com.gonec009.meshizandaka.ui.AppViewModelFactory
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
-
-private data class PendingDeleteRecord(
-    val record: MealRecord,
-)
-
-private data class PendingDeleteRecordPhoto(
-    val record: MealRecord,
-)
-
-private data class PendingDeleteDrivePlanItem(
-    val record: MealRecord,
-    val item: DrivePlanItem,
-    val itemKey: String,
-)
-
-private data class PendingDeleteRecordOption(
-    val record: MealRecord,
-    val option: MealRecordOption,
-)
 
 @Composable
 fun HomeRoute(
@@ -181,39 +152,19 @@ private fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                RecordDateSelector(
-                    selectedDate = state.selectedRecordDate,
-                    onPreviousDateClick = { onMoveSelectedDate(-1L) },
-                    onNextDateClick = { onMoveSelectedDate(1L) },
-                    onOpenDatePicker = { isDatePickerVisible = true },
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onBreakfastClick, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.breakfast_set))
-                    }
-                    Button(onClick = onLunchClick, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.lunch_set))
-                    }
-                    Button(onClick = onDinnerClick, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.dinner_set))
-                    }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onMorningSnackClick, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.morning_snack_set))
-                    }
-                    Button(onClick = onDaytimeSnackClick, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.daytime_snack_set))
-                    }
-                    Button(onClick = onFreeSnackClick, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.free_snack_set))
-                    }
-                }
-                Button(onClick = onQuickRecordClick, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.go_to_record))
-                }
-            }
+            HomeRecordActions(
+                selectedDate = state.selectedRecordDate,
+                onPreviousDateClick = { onMoveSelectedDate(-1L) },
+                onNextDateClick = { onMoveSelectedDate(1L) },
+                onOpenDatePicker = { isDatePickerVisible = true },
+                onBreakfastClick = onBreakfastClick,
+                onMorningSnackClick = onMorningSnackClick,
+                onLunchClick = onLunchClick,
+                onDinnerClick = onDinnerClick,
+                onDaytimeSnackClick = onDaytimeSnackClick,
+                onFreeSnackClick = onFreeSnackClick,
+                onQuickRecordClick = onQuickRecordClick,
+            )
         }
         item {
             WeeklyChartCard(
@@ -261,144 +212,24 @@ private fun HomeScreen(
     }
 
     if (isDatePickerVisible) {
-        val zoneId = ZoneId.systemDefault()
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = state.selectedRecordDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
-        )
-        DatePickerDialog(
+        HomeDatePickerDialog(
+            selectedDate = state.selectedRecordDate,
             onDismissRequest = { isDatePickerVisible = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            onDateSelected(Instant.ofEpochMilli(millis).atZone(zoneId).toLocalDate())
-                        }
-                        isDatePickerVisible = false
-                    },
-                ) {
-                    Text(stringResource(R.string.confirm_date))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { isDatePickerVisible = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
-    pendingDeleteRecord?.let { pending ->
-        AlertDialog(
-            onDismissRequest = { pendingDeleteRecord = null },
-            title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.delete_record_confirm_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDeleteRecord(pending.record.id) {
-                            pendingDeleteRecord = null
-                        }
-                    },
-                ) {
-                    Text(stringResource(R.string.yes))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDeleteRecord = null }) {
-                    Text(stringResource(R.string.no))
-                }
-            },
+            onDateSelected = onDateSelected,
         )
     }
-    pendingDeleteRecordPhoto?.let { pending ->
-        AlertDialog(
-            onDismissRequest = { pendingDeleteRecordPhoto = null },
-            title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.delete_photo_confirm_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDeleteRecordPhoto(pending.record.id) {
-                            pendingDeleteRecordPhoto = null
-                        }
-                    },
-                ) {
-                    Text(stringResource(R.string.yes))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDeleteRecordPhoto = null }) {
-                    Text(stringResource(R.string.no))
-                }
-            },
-        )
-    }
-    pendingDeleteDrivePlanItem?.let { pending ->
-        AlertDialog(
-            onDismissRequest = { pendingDeleteDrivePlanItem = null },
-            title = { Text(stringResource(R.string.delete)) },
-            text = {
-                Text(
-                    stringResource(
-                        R.string.delete_meal_item_confirm_message,
-                        pending.item.name,
-                    ),
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDeleteDrivePlanItem(
-                            pending.record.id,
-                            pending.itemKey,
-                            pending.item,
-                        ) {
-                            pendingDeleteDrivePlanItem = null
-                        }
-                    },
-                ) {
-                    Text(stringResource(R.string.yes))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDeleteDrivePlanItem = null }) {
-                    Text(stringResource(R.string.no))
-                }
-            },
-        )
-    }
-    pendingDeleteRecordOption?.let { pending ->
-        AlertDialog(
-            onDismissRequest = { pendingDeleteRecordOption = null },
-            title = { Text(stringResource(R.string.delete)) },
-            text = {
-                Text(
-                    stringResource(
-                        R.string.delete_meal_item_confirm_message,
-                        pending.option.optionNameSnapshot,
-                    ),
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDeleteRecordOption(
-                            pending.record.id,
-                            pending.option,
-                        ) {
-                            pendingDeleteRecordOption = null
-                        }
-                    },
-                ) {
-                    Text(stringResource(R.string.yes))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDeleteRecordOption = null }) {
-                    Text(stringResource(R.string.no))
-                }
-            },
-        )
-    }
+    HomeDeleteDialogs(
+        pendingDeleteRecord = pendingDeleteRecord,
+        pendingDeleteRecordPhoto = pendingDeleteRecordPhoto,
+        pendingDeleteDrivePlanItem = pendingDeleteDrivePlanItem,
+        pendingDeleteRecordOption = pendingDeleteRecordOption,
+        onDismissRecord = { pendingDeleteRecord = null },
+        onDismissRecordPhoto = { pendingDeleteRecordPhoto = null },
+        onDismissDrivePlanItem = { pendingDeleteDrivePlanItem = null },
+        onDismissRecordOption = { pendingDeleteRecordOption = null },
+        onDeleteRecord = onDeleteRecord,
+        onDeleteRecordPhoto = onDeleteRecordPhoto,
+        onDeleteDrivePlanItem = onDeleteDrivePlanItem,
+        onDeleteRecordOption = onDeleteRecordOption,
+    )
 }
