@@ -123,7 +123,10 @@ private fun TemplateManagementScreen(
                         }
                     }
                     state.selectedPlan?.let { plan ->
-                        items(plan.meals, key = { meal -> meal.slot }) { meal ->
+                        items(
+                            items = plan.meals.sortedBy { meal -> mealDisplayOrder(meal.slot) },
+                            key = { meal -> meal.slot },
+                        ) { meal ->
                             DrivePlanMealCard(
                                 meal = meal,
                                 imageLoading = state.imageLoading,
@@ -134,6 +137,12 @@ private fun TemplateManagementScreen(
             }
         }
     }
+}
+
+private fun mealDisplayOrder(slot: Int): Int = when (slot) {
+    3 -> 4
+    4 -> 3
+    else -> slot
 }
 
 @Composable
