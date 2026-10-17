@@ -473,6 +473,7 @@ internal object DrivePlanCatalogBuilder {
                     ),
                     isMainDish = isMainDish,
                     isMainDishCandidate = isMainDishCandidate,
+                    isPreMealDrink = item.optBooleanIgnoreCase("isPreMealDrink", false),
                     imageContentHash = imageAssetId?.let { imageHashes[idKey(it)] },
                     calories = nutrition.calories.roundToInt(),
                     proteinG = nutrition.proteinG,

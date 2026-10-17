@@ -47,6 +47,7 @@ internal object DrivePlanCacheCodec {
                             .put("amountLabel", item.amountLabel)
                             .put("isMainDish", item.isMainDish)
                             .put("isMainDishCandidate", item.isMainDishCandidate)
+                            .put("isPreMealDrink", item.isPreMealDrink)
                             .putNullable("imageContentHash", item.imageContentHash)
                             .put("calories", item.calories)
                             .put("proteinG", item.proteinG)
@@ -83,6 +84,7 @@ internal object DrivePlanCacheCodec {
                                     .put("amountLabel", item.amountLabel)
                                     .put("isMainDish", item.isMainDish)
                                     .put("isMainDishCandidate", item.isMainDishCandidate)
+                                    .put("isPreMealDrink", item.isPreMealDrink)
                                     .putNullable("imageContentHash", item.imageContentHash)
                                     .putNullable("imagePath", item.imagePath)
                                     .put("calories", item.calories)
@@ -138,6 +140,7 @@ internal object DrivePlanCacheCodec {
                                         amountLabel = itemJson.stringOrNull("amountLabel").orEmpty(),
                                         isMainDish = isMainDish,
                                         isMainDishCandidate = itemJson.optBoolean("isMainDishCandidate", false) || isMainDish,
+                                        isPreMealDrink = itemJson.optBoolean("isPreMealDrink", false),
                                         imageContentHash = itemJson.stringOrNull("imageContentHash"),
                                         calories = itemJson.optInt("calories", 0),
                                         proteinG = itemJson.optDouble("proteinG", 0.0),
@@ -194,6 +197,7 @@ internal object DrivePlanCacheCodec {
                                 amountLabel = itemJson.stringOrNull("amountLabel").orEmpty(),
                                 isMainDish = isMainDish,
                                 isMainDishCandidate = itemJson.optBoolean("isMainDishCandidate", false) || isMainDish,
+                                isPreMealDrink = itemJson.optBoolean("isPreMealDrink", false),
                                 imageContentHash = itemJson.stringOrNull("imageContentHash"),
                                 imagePath = itemJson.stringOrNull("imagePath"),
                                 calories = itemJson.optInt("calories", 0),

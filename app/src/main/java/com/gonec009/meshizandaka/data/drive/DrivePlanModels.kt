@@ -19,6 +19,7 @@ data class DrivePlanItem(
     val fatG: Double = 0.0,
     val carbG: Double = 0.0,
     val id: String? = null,
+    val isPreMealDrink: Boolean = false,
 )
 
 data class DrivePlanMeal(

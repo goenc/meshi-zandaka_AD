@@ -511,6 +511,13 @@ private fun DrivePlanMealContent(
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(item.name, color = itemColor, fontWeight = FontWeight.SemiBold)
+                        if (item.isPreMealDrink) {
+                            Text(
+                                text = stringResource(R.string.meal_detail_pre_meal_drink),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                         item.amountLabel.takeIf { it.isNotBlank() }?.let { amountLabel ->
                             Text(
                                 text = amountLabel,
