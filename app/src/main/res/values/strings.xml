@@ -113,6 +113,8 @@
     <string name="template_management_meal_nutrition">%1$d kcal / P %2$sg / F %3$sg / C %4$sg</string>
     <string name="template_management_no_items">食事項目なし</string>
     <string name="template_management_main_dish">主菜</string>
+    <string name="template_management_drink_nutrition_note">各食の分量を表示。栄養値は各食の合計に含まれます。</string>
+    <string name="template_management_includes_drinks">食前ドリンクを含む合計</string>
     <string name="select_main_dish">主菜に切り替え</string>
     <string name="meal_detail_contents">食事内容</string>
     <string name="meal_detail_pre_meal_drink">食前ドリンク</string>

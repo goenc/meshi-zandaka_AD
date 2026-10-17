@@ -123,8 +123,15 @@ private fun TemplateManagementScreen(
                         }
                     }
                     state.selectedPlan?.let { plan ->
+                        val orderedMeals = plan.meals.sortedBy { meal -> mealDisplayOrder(meal.slot) }
+                        val drinkMeals = orderedMeals.filter { meal -> meal.items.any { it.isPreMealDrink } }
+                        if (drinkMeals.isNotEmpty()) {
+                            item(key = "pre-meal-drinks") {
+                                DrivePreMealDrinkCard(meals = drinkMeals)
+                            }
+                        }
                         items(
-                            items = plan.meals.sortedBy { meal -> mealDisplayOrder(meal.slot) },
+                            items = orderedMeals,
                             key = { meal -> meal.slot },
                         ) { meal ->
                             DrivePlanMealCard(
@@ -244,10 +251,41 @@ private fun DrivePlanSelector(
 }
 
 @Composable
+private fun DrivePreMealDrinkCard(meals: List<DrivePlanMeal>) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.meal_detail_pre_meal_drink),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = stringResource(R.string.template_management_drink_nutrition_note),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            meals.forEach { meal ->
+                key(meal.slot) {
+                    Text(meal.label, fontWeight = FontWeight.SemiBold)
+                    meal.items.filter { it.isPreMealDrink }.forEachIndexed { index, item ->
+                        key(item.id ?: "${item.name}:${item.amountLabel}:$index") {
+                            DrivePlanItemRow(item = item, showPreMealDrinkLabel = false)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun DrivePlanMealCard(
     meal: DrivePlanMeal,
     imageLoading: Boolean,
 ) {
+    val regularItems = meal.items.filterNot { it.isPreMealDrink }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -265,6 +303,12 @@ private fun DrivePlanMealCard(
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                if (meal.items.any { it.isPreMealDrink }) {
+                    Text(
+                        text = stringResource(R.string.template_management_includes_drinks),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
             Text(meal.name, fontWeight = FontWeight.Bold)
             meal.imagePath?.let { path ->
@@ -283,10 +327,10 @@ private fun DrivePlanMealCard(
             meal.memo.takeIf { it.isNotBlank() }?.let { memo ->
                 Text(stringResource(R.string.template_management_meal_memo, memo))
             }
-            if (meal.items.isEmpty()) {
+            if (regularItems.isEmpty()) {
                 Text(stringResource(R.string.template_management_no_items))
             } else {
-                meal.items.forEachIndexed { index, item ->
+                regularItems.forEachIndexed { index, item ->
                     key(item.id ?: "${item.name}:${item.amountLabel}:$index") {
                         DrivePlanItemRow(item = item)
                     }
@@ -297,7 +341,7 @@ private fun DrivePlanMealCard(
 }
 
 @Composable
-private fun DrivePlanItemRow(item: DrivePlanItem) {
+private fun DrivePlanItemRow(item: DrivePlanItem, showPreMealDrinkLabel: Boolean = true) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -314,7 +358,7 @@ private fun DrivePlanItemRow(item: DrivePlanItem) {
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(item.name)
-            if (item.isPreMealDrink) {
+            if (item.isPreMealDrink && showPreMealDrinkLabel) {
                 Text(
                     text = stringResource(R.string.meal_detail_pre_meal_drink),
                     style = MaterialTheme.typography.labelSmall,
