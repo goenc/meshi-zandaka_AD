@@ -266,14 +266,9 @@ private fun DrivePreMealDrinkCard(meals: List<DrivePlanMeal>) {
                 text = stringResource(R.string.template_management_drink_nutrition_note),
                 style = MaterialTheme.typography.bodySmall,
             )
-            meals.forEach { meal ->
-                key(meal.slot) {
-                    Text(meal.label, fontWeight = FontWeight.SemiBold)
-                    meal.items.filter { it.isPreMealDrink }.forEachIndexed { index, item ->
-                        key(item.id ?: "${item.name}:${item.amountLabel}:$index") {
-                            DrivePlanItemRow(item = item, showPreMealDrinkLabel = false)
-                        }
-                    }
+            commonPreMealDrinkItems(meals).forEachIndexed { index, item ->
+                key(item.id ?: "${item.name}:${item.amountLabel}:$index") {
+                    DrivePlanItemRow(item = item, showPreMealDrinkLabel = false)
                 }
             }
         }
