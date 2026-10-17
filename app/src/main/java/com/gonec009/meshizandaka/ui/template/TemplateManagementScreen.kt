@@ -314,6 +314,13 @@ private fun DrivePlanItemRow(item: DrivePlanItem) {
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(item.name)
+            if (item.isPreMealDrink) {
+                Text(
+                    text = stringResource(R.string.meal_detail_pre_meal_drink),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             Text(item.amountLabel, style = MaterialTheme.typography.bodySmall)
         }
         if (item.isMainDish) {
